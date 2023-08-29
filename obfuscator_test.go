@@ -229,6 +229,16 @@ func TestObfuscator(t *testing.T) {
 			input: `SELECT * FROM users where '{"a": 1, "b": 2}'::jsonb - 'a'`,
 			want:  `SELECT * FROM users where ?::jsonb - ?`,
 		},
+		{
+			input: `
+			DECLARE @TableName NVARCHAR(50) = 'MyTableName'
+			DECLARE @Query NVARCHAR(1000)
+
+			SET @Query = 'SELECT * FROM ' + @TableName
+			EXEC sp_executesql @Query
+			`,
+			want: "DECLARE @TableName NVARCHAR(?) = ? DECLARE @Query NVARCHAR(?) SET @Query = ? + @TableName EXEC sp_executesql @Query",
+		},
 	}
 
 	for _, tt := range tests {
