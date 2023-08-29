@@ -69,7 +69,8 @@ func (n *SQLNormalizer) Normalize(input string) (string, *NormalizedInfo, error)
 		}
 
 		// TODO: We rely on the WS token to determine if we should add a whitespace
-		// This is not ideal, as SQLs with slightly different formatting will be normalized into single family
+		// This is not ideal, as SQLs with slightly different formatting will NOT be normalized into single family
+		// e.g. "SELECT * FROM table where id = ?" and "SELECT * FROM table where id= ?" will be normalized into different family
 		if token.Type != WS && token.Type != COMMENT && token.Type != MULTILINE_COMMENT {
 			lastToken = token
 			normalizedSQL += token.Value
