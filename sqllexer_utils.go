@@ -40,6 +40,8 @@ var tableIndicators = map[string]bool{
 	"TABLE":  true,
 }
 
+var keywordsRegex = regexp.MustCompile(`(?i)^(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|GRANT|REVOKE|ADD|ALL|AND|ANY|AS|ASC|BEGIN|BETWEEN|BY|CASE|CHECK|COLUMN|COMMIT|CONSTRAINT|DATABASE|DECLARE|DEFAULT|DESC|DISTINCT|ELSE|END|EXEC|EXISTS|FOREIGN|FROM|GROUP|HAVING|IN|INDEX|INNER|INTO|IS|JOIN|KEY|LEFT|LIKE|LIMIT|NOT|ON|OR|ORDER|OUTER|PRIMARY|PROCEDURE|REPLACE|RETURNS|RIGHT|ROLLBACK|ROWNUM|SET|SOME|TABLE|TOP|TRUNCATE|UNION|UNIQUE|USE|VALUES|VIEW|WHERE|CUBE|ROLLUP|LITERAL|WINDOW|VACCUM|ANALYZE|ILIKE|USING|ASSERTION|DOMAIN|CLUSTER|COPY|EXPLAIN|PLPGSQL|TRIGGER|TEMPORARY|UNLOGGED|RECURSIVE|RETURNING)$`)
+
 func isWhitespace(ch rune) bool {
 	return ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r'
 }
@@ -69,7 +71,7 @@ func isSingleQuote(ch rune) bool {
 }
 
 func isOperator(ch rune) bool {
-	return ch == '+' || ch == '-' || ch == '*' || ch == '/' || ch == '=' || ch == '<' || ch == '>' || ch == '!' || ch == '&' || ch == '|' || ch == '^' || ch == '%' || ch == '~' || ch == '?' || ch == '@'
+	return ch == '+' || ch == '-' || ch == '*' || ch == '/' || ch == '=' || ch == '<' || ch == '>' || ch == '!' || ch == '&' || ch == '|' || ch == '^' || ch == '%' || ch == '~' || ch == '?' || ch == '@' || ch == ':' || ch == '#'
 }
 
 func isWildcard(ch rune) bool {

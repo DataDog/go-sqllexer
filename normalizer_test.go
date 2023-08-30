@@ -12,8 +12,8 @@ func TestNormalizer(t *testing.T) {
 		normalizedInfo NormalizedInfo
 	}{
 		{
-			input: "select ?",
-			want:  "select ?",
+			input: "SELECT ?",
+			want:  "SELECT ?",
 			normalizedInfo: NormalizedInfo{
 				Tables:   []string{},
 				Comments: []string{},
@@ -21,8 +21,8 @@ func TestNormalizer(t *testing.T) {
 			},
 		},
 		{
-			input: "SELECT * FROM users where id = ?",
-			want:  "SELECT * FROM users where id = ?",
+			input: "SELECT * FROM users WHERE id = ?",
+			want:  "SELECT * FROM users WHERE id = ?",
 			normalizedInfo: NormalizedInfo{
 				Tables:   []string{"users"},
 				Comments: []string{},
@@ -30,8 +30,8 @@ func TestNormalizer(t *testing.T) {
 			},
 		},
 		{
-			input: "SELECT * FROM users where id in (?, ?) and name in ARRAY[?, ?]",
-			want:  "SELECT * FROM users where id in (?) and name in ARRAY[?]",
+			input: "SELECT * FROM users WHERE id IN (?, ?) and name IN ARRAY[?, ?]",
+			want:  "SELECT * FROM users WHERE id IN ( ? ) AND name IN ARRAY [ ? ]",
 			normalizedInfo: NormalizedInfo{
 				Tables:   []string{"users"},
 				Comments: []string{},
@@ -45,7 +45,7 @@ func TestNormalizer(t *testing.T) {
 				JOIN vs?.host_alias ha on ha.host_id = h.id 
 			WHERE ha.org_id = ? AND ha.name = ANY ( ?, ? )
 			`,
-			want: "SELECT h.id, h.org_id, h.name, ha.name, h.created FROM vs?.host h JOIN vs?.host_alias ha on ha.host_id = h.id WHERE ha.org_id = ? AND ha.name = ANY (?)",
+			want: "SELECT h.id, h.org_id, h.name, ha.name, h.created FROM vs?.host h JOIN vs?.host_alias ha ON ha.host_id = h.id WHERE ha.org_id = ? AND ha.name = ANY ( ? )",
 			normalizedInfo: NormalizedInfo{
 				Tables:   []string{"vs?.host", "vs?.host_alias"},
 				Comments: []string{},
@@ -53,8 +53,8 @@ func TestNormalizer(t *testing.T) {
 			},
 		},
 		{
-			input: "/* this is a comment */ SELECT * FROM users where id = ?",
-			want:  "SELECT * FROM users where id = ?",
+			input: "/* this is a comment */ SELECT * FROM users WHERE id = ?",
+			want:  "SELECT * FROM users WHERE id = ?",
 			normalizedInfo: NormalizedInfo{
 				Tables:   []string{"users"},
 				Comments: []string{"/* this is a comment */"},
@@ -64,10 +64,10 @@ func TestNormalizer(t *testing.T) {
 		{
 			input: `
 			/* this is a comment */
-			SELECT * FROM users /* comment comment */ where id = ?
+			SELECT * FROM users /* comment comment */ WHERE id = ?
 			/* this is another comment */
 			`,
-			want: "SELECT * FROM users where id = ?",
+			want: "SELECT * FROM users WHERE id = ?",
 			normalizedInfo: NormalizedInfo{
 				Tables:   []string{"users"},
 				Comments: []string{"/* this is a comment */", "/* comment comment */", "/* this is another comment */"},
@@ -75,8 +75,8 @@ func TestNormalizer(t *testing.T) {
 			},
 		},
 		{
-			input: "SELECT u.id as ID, u.name as Name FROM users as u where u.id = ?",
-			want:  "SELECT u.id, u.name FROM users where u.id = ?",
+			input: "SELECT u.id as ID, u.name as Name FROM users as u WHERE u.id = ?",
+			want:  "SELECT u.id, u.name FROM users WHERE u.id = ?",
 			normalizedInfo: NormalizedInfo{
 				Tables:   []string{"users"},
 				Comments: []string{},
@@ -84,8 +84,8 @@ func TestNormalizer(t *testing.T) {
 			},
 		},
 		{
-			input: "UPDATE users SET name = (SELECT name FROM test_users where id = ?) where id = ?",
-			want:  "UPDATE users SET name = (SELECT name FROM test_users where id = ?) where id = ?",
+			input: "UPDATE users SET name = (SELECT name FROM test_users WHERE id = ?) WHERE id = ?",
+			want:  "UPDATE users SET name = ( SELECT name FROM test_users WHERE id = ? ) WHERE id = ?",
 			normalizedInfo: NormalizedInfo{
 				Tables:   []string{"users", "test_users"},
 				Comments: []string{},
@@ -115,8 +115,8 @@ func TestNormalizer(t *testing.T) {
 			},
 		},
 		{
-			input: "DELETE FROM users where id in (?, ?)",
-			want:  "DELETE FROM users where id in (?)",
+			input: "DELETE FROM users WHERE id IN (?, ?)",
+			want:  "DELETE FROM users WHERE id IN ( ? )",
 			normalizedInfo: NormalizedInfo{
 				Tables:   []string{"users"},
 				Comments: []string{},
@@ -127,12 +127,12 @@ func TestNormalizer(t *testing.T) {
 			input: `
 			CREATE PROCEDURE test_procedure()
 			BEGIN
-				SELECT * FROM users where id = ?;
-				Update test_users set name = ? where id = ?;
-				Delete from user? where id = ?;
+				SELECT * FROM users WHERE id = ?;
+				Update test_users set name = ? WHERE id = ?;
+				Delete FROM user? WHERE id = ?;
 			END
 			`,
-			want: "CREATE PROCEDURE test_procedure() BEGIN SELECT * FROM users where id = ?; Update test_users set name = ? where id = ?; Delete from user? where id = ?; END",
+			want: "CREATE PROCEDURE test_procedure ( ) BEGIN SELECT * FROM users WHERE id = ? ; UPDATE test_users SET name = ? WHERE id = ? ; DELETE FROM user? WHERE id = ? ; END",
 			normalizedInfo: NormalizedInfo{
 				Tables:   []string{"users", "test_users", "user?"},
 				Comments: []string{},
@@ -143,9 +143,9 @@ func TestNormalizer(t *testing.T) {
 			input: `
 			SELECT org_id, resource_type, meta_key, meta_value 
 			FROM public.schema_meta 
-			WHERE org_id in ( ? ) AND resource_type in ( ? ) AND meta_key in ( ? )
+			WHERE org_id IN ( ? ) AND resource_type IN ( ? ) AND meta_key IN ( ? )
 			`,
-			want: "SELECT org_id, resource_type, meta_key, meta_value FROM public.schema_meta WHERE org_id in (?) AND resource_type in (?) AND meta_key in (?)",
+			want: "SELECT org_id, resource_type, meta_key, meta_value FROM public.schema_meta WHERE org_id IN ( ? ) AND resource_type IN ( ? ) AND meta_key IN ( ? )",
 			normalizedInfo: NormalizedInfo{
 				Tables:   []string{"public.schema_meta"},
 				Comments: []string{},
@@ -167,7 +167,7 @@ func TestNormalizer(t *testing.T) {
 			FROM cte
 			WHERE age <= ?;
 			`,
-			want: "WITH cte AS ( SELECT id, name, age FROM person WHERE age > ? ) UPDATE person SET age = ? WHERE id IN (SELECT id FROM cte); INSERT INTO person (name, age) SELECT name, ? FROM cte WHERE age <= ?;",
+			want: "WITH cte AS ( SELECT id, name, age FROM person WHERE age > ? ) UPDATE person SET age = ? WHERE id IN ( SELECT id FROM cte ) ; INSERT INTO person ( name, age ) SELECT name, ? FROM cte WHERE age <= ? ;",
 			normalizedInfo: NormalizedInfo{
 				Tables:   []string{"person", "cte"},
 				Comments: []string{},
@@ -187,7 +187,7 @@ func TestNormalizer(t *testing.T) {
 			input: `
 			/* Multi-line comment */
 			SELECT * FROM clients WHERE (clients.first_name = ?) LIMIT ? BEGIN INSERT INTO owners (created_at, first_name, locked, orders_count, updated_at) VALUES (?, ?, ?, ?, ?) COMMIT`,
-			want: "SELECT * FROM clients WHERE (clients.first_name = ?) LIMIT ? BEGIN INSERT INTO owners (created_at, first_name, locked, orders_count, updated_at) VALUES (?) COMMIT",
+			want: "SELECT * FROM clients WHERE ( clients.first_name = ? ) LIMIT ? BEGIN INSERT INTO owners ( created_at, first_name, locked, orders_count, updated_at ) VALUES ( ? ) COMMIT",
 			normalizedInfo: NormalizedInfo{
 				Tables:   []string{"clients", "owners"},
 				Comments: []string{"/* Multi-line comment */"},
@@ -209,7 +209,7 @@ func TestNormalizer(t *testing.T) {
 		{
 			input: `-- Testing table value constructor SQL expression
 			SELECT * FROM (VALUES (?, ?)) AS d (id, animal)`,
-			want: "SELECT * FROM (VALUES (?)) (id, animal)",
+			want: "SELECT * FROM ( VALUES ( ? ) ) ( id, animal )",
 			normalizedInfo: NormalizedInfo{
 				Tables:   []string{},
 				Comments: []string{"-- Testing table value constructor SQL expression"},
@@ -217,10 +217,10 @@ func TestNormalizer(t *testing.T) {
 			},
 		},
 		{
-			input: `ALTER TABLE table DROP COLUMN column`,
-			want:  "ALTER TABLE table DROP COLUMN column",
+			input: `ALTER TABLE tabletest DROP COLUMN columna`,
+			want:  "ALTER TABLE tabletest DROP COLUMN columna",
 			normalizedInfo: NormalizedInfo{
-				Tables:   []string{"table"},
+				Tables:   []string{"tabletest"},
 				Comments: []string{},
 				Commands: []string{"ALTER", "DROP"},
 			},
@@ -236,7 +236,7 @@ func TestNormalizer(t *testing.T) {
 		},
 		{
 			input: "/* Testing explicit table SQL expression */ WITH T1 AS (SELECT PNO , PNAME , COLOR , WEIGHT , CITY FROM P WHERE CITY = ?), T2 AS (SELECT PNO, PNAME, COLOR, WEIGHT, CITY, ? * WEIGHT AS NEW_WEIGHT, ? AS NEW_CITY FROM T1), T3 AS ( SELECT PNO , PNAME, COLOR, NEW_WEIGHT AS WEIGHT, NEW_CITY AS CITY FROM T2), T4 AS ( TABLE P EXCEPT CORRESPONDING TABLE T1) TABLE T4 UNION CORRESPONDING TABLE T3",
-			want:  "WITH T1 AS (SELECT PNO , PNAME , COLOR , WEIGHT , CITY FROM P WHERE CITY = ?), T2 AS (SELECT PNO, PNAME, COLOR, WEIGHT, CITY, ? * WEIGHT, ? FROM T1), T3 AS ( SELECT PNO , PNAME, COLOR, NEW_WEIGHT, NEW_CITY FROM T2), T4 AS ( TABLE P EXCEPT CORRESPONDING TABLE T1) TABLE T4 UNION CORRESPONDING TABLE T3",
+			want:  "WITH T1 AS ( SELECT PNO, PNAME, COLOR, WEIGHT, CITY FROM P WHERE CITY = ? ), T2 AS ( SELECT PNO, PNAME, COLOR, WEIGHT, CITY, ? * WEIGHT, ? FROM T1 ), T3 AS ( SELECT PNO, PNAME, COLOR, NEW_WEIGHT, NEW_CITY FROM T2 ), T4 AS ( TABLE P EXCEPT CORRESPONDING TABLE T1 ) TABLE T4 UNION CORRESPONDING TABLE T3",
 			normalizedInfo: NormalizedInfo{
 				Tables:   []string{"P", "T1", "T2", "T4", "T3"},
 				Comments: []string{"/* Testing explicit table SQL expression */"},
@@ -245,8 +245,8 @@ func TestNormalizer(t *testing.T) {
 		},
 		{
 			// truncated
-			input: "SELECT * FROM users where id =",
-			want:  "SELECT * FROM users where id =",
+			input: "SELECT * FROM users WHERE id =",
+			want:  "SELECT * FROM users WHERE id =",
 			normalizedInfo: NormalizedInfo{
 				Tables:   []string{"users"},
 				Comments: []string{},
@@ -291,8 +291,8 @@ func TestNormalizerNotCollectMetadata(t *testing.T) {
 		normalizedInfo NormalizedInfo
 	}{
 		{
-			input: "select ?",
-			want:  "select ?",
+			input: "SELECT ?",
+			want:  "SELECT ?",
 			normalizedInfo: NormalizedInfo{
 				Tables:   []string{},
 				Comments: []string{},
@@ -300,8 +300,8 @@ func TestNormalizerNotCollectMetadata(t *testing.T) {
 			},
 		},
 		{
-			input: "SELECT * FROM users where id = ?",
-			want:  "SELECT * FROM users where id = ?",
+			input: "SELECT * FROM users WHERE id = ?",
+			want:  "SELECT * FROM users WHERE id = ?",
 			normalizedInfo: NormalizedInfo{
 				Tables:   []string{},
 				Comments: []string{},
@@ -309,8 +309,8 @@ func TestNormalizerNotCollectMetadata(t *testing.T) {
 			},
 		},
 		{
-			input: "SELECT id as ID, name as Name from users where id in (?, ?)",
-			want:  "SELECT id as ID, name as Name from users where id in (?)",
+			input: "SELECT id as ID, name as Name FROM users WHERE id IN (?, ?)",
+			want:  "SELECT id AS ID, name AS Name FROM users WHERE id IN ( ? )",
 			normalizedInfo: NormalizedInfo{
 				Tables:   []string{},
 				Comments: []string{},
@@ -357,58 +357,100 @@ func TestNormalizerNotCollectMetadata(t *testing.T) {
 	}
 }
 
+func TestNormalizerFormatting(t *testing.T) {
+	tests := []struct {
+		queries  []string
+		expected string
+	}{
+		{
+			queries: []string{
+				"SELECT id,name, address FROM users where id = ?",
+				"select id, name, address FROM users where id = ?",
+				"select id as ID, name as Name, address FROM users where id = ?",
+			},
+			expected: "SELECT id, name, address FROM users WHERE id = ?",
+		},
+		{
+			queries: []string{
+				"SELECT id,name, address FROM users where id IN (?, ?,?, ?)",
+				"select id, name, address FROM users where id IN ( ? )",
+				"select id, name, address FROM users where id IN ( ? )",
+				"select id, name, address FROM users where id IN (?,?,?)",
+			},
+			expected: "SELECT id, name, address FROM users WHERE id IN ( ? )",
+		},
+	}
+
+	normalizer := NewSQLNormalizer(&SQLNormalizerConfig{
+		KeepSQLAlias: false,
+	})
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			for _, query := range test.queries {
+				got, _, err := normalizer.Normalize(query)
+				if err != nil {
+					t.Errorf("error during normalization: %v", err)
+				}
+				if got != test.expected {
+					t.Errorf("got %q, want %q", got, test.expected)
+				}
+			}
+		})
+	}
+}
+
 func TestGroupObfuscatedValues(t *testing.T) {
 	tests := []struct {
 		input string
 		want  string
 	}{
 		{
-			input: "(?)",
-			want:  "(?)",
+			input: "( ? )",
+			want:  "( ? )",
 		},
 		{
 			input: "(?, ?)",
-			want:  "(?)",
+			want:  "( ? )",
 		},
 		{
 			input: "( ?, ?, ? )",
-			want:  "(?)",
+			want:  "( ? )",
 		},
 		{
 			input: "( ? )",
-			want:  "(?)",
+			want:  "( ? )",
 		},
 		{
 			input: "( ?, ? )",
-			want:  "(?)",
+			want:  "( ? )",
 		},
 		{
 			input: "( ?,?)",
-			want:  "(?)",
-		},
-		{
-			input: "[?]",
-			want:  "[?]",
-		},
-		{
-			input: "[?, ?]",
-			want:  "[?]",
-		},
-		{
-			input: "[ ?, ?, ? ]",
-			want:  "[?]",
+			want:  "( ? )",
 		},
 		{
 			input: "[ ? ]",
-			want:  "[?]",
+			want:  "[ ? ]",
+		},
+		{
+			input: "[?, ?]",
+			want:  "[ ? ]",
+		},
+		{
+			input: "[ ?, ?, ? ]",
+			want:  "[ ? ]",
+		},
+		{
+			input: "[ ? ]",
+			want:  "[ ? ]",
 		},
 		{
 			input: "[ ?, ? ]",
-			want:  "[?]",
+			want:  "[ ? ]",
 		},
 		{
 			input: "[ ?,?]",
-			want:  "[?]",
+			want:  "[ ? ]",
 		},
 	}
 

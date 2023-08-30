@@ -68,19 +68,13 @@ func (n *SQLNormalizer) Normalize(input string) (string, *NormalizedInfo, error)
 			}
 		}
 
+		writeNormalizedSQL(token, lastToken, &normalizedSQL)
+
 		// TODO: We rely on the WS token to determine if we should add a whitespace
 		// This is not ideal, as SQLs with slightly different formatting will NOT be normalized into single family
 		// e.g. "SELECT * FROM table where id = ?" and "SELECT * FROM table where id= ?" will be normalized into different family
 		if token.Type != WS && token.Type != COMMENT && token.Type != MULTILINE_COMMENT {
 			lastToken = token
-			normalizedSQL += token.Value
-		} else {
-			// Replace whitespace and comments with single whitespace
-			// only when the previous token was not whitespace.
-			// This is to prevent multiple whitespaces in a row.
-			if len(normalizedSQL) > 0 && normalizedSQL[len(normalizedSQL)-1] != ' ' {
-				normalizedSQL += " "
-			}
 		}
 	}
 
@@ -100,16 +94,33 @@ func (n *SQLNormalizer) Normalize(input string) (string, *NormalizedInfo, error)
 	return strings.TrimSpace(normalizedSQL), normalizedInfo, nil
 }
 
+func writeNormalizedSQL(token *Token, lastToken *Token, normalizedSQL *string) {
+	if token.Type == WS || token.Type == COMMENT || token.Type == MULTILINE_COMMENT {
+		// We don't rely on the WS token to determine if we should add a whitespace
+		return
+	}
+
+	// determine if we should add a whitespace
+	writeWhitespace(lastToken, token, normalizedSQL)
+
+	// UPPER CASE SQL keywords
+	if isSQLKeyword(token) {
+		*normalizedSQL += strings.ToUpper(token.Value)
+		return
+	}
+	*normalizedSQL += token.Value
+}
+
 // groupObfuscatedValues groups consecutive obfuscated values in a SQL query into a single placeholder.
-// It replaces "(?, ?, ...)" and "[?, ?, ...]" with "(?)" and "[?]", respectively.
+// It replaces "(?, ?, ...)" and "[?, ?, ...]" with "( ? )" and "[ ? ]", respectively.
 // Returns the modified SQL query as a string.
 func groupObfuscatedValues(input string) string {
 	groupable_regex := regexp.MustCompile(`(\()\s*\?(?:\s*,\s*\?\s*)*\s*(\))|(\[)\s*\?(?:\s*,\s*\?\s*)*\s*(\])`)
 	grouped := groupable_regex.ReplaceAllStringFunc(input, func(match string) string {
 		if match[0] == '(' {
-			return "(?)"
+			return "( ? )"
 		}
-		return "[?]"
+		return "[ ? ]"
 	})
 	return grouped
 }
@@ -141,4 +152,23 @@ func dedupeNormalizedInfo(info *NormalizedInfo) {
 	info.Tables = dedupeCollectedMetadata(info.Tables)
 	info.Comments = dedupeCollectedMetadata(info.Comments)
 	info.Commands = dedupeCollectedMetadata(info.Commands)
+}
+
+func isSQLKeyword(token *Token) bool {
+	return token.Type == IDENT && keywordsRegex.MatchString(token.Value)
+}
+
+func writeWhitespace(lastToken *Token, token *Token, normalizedSQL *string) {
+	switch token.Value {
+	case ",":
+	case "=":
+		if lastToken != nil && lastToken.Value == ":" {
+			// do not add a space before an equals if a colon was
+			// present before it.
+			break
+		}
+		fallthrough
+	default:
+		*normalizedSQL += " "
+	}
 }
