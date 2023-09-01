@@ -275,7 +275,7 @@ func (s *SQLLexer) scanWhitespace() Token {
 	for isWhitespace(s.peek()) {
 		s.next()
 	}
-	return Token{WS, " "}
+	return Token{WS, s.src[s.start:s.cursor]}
 }
 
 func (s *SQLLexer) scanOperator() Token {

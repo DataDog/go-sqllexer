@@ -38,25 +38,29 @@ func TestObfuscator(t *testing.T) {
 		},
 		{
 			input:         "SELECT * FROM users where id = 1 -- this is a comment",
-			want:          "SELECT * FROM users where id = ? /* this is a comment */",
+			want:          "SELECT * FROM users where id = ? -- this is a comment",
 			replaceDigits: true,
 		},
 		{
-			input: `
-			/* this is a comment 
+			input: `/* this is a comment 
 			with multiple lines
 			*/
-			SELECT * FROM users where id = 1
-			`,
-			want:          "/* this is a comment with multiple lines */ SELECT * FROM users where id = ?",
+			SELECT * FROM users where id = 1`,
+			want: `/* this is a comment 
+			with multiple lines
+			*/
+			SELECT * FROM users where id = ?`,
 			replaceDigits: true,
 		},
 		{
 			input: `
 			SELECT * FROM users where id = 1
-			/* this is a comment with multiple lines
+			/* this is a comment 
+			with multiple lines */
 			`,
-			want: "SELECT * FROM users where id = ? /* this is a comment with multiple lines",
+			want: `SELECT * FROM users where id = ?
+			/* this is a comment 
+			with multiple lines */`,
 		},
 		{
 			input: "SELECT * FROM users where id = 'Joh",
@@ -104,7 +108,12 @@ func TestObfuscator(t *testing.T) {
 			T3 AS ( SELECT PNO , PNAME, COLOR, NEW_WEIGHT AS WEIGHT, NEW_CITY AS CITY FROM T2),
 			T4 AS ( TABLE P EXCEPT CORRESPONDING TABLE T1)
 			TABLE T4 UNION CORRESPONDING TABLE T3`,
-			want:          "/* Testing explicit table SQL expression */ WITH T1 AS (SELECT PNO , PNAME , COLOR , WEIGHT , CITY FROM P WHERE CITY = ?), T2 AS (SELECT PNO, PNAME, COLOR, WEIGHT, CITY, ? * WEIGHT AS NEW_WEIGHT, ? AS NEW_CITY FROM T1), T3 AS ( SELECT PNO , PNAME, COLOR, NEW_WEIGHT AS WEIGHT, NEW_CITY AS CITY FROM T2), T4 AS ( TABLE P EXCEPT CORRESPONDING TABLE T1) TABLE T4 UNION CORRESPONDING TABLE T3",
+			want: `-- Testing explicit table SQL expression
+			WITH T1 AS (SELECT PNO , PNAME , COLOR , WEIGHT , CITY FROM P WHERE  CITY = ?),
+			T2 AS (SELECT PNO, PNAME, COLOR, WEIGHT, CITY, ? * WEIGHT AS NEW_WEIGHT, ? AS NEW_CITY FROM T1),
+			T3 AS ( SELECT PNO , PNAME, COLOR, NEW_WEIGHT AS WEIGHT, NEW_CITY AS CITY FROM T2),
+			T4 AS ( TABLE P EXCEPT CORRESPONDING TABLE T1)
+			TABLE T4 UNION CORRESPONDING TABLE T3`,
 			replaceDigits: false,
 		},
 		{
@@ -115,7 +124,12 @@ func TestObfuscator(t *testing.T) {
 			T3 AS ( SELECT PNO , PNAME, COLOR, NEW_WEIGHT AS WEIGHT, NEW_CITY AS CITY FROM T2),
 			T4 AS ( TABLE P EXCEPT CORRESPONDING TABLE T1)
 			TABLE T4 UNION CORRESPONDING TABLE T3`,
-			want:          "/* Testing explicit table SQL expression */ WITH T? AS (SELECT PNO , PNAME , COLOR , WEIGHT , CITY FROM P WHERE CITY = ?), T? AS (SELECT PNO, PNAME, COLOR, WEIGHT, CITY, ? * WEIGHT AS NEW_WEIGHT, ? AS NEW_CITY FROM T?), T? AS ( SELECT PNO , PNAME, COLOR, NEW_WEIGHT AS WEIGHT, NEW_CITY AS CITY FROM T?), T? AS ( TABLE P EXCEPT CORRESPONDING TABLE T?) TABLE T? UNION CORRESPONDING TABLE T?",
+			want: `-- Testing explicit table SQL expression
+			WITH T? AS (SELECT PNO , PNAME , COLOR , WEIGHT , CITY FROM P WHERE  CITY = ?),
+			T? AS (SELECT PNO, PNAME, COLOR, WEIGHT, CITY, ? * WEIGHT AS NEW_WEIGHT, ? AS NEW_CITY FROM T?),
+			T? AS ( SELECT PNO , PNAME, COLOR, NEW_WEIGHT AS WEIGHT, NEW_CITY AS CITY FROM T?),
+			T? AS ( TABLE P EXCEPT CORRESPONDING TABLE T?)
+			TABLE T? UNION CORRESPONDING TABLE T?`,
 			replaceDigits: true,
 		},
 		{
@@ -124,8 +138,13 @@ func TestObfuscator(t *testing.T) {
 			replaceDigits: true,
 		},
 		{
-			input:         "SELECT * FROM users where id in (1, '2', NULL, true, false)",
+			input:         "SELECT * FROM users where id in (1, '2', 3, 1.5, '12')",
 			want:          "SELECT * FROM users where id in (?, ?, ?, ?, ?)",
+			replaceDigits: true,
+		},
+		{
+			input:         "SELECT * FROM users where id is NULL and is_active = TRUE and is_admin = FALSE",
+			want:          "SELECT * FROM users where id is NULL and is_active = TRUE and is_admin = FALSE",
 			replaceDigits: true,
 		},
 		{
@@ -238,32 +257,53 @@ func TestObfuscator(t *testing.T) {
 		},
 		{
 			input: `
+			-- Testing explicit table SQL expression
 			DECLARE @TableName NVARCHAR(50) = 'MyTableName'
 			DECLARE @Query NVARCHAR(1000)
+			/* Build the SQL string */
 
 			SET @Query = 'SELECT * FROM ' + @TableName
 			EXEC sp_executesql @Query
 			`,
-			want: "DECLARE @TableName NVARCHAR(?) = ? DECLARE @Query NVARCHAR(?) SET @Query = ? + @TableName EXEC sp_executesql @Query",
+			want: `-- Testing explicit table SQL expression
+			DECLARE @TableName NVARCHAR(?) = ?
+			DECLARE @Query NVARCHAR(?)
+			/* Build the SQL string */
+
+			SET @Query = ? + @TableName
+			EXEC sp_executesql @Query`,
 		},
 		{
 			input: `
 			MERGE INTO Employees AS target
 			USING EmployeeUpdates AS source
 			ON (target.EmployeeID = source.EmployeeID)
-			WHEN MATCHED THEN 
-				UPDATE SET 
+			WHEN MATCHED THEN
+				UPDATE SET
 					target.Name = source.Name,
 					target.Age = source.Age,
 					target.Salary = source.Salary
-			WHEN NOT MATCHED BY TARGET THEN 
+			WHEN NOT MATCHED BY TARGET THEN
 				INSERT (EmployeeID, Name, Age, Salary)
 				VALUES (source.EmployeeID, source.Name, source.Age, source.Salary)
-			WHEN NOT MATCHED BY SOURCE THEN 
+			WHEN NOT MATCHED BY SOURCE THEN
 				DELETE
 			OUTPUT $action, inserted.*, deleted.*;
 			`,
-			want: "MERGE INTO Employees AS target USING EmployeeUpdates AS source ON (target.EmployeeID = source.EmployeeID) WHEN MATCHED THEN UPDATE SET target.Name = source.Name, target.Age = source.Age, target.Salary = source.Salary WHEN NOT MATCHED BY TARGET THEN INSERT (EmployeeID, Name, Age, Salary) VALUES (source.EmployeeID, source.Name, source.Age, source.Salary) WHEN NOT MATCHED BY SOURCE THEN DELETE OUTPUT $action, inserted.*, deleted.*;",
+			want: `MERGE INTO Employees AS target
+			USING EmployeeUpdates AS source
+			ON (target.EmployeeID = source.EmployeeID)
+			WHEN MATCHED THEN
+				UPDATE SET
+					target.Name = source.Name,
+					target.Age = source.Age,
+					target.Salary = source.Salary
+			WHEN NOT MATCHED BY TARGET THEN
+				INSERT (EmployeeID, Name, Age, Salary)
+				VALUES (source.EmployeeID, source.Name, source.Age, source.Salary)
+			WHEN NOT MATCHED BY SOURCE THEN
+				DELETE
+			OUTPUT $action, inserted.*, deleted.*;`,
 		},
 	}
 

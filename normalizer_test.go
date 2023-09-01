@@ -21,11 +21,14 @@ func TestNormalizer(t *testing.T) {
 			},
 		},
 		{
-			input: "SELECT * FROM users WHERE id = ?",
-			want:  "SELECT * FROM users WHERE id = ?",
+			input: `
+			/*dddbs='orders-mysql',dde='dbm-agent-integration',ddps='orders-app',ddpv='7825a16',traceparent='00-000000000000000068e229d784ee697c-569d1b940c1fb3ac-00'*/
+			/* date='12%2F31',key='val' */
+			SELECT * FROM users WHERE id = ?`,
+			want: "SELECT * FROM users WHERE id = ?",
 			normalizedInfo: NormalizedInfo{
 				Tables:   []string{"users"},
-				Comments: []string{},
+				Comments: []string{"/*dddbs='orders-mysql',dde='dbm-agent-integration',ddps='orders-app',ddpv='7825a16',traceparent='00-000000000000000068e229d784ee697c-569d1b940c1fb3ac-00'*/", "/* date='12%2F31',key='val' */"},
 				Commands: []string{"SELECT"},
 			},
 		},
@@ -63,14 +66,15 @@ func TestNormalizer(t *testing.T) {
 		},
 		{
 			input: `
-			/* this is a comment */
+			/* this is a 
+multiline comment */
 			SELECT * FROM users /* comment comment */ WHERE id = ?
-			/* this is another comment */
+			-- this is another comment
 			`,
 			want: "SELECT * FROM users WHERE id = ?",
 			normalizedInfo: NormalizedInfo{
 				Tables:   []string{"users"},
-				Comments: []string{"/* this is a comment */", "/* comment comment */", "/* this is another comment */"},
+				Comments: []string{"/* this is a \nmultiline comment */", "/* comment comment */", "-- this is another comment"},
 				Commands: []string{"SELECT"},
 			},
 		},
@@ -100,6 +104,7 @@ func TestNormalizer(t *testing.T) {
 				FROM dbm_order 
 				WHERE id = ? 
 			) ( 
+				-- random comment
 				SELECT ( t.price * t.quantity * d.discount_percent ) AS price 
 				FROM dbm_order o 
 					JOIN order_item t ON o.id = t.dbm_order_id 
@@ -110,7 +115,7 @@ func TestNormalizer(t *testing.T) {
 			want: "INSERT INTO order_status_change ( dbm_order_id, message, price, state ) VALUES ( ( SELECT id FROM dbm_order WHERE id = ? ) ( SELECT ( t.price * t.quantity * d.discount_percent ) FROM dbm_order o JOIN order_item t ON o.id = t.dbm_order_id JOIN discount d ON d.dbm_item_id = t.id WHERE o.id = ? LIMIT ? ) )",
 			normalizedInfo: NormalizedInfo{
 				Tables:   []string{"order_status_change", "dbm_order", "order_item", "discount"},
-				Comments: []string{},
+				Comments: []string{"-- random comment"},
 				Commands: []string{"INSERT", "SELECT", "JOIN"},
 			},
 		},
@@ -276,6 +281,8 @@ func TestNormalizer(t *testing.T) {
 			}
 			if !reflect.DeepEqual(normalizedInfo.Comments, test.normalizedInfo.Comments) {
 				t.Errorf("got %v, want %v", normalizedInfo.Comments, test.normalizedInfo.Comments)
+				t.Errorf(normalizedInfo.Comments[0])
+				t.Errorf(test.normalizedInfo.Comments[0])
 			}
 			if !reflect.DeepEqual(normalizedInfo.Tables, test.normalizedInfo.Tables) {
 				t.Errorf("got %v, want %v", normalizedInfo.Tables, test.normalizedInfo.Tables)

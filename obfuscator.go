@@ -18,6 +18,11 @@ func NewSQLObfuscator(config *SQLObfuscatorConfig) *SQLObfuscator {
 	return &SQLObfuscator{config: config}
 }
 
+const (
+	StringPlaceholder = "?"
+	NumberPlaceholder = "?"
+)
+
 // Obfuscate takes an input SQL string and returns an obfuscated SQL string.
 // The obfuscator replaces all literal values with a single placeholder
 func (o *SQLObfuscator) Obfuscate(input string) string {
@@ -27,35 +32,27 @@ func (o *SQLObfuscator) Obfuscate(input string) string {
 	for token := range lexer.ScanAllTokens() {
 		switch token.Type {
 		case NUMBER:
-			obfuscatedSQL += "?"
+			obfuscatedSQL += NumberPlaceholder
 		case STRING:
-			obfuscatedSQL += "?"
+			obfuscatedSQL += StringPlaceholder
 		case INCOMPLETE_STRING:
-			obfuscatedSQL += "?"
+			obfuscatedSQL += StringPlaceholder
 		case IDENT:
-			if strings.EqualFold(token.Value, "null") || strings.EqualFold(token.Value, "true") || strings.EqualFold(token.Value, "false") {
-				obfuscatedSQL += "?" // replace null, true, false with ?
+			if o.config.ReplaceDigits {
+				// regex to replace digits in identifier
+				// we try to avoid using regex as much as possible,
+				// as regex isn't the most performant,
+				// but it's the easiest to implement and maintain
+				digits_regex := regexp.MustCompile(`\d+`)
+				obfuscatedSQL += digits_regex.ReplaceAllString(token.Value, "?")
 			} else {
-				if o.config.ReplaceDigits {
-					// regex to replace digits in identifier
-					// we try to avoid using regex as much as possible,
-					// as regex isn't the most performant,
-					// but it's the easiest to implement and maintain
-					digits_regex := regexp.MustCompile(`\d+`)
-					obfuscatedSQL += digits_regex.ReplaceAllString(token.Value, "?")
-				} else {
-					obfuscatedSQL += token.Value
-				}
+				obfuscatedSQL += token.Value
 			}
 		case COMMENT:
-			// replace single line comment with multi line comment
-			// this is done because the obfuscated SQL is collaped into a single line
-			// and we don't want the single line comment to to mask the rest of the SQL
-			commentContent := strings.TrimPrefix(token.Value, "--")
-			obfuscatedSQL += "/*" + commentContent + " */"
+			obfuscatedSQL += token.Value
 		case MULTILINE_COMMENT:
 			// replace newlines and tabs in multiline comment with whitespace
-			obfuscatedSQL += collapseWhitespace(token.Value)
+			obfuscatedSQL += token.Value
 		case DOLLAR_QUOTED_STRING:
 			obfuscatedSQL += "?"
 		case DOLLAR_QUOTED_FUNCTION:
@@ -70,7 +67,7 @@ func (o *SQLObfuscator) Obfuscate(input string) string {
 			}
 		case ERROR | UNKNOWN:
 			// if we encounter an error or unknown token, we just append the value
-			obfuscatedSQL += collapseWhitespace(token.Value)
+			obfuscatedSQL += token.Value
 		default:
 			obfuscatedSQL += token.Value
 		}

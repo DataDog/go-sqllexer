@@ -35,6 +35,11 @@ func NewSQLNormalizer(config *SQLNormalizerConfig) *SQLNormalizer {
 	return &SQLNormalizer{config: config}
 }
 
+const (
+	ArrayPlaceholder   = "( ? )"
+	BracketPlaceholder = "[ ? ]"
+)
+
 // Normalize takes an input SQL string and returns a normalized SQL string, a NormalizedInfo struct, and an error.
 // The normalizer collapses input SQL into compact format, groups obfuscated values into single placeholder,
 // and collects metadata such as table names, comments, and commands.
@@ -118,9 +123,9 @@ func groupObfuscatedValues(input string) string {
 	groupable_regex := regexp.MustCompile(`(\()\s*\?(?:\s*,\s*\?\s*)*\s*(\))|(\[)\s*\?(?:\s*,\s*\?\s*)*\s*(\])`)
 	grouped := groupable_regex.ReplaceAllStringFunc(input, func(match string) string {
 		if match[0] == '(' {
-			return "( ? )"
+			return ArrayPlaceholder
 		}
-		return "[ ? ]"
+		return BracketPlaceholder
 	})
 	return grouped
 }
