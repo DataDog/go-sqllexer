@@ -51,7 +51,6 @@ func (o *SQLObfuscator) Obfuscate(input string) string {
 		case COMMENT:
 			obfuscatedSQL += token.Value
 		case MULTILINE_COMMENT:
-			// replace newlines and tabs in multiline comment with whitespace
 			obfuscatedSQL += token.Value
 		case DOLLAR_QUOTED_STRING:
 			obfuscatedSQL += "?"
