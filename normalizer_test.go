@@ -258,7 +258,7 @@ func TestNormalizer(t *testing.T) {
 	normalizer := NewSQLNormalizer(&SQLNormalizerConfig{
 		CollectComments: true,
 		CollectCommands: true,
-		TableNames:      true,
+		CollectTables:   true,
 		KeepSQLAlias:    false,
 	})
 
@@ -331,7 +331,7 @@ func TestNormalizerNotCollectMetadata(t *testing.T) {
 	normalizer := NewSQLNormalizer(&SQLNormalizerConfig{
 		CollectComments: false,
 		CollectCommands: false,
-		TableNames:      false,
+		CollectTables:   false,
 		KeepSQLAlias:    true,
 	})
 
@@ -378,6 +378,14 @@ func TestNormalizerFormatting(t *testing.T) {
 				"select id, name, address FROM users where id IN (?,?,?)",
 			},
 			expected: "SELECT id, name, address FROM users WHERE id IN ( ? )",
+		},
+		{
+			queries: []string{
+				"SELECT * FROM discount where description LIKE ?",
+				"select * from discount where description LIKE ?",
+				"select * from discount where description like ?",
+			},
+			expected: "SELECT * FROM discount WHERE description LIKE ?",
 		},
 	}
 

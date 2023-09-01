@@ -19,7 +19,7 @@ func BenchmarkNormalizer(b *testing.B) {
 	normalizer := NewSQLNormalizer(&SQLNormalizerConfig{
 		CollectComments: true,
 		CollectCommands: true,
-		TableNames:      true,
+		CollectTables:   true,
 		KeepSQLAlias:    false,
 	})
 

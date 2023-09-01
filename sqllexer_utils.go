@@ -30,6 +30,7 @@ var Commands = map[string]bool{
 	"COMMIT":   true,
 	"BEGIN":    true,
 	"TRUNCATE": true,
+	"MERGE":    true,
 }
 
 var tableIndicators = map[string]bool{

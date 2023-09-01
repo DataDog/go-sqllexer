@@ -66,7 +66,7 @@ func main() {
     normalizer := NewSQLNormalizer(&SQLNormalizerConfig{
         CollectComments: true,
         CollectCommands: true,
-        TableNames:      true,
+        CollectTables:      true,
         KeepSQLAlias:    false,
     })
     normalized, normalizedInfo, err := normalizer.Normalize(query)

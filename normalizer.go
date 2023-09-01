@@ -8,8 +8,8 @@ import (
 type SQLNormalizerConfig struct {
 	DBMS string `json:"dbms"`
 
-	// TableNames specifies whether the normalizer should also extract the table names that a query addresses
-	TableNames bool `json:"table_names"`
+	// CollectTables specifies whether the normalizer should also extract the table names that a query addresses
+	CollectTables bool `json:"collect_tables"`
 
 	// CollectCommands specifies whether the normalizer should extract and return commands as SQL metadata
 	CollectCommands bool `json:"collect_commands"`
@@ -62,7 +62,7 @@ func (n *SQLNormalizer) Normalize(input string) (string, *NormalizedInfo, error)
 				normalizedInfo.Commands = append(normalizedInfo.Commands, strings.ToUpper(token.Value))
 			} else if lastToken != nil && isTableIndicator(strings.ToUpper(lastToken.Value)) {
 				// Collect table names
-				if n.config.TableNames {
+				if n.config.CollectTables {
 					normalizedInfo.Tables = append(normalizedInfo.Tables, token.Value)
 				}
 			}

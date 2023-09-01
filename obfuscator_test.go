@@ -6,9 +6,10 @@ import (
 
 func TestObfuscator(t *testing.T) {
 	tests := []struct {
-		input         string
-		want          string
-		replaceDigits bool
+		input            string
+		want             string
+		replaceDigits    bool
+		DollarQuotedFunc bool
 	}{
 		{
 			input:         "SELECT * FROM users where id = 1",
@@ -62,8 +63,14 @@ func TestObfuscator(t *testing.T) {
 			want:  "SELECT * FROM users where id = ?",
 		},
 		{
-			input: "SELECT $func$INSERT INTO table VALUES ('a', 1, 2)$func$ FROM users where id = 1",
-			want:  "SELECT $func$INSERT INTO table VALUES (?, ?, ?)$func$ FROM users where id = ?",
+			input:            "SELECT $func$INSERT INTO table VALUES ('a', 1, 2)$func$ FROM users where id = 1",
+			want:             "SELECT ? FROM users where id = ?",
+			DollarQuotedFunc: false,
+		},
+		{
+			input:            "SELECT $func$INSERT INTO table VALUES ('a', 1, 2)$func$ FROM users where id = 1",
+			want:             "SELECT $func$INSERT INTO table VALUES (?, ?, ?)$func$ FROM users where id = ?",
+			DollarQuotedFunc: true,
 		},
 		{
 			input: "SELECT * FROM users where id = $tag$test$tag$",
@@ -239,12 +246,32 @@ func TestObfuscator(t *testing.T) {
 			`,
 			want: "DECLARE @TableName NVARCHAR(?) = ? DECLARE @Query NVARCHAR(?) SET @Query = ? + @TableName EXEC sp_executesql @Query",
 		},
+		{
+			input: `
+			MERGE INTO Employees AS target
+			USING EmployeeUpdates AS source
+			ON (target.EmployeeID = source.EmployeeID)
+			WHEN MATCHED THEN 
+				UPDATE SET 
+					target.Name = source.Name,
+					target.Age = source.Age,
+					target.Salary = source.Salary
+			WHEN NOT MATCHED BY TARGET THEN 
+				INSERT (EmployeeID, Name, Age, Salary)
+				VALUES (source.EmployeeID, source.Name, source.Age, source.Salary)
+			WHEN NOT MATCHED BY SOURCE THEN 
+				DELETE
+			OUTPUT $action, inserted.*, deleted.*;
+			`,
+			want: "MERGE INTO Employees AS target USING EmployeeUpdates AS source ON (target.EmployeeID = source.EmployeeID) WHEN MATCHED THEN UPDATE SET target.Name = source.Name, target.Age = source.Age, target.Salary = source.Salary WHEN NOT MATCHED BY TARGET THEN INSERT (EmployeeID, Name, Age, Salary) VALUES (source.EmployeeID, source.Name, source.Age, source.Salary) WHEN NOT MATCHED BY SOURCE THEN DELETE OUTPUT $action, inserted.*, deleted.*;",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run("", func(t *testing.T) {
 			obfuscatorConfig := &SQLObfuscatorConfig{
-				ReplaceDigits: tt.replaceDigits,
+				ReplaceDigits:    tt.replaceDigits,
+				DollarQuotedFunc: tt.DollarQuotedFunc,
 			}
 			obfuscator := NewSQLObfuscator(obfuscatorConfig)
 			got := obfuscator.Obfuscate(tt.input)

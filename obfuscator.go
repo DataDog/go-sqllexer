@@ -6,7 +6,8 @@ import (
 )
 
 type SQLObfuscatorConfig struct {
-	ReplaceDigits bool
+	ReplaceDigits    bool
+	DollarQuotedFunc bool
 }
 
 type SQLObfuscator struct {
@@ -58,10 +59,15 @@ func (o *SQLObfuscator) Obfuscate(input string) string {
 		case DOLLAR_QUOTED_STRING:
 			obfuscatedSQL += "?"
 		case DOLLAR_QUOTED_FUNCTION:
-			// obfuscate the content of dollar quoted function
-			quotedFunc := strings.TrimPrefix(token.Value, "$func$")
-			quotedFunc = strings.TrimSuffix(quotedFunc, "$func$")
-			obfuscatedSQL += "$func$" + o.Obfuscate(quotedFunc) + "$func$"
+			if o.config.DollarQuotedFunc {
+				// obfuscate the content of dollar quoted function
+				quotedFunc := strings.TrimPrefix(token.Value, "$func$")
+				quotedFunc = strings.TrimSuffix(quotedFunc, "$func$")
+				obfuscatedSQL += "$func$" + o.Obfuscate(quotedFunc) + "$func$"
+			} else {
+				// treat dollar quoted function as dollar quoted string
+				obfuscatedSQL += "?"
+			}
 		case ERROR | UNKNOWN:
 			// if we encounter an error or unknown token, we just append the value
 			obfuscatedSQL += collapseWhitespace(token.Value)
