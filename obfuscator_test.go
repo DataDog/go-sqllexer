@@ -188,6 +188,10 @@ func TestObfuscator(t *testing.T) {
 			replaceDigits: true,
 		},
 		{
+			input: `SELECT * FROM "public"."users" where id = 2`,
+			want:  `SELECT * FROM "public"."users" where id = ?`,
+		},
+		{
 			input: "SELECT * FROM \"世界\" where id = '🌊'",
 			want:  "SELECT * FROM \"世界\" where id = ?",
 		},

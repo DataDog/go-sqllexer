@@ -378,6 +378,32 @@ func TestLexer(t *testing.T) {
 				{IDENT, "users"},
 			},
 		},
+		{
+			name:  "select with double quoted identifier",
+			input: `SELECT * FROM "users table"`,
+			want: []Token{
+				{IDENT, "SELECT"},
+				{WS, " "},
+				{WILDCARD, "*"},
+				{WS, " "},
+				{IDENT, "FROM"},
+				{WS, " "},
+				{IDENT, `"users table"`},
+			},
+		},
+		{
+			name:  "select with double quoted identifier",
+			input: `SELECT * FROM "public"."users table"`,
+			want: []Token{
+				{IDENT, "SELECT"},
+				{WS, " "},
+				{WILDCARD, "*"},
+				{WS, " "},
+				{IDENT, "FROM"},
+				{WS, " "},
+				{IDENT, `"public"."users table"`},
+			},
+		},
 	}
 
 	for _, tt := range tests {

@@ -257,7 +257,14 @@ func (s *SQLLexer) scanDoubleQuotedIdentifier() Token {
 	s.next() // consume the opening quote
 	for {
 		ch := s.peek()
+		// encountered the closing quote
+		// BUT if it's followed by .", then we should keep going
+		// e.g. postgre "foo"."bar"
 		if ch == '"' {
+			if string(s.peekBy(3)) == `"."` {
+				s.nextBy(3) // consume the "."
+				continue
+			}
 			break
 		}
 		if isEOF(ch) {

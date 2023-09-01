@@ -158,6 +158,26 @@ multiline comment */
 			},
 		},
 		{
+			// double quoted table name
+			input: `SELECT * FROM "users" WHERE id = ?`,
+			want:  `SELECT * FROM "users" WHERE id = ?`,
+			normalizedInfo: NormalizedInfo{
+				Tables:   []string{`"users"`},
+				Comments: []string{},
+				Commands: []string{"SELECT"},
+			},
+		},
+		{
+			// double quoted table name
+			input: `SELECT * FROM "public"."users" WHERE id = ?`,
+			want:  `SELECT * FROM "public"."users" WHERE id = ?`,
+			normalizedInfo: NormalizedInfo{
+				Tables:   []string{`"public"."users"`},
+				Comments: []string{},
+				Commands: []string{"SELECT"},
+			},
+		},
+		{
 			input: `
 			WITH cte AS (
 				SELECT id, name, age
