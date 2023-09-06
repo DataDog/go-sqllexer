@@ -1,7 +1,6 @@
 package sqllexer
 
 import (
-	"regexp"
 	"strings"
 )
 
@@ -158,8 +157,7 @@ func writeNormalizedSQL(token *Token, lastToken *Token, normalizedSQL *string) {
 // It replaces "(?, ?, ...)" and "[?, ?, ...]" with "( ? )" and "[ ? ]", respectively.
 // Returns the modified SQL query as a string.
 func groupObfuscatedValues(input string) string {
-	groupable_regex := regexp.MustCompile(`(\()\s*\?(?:\s*,\s*\?\s*)*\s*(\))|(\[)\s*\?(?:\s*,\s*\?\s*)*\s*(\])`)
-	grouped := groupable_regex.ReplaceAllStringFunc(input, func(match string) string {
+	grouped := groupableRegex.ReplaceAllStringFunc(input, func(match string) string {
 		if match[0] == '(' {
 			return ArrayPlaceholder
 		}
@@ -173,7 +171,7 @@ func groupObfuscatedValues(input string) string {
 // The function is case-insensitive and matches the pattern "AS <alias_name>".
 // The input string is not modified in place.
 func DiscardSQLAlias(input string) string {
-	return regexp.MustCompile(`(?i)\s+AS\s+[\w?]+`).ReplaceAllString(input, "")
+	return sqlAliasRegex.ReplaceAllString(input, "")
 }
 
 func dedupeCollectedMetadata(metadata []string) []string {
