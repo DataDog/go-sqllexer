@@ -110,7 +110,7 @@ func (n *Normalizer) Normalize(input string) (normalized string, info *Statement
 			}
 		}
 
-		writeNormalizedSQL(token, lastToken, &normalizedSQL)
+		normalizedSQL = writeNormalizedSQL(token, lastToken, normalizedSQL)
 
 		// TODO: We rely on the WS token to determine if we should add a whitespace
 		// This is not ideal, as SQLs with slightly different formatting will NOT be normalized into single family
@@ -136,21 +136,23 @@ func (n *Normalizer) Normalize(input string) (normalized string, info *Statement
 	return strings.TrimSpace(normalizedSQL), statementMetadata, nil
 }
 
-func writeNormalizedSQL(token *Token, lastToken *Token, normalizedSQL *string) {
+func writeNormalizedSQL(token *Token, lastToken *Token, statement string) string {
 	if token.Type == WS || token.Type == COMMENT || token.Type == MULTILINE_COMMENT {
 		// We don't rely on the WS token to determine if we should add a whitespace
-		return
+		return statement
 	}
 
 	// determine if we should add a whitespace
-	writeWhitespace(lastToken, token, normalizedSQL)
+	statement = appendWhitespace(lastToken, token, statement)
 
 	// UPPER CASE SQL keywords
 	if isSQLKeyword(token) {
-		*normalizedSQL += strings.ToUpper(token.Value)
-		return
+		statement += strings.ToUpper(token.Value)
+		return statement
 	}
-	*normalizedSQL += token.Value
+	statement += token.Value
+
+	return statement
 }
 
 // groupObfuscatedValues groups consecutive obfuscated values in a SQL query into a single placeholder.
@@ -199,7 +201,7 @@ func isSQLKeyword(token *Token) bool {
 	return token.Type == IDENT && keywordsRegex.MatchString(token.Value)
 }
 
-func writeWhitespace(lastToken *Token, token *Token, normalizedSQL *string) {
+func appendWhitespace(lastToken *Token, token *Token, normalizedSQL string) string {
 	switch token.Value {
 	case ",":
 	case "=":
@@ -210,6 +212,8 @@ func writeWhitespace(lastToken *Token, token *Token, normalizedSQL *string) {
 		}
 		fallthrough
 	default:
-		*normalizedSQL += " "
+		normalizedSQL += " "
 	}
+
+	return normalizedSQL
 }
