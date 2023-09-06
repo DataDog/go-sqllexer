@@ -1,4 +1,4 @@
-# go-sql-lexer
+# go-sqllexer
 
 This repository contains a hand written SQL Lexer that tokenizes SQL queries with a focus on obfuscating and normalization. The lexer is written in Go with no external dependencies.
 **Note** This is NOT a SQL parser, it only tokenizes SQL queries.
@@ -14,7 +14,7 @@ This repository contains a hand written SQL Lexer that tokenizes SQL queries wit
 ## Installation
 
 ```bash
-go get github.com/DataDog/go-sql-lexer
+go get github.com/DataDog/go-sqllexer
 ```
 
 ## Usage
@@ -22,7 +22,7 @@ go get github.com/DataDog/go-sql-lexer
 ### Tokenize
 
 ```go
-import "github.com/DataDog/go-sql-lexer"
+import "github.com/DataDog/go-sqllexer"
 
 func main() {
     query := "SELECT * FROM users WHERE id = 1"
@@ -39,7 +39,7 @@ func main() {
 ```go
 import (
     "fmt"
-    "github.com/DataDog/go-sql-lexer"
+    "github.com/DataDog/go-sqllexer"
 )
 
 func main() {
@@ -58,7 +58,7 @@ func main() {
 ```go
 import (
     "fmt"
-    "github.com/DataDog/go-sql-lexer"
+    "github.com/DataDog/go-sqllexer"
 )
 
 func main() {
