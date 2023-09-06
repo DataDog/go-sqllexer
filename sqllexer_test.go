@@ -6,14 +6,14 @@ import (
 
 func TestLexer(t *testing.T) {
 	tests := []struct {
-		name  string
-		input string
-		want  []Token
+		name     string
+		input    string
+		expected []Token
 	}{
 		{
 			name:  "simple select with number",
 			input: "SELECT * FROM users where id = 1",
-			want: []Token{
+			expected: []Token{
 				{IDENT, "SELECT"},
 				{WS, " "},
 				{WILDCARD, "*"},
@@ -34,7 +34,7 @@ func TestLexer(t *testing.T) {
 		{
 			name:  "simple select with number",
 			input: "SELECT * FROM users where id = '1'",
-			want: []Token{
+			expected: []Token{
 				{IDENT, "SELECT"},
 				{WS, " "},
 				{WILDCARD, "*"},
@@ -55,7 +55,7 @@ func TestLexer(t *testing.T) {
 		{
 			name:  "simple select with negative number",
 			input: "SELECT * FROM users where id = -1",
-			want: []Token{
+			expected: []Token{
 				{IDENT, "SELECT"},
 				{WS, " "},
 				{WILDCARD, "*"},
@@ -76,7 +76,7 @@ func TestLexer(t *testing.T) {
 		{
 			name:  "simple select with string",
 			input: "SELECT * FROM users where id = '12'",
-			want: []Token{
+			expected: []Token{
 				{IDENT, "SELECT"},
 				{WS, " "},
 				{WILDCARD, "*"},
@@ -97,7 +97,7 @@ func TestLexer(t *testing.T) {
 		{
 			name:  "simple select with double quoted identifier",
 			input: "SELECT * FROM \"users table\" where id = 1",
-			want: []Token{
+			expected: []Token{
 				{IDENT, "SELECT"},
 				{WS, " "},
 				{WILDCARD, "*"},
@@ -118,7 +118,7 @@ func TestLexer(t *testing.T) {
 		{
 			name:  "simple select with single line comment",
 			input: "SELECT * FROM users where id = 1 -- comment here",
-			want: []Token{
+			expected: []Token{
 				{IDENT, "SELECT"},
 				{WS, " "},
 				{WILDCARD, "*"},
@@ -141,7 +141,7 @@ func TestLexer(t *testing.T) {
 		{
 			name:  "simple select with multi line comment",
 			input: "SELECT * /* comment here */ FROM users where id = 1",
-			want: []Token{
+			expected: []Token{
 				{IDENT, "SELECT"},
 				{WS, " "},
 				{WILDCARD, "*"},
@@ -164,7 +164,7 @@ func TestLexer(t *testing.T) {
 		{
 			name:  "simple malformed select",
 			input: "SELECT * FROM users where id = 1 and name = 'j",
-			want: []Token{
+			expected: []Token{
 				{IDENT, "SELECT"},
 				{WS, " "},
 				{WILDCARD, "*"},
@@ -193,7 +193,7 @@ func TestLexer(t *testing.T) {
 		{
 			name:  "truncated sql",
 			input: "SELECT * FROM users where id = ",
-			want: []Token{
+			expected: []Token{
 				{IDENT, "SELECT"},
 				{WS, " "},
 				{WILDCARD, "*"},
@@ -213,7 +213,7 @@ func TestLexer(t *testing.T) {
 		{
 			name:  "simple select with array of literals",
 			input: "SELECT * FROM users where id in (1, '2')",
-			want: []Token{
+			expected: []Token{
 				{IDENT, "SELECT"},
 				{WS, " "},
 				{WILDCARD, "*"},
@@ -239,7 +239,7 @@ func TestLexer(t *testing.T) {
 		{
 			name:  "dollar quoted function",
 			input: "SELECT $func$INSERT INTO table VALUES ('a', 1, 2)$func$ FROM users",
-			want: []Token{
+			expected: []Token{
 				{IDENT, "SELECT"},
 				{WS, " "},
 				{DOLLAR_QUOTED_FUNCTION, "$func$INSERT INTO table VALUES ('a', 1, 2)$func$"},
@@ -252,7 +252,7 @@ func TestLexer(t *testing.T) {
 		{
 			name:  "dollar quoted string",
 			input: "SELECT * FROM users where id = $tag$test$tag$",
-			want: []Token{
+			expected: []Token{
 				{IDENT, "SELECT"},
 				{WS, " "},
 				{WILDCARD, "*"},
@@ -273,7 +273,7 @@ func TestLexer(t *testing.T) {
 		{
 			name:  "numbered parameter",
 			input: "SELECT * FROM users where id = $1",
-			want: []Token{
+			expected: []Token{
 				{IDENT, "SELECT"},
 				{WS, " "},
 				{WILDCARD, "*"},
@@ -294,7 +294,7 @@ func TestLexer(t *testing.T) {
 		{
 			name:  "identifier with underscore and period",
 			input: "SELECT * FROM users where user_id = 2 and users.name = 'j'",
-			want: []Token{
+			expected: []Token{
 				{IDENT, "SELECT"},
 				{WS, " "},
 				{WILDCARD, "*"},
@@ -323,7 +323,7 @@ func TestLexer(t *testing.T) {
 		{
 			name:  "select with hex and octal numbers",
 			input: "SELECT * FROM users where id = 0x123 and id = 0X123 and id = 0123",
-			want: []Token{
+			expected: []Token{
 				{IDENT, "SELECT"},
 				{WS, " "},
 				{WILDCARD, "*"},
@@ -360,7 +360,7 @@ func TestLexer(t *testing.T) {
 		{
 			name:  "select with float numbers and scientific notation",
 			input: "SELECT 1.2,1.2e3,1.2e-3,1.2E3,1.2E-3 FROM users",
-			want: []Token{
+			expected: []Token{
 				{IDENT, "SELECT"},
 				{WS, " "},
 				{NUMBER, "1.2"},
@@ -381,7 +381,7 @@ func TestLexer(t *testing.T) {
 		{
 			name:  "select with double quoted identifier",
 			input: `SELECT * FROM "users table"`,
-			want: []Token{
+			expected: []Token{
 				{IDENT, "SELECT"},
 				{WS, " "},
 				{WILDCARD, "*"},
@@ -394,7 +394,7 @@ func TestLexer(t *testing.T) {
 		{
 			name:  "select with double quoted identifier",
 			input: `SELECT * FROM "public"."users table"`,
-			want: []Token{
+			expected: []Token{
 				{IDENT, "SELECT"},
 				{WS, " "},
 				{WILDCARD, "*"},
@@ -410,15 +410,15 @@ func TestLexer(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			lexer := New(tt.input)
 			tokens := lexer.ScanAll()
-			if len(tokens) != len(tt.want) {
-				t.Errorf("got %d tokens, want %d", len(tokens), len(tt.want))
+			if len(tokens) != len(tt.expected) {
+				t.Errorf("got %d tokens, expected %d", len(tokens), len(tt.expected))
 			}
 			for i, token := range tokens {
-				if token.Type != tt.want[i].Type {
-					t.Errorf("got token type %d, want %d", token.Type, tt.want[i].Type)
+				if token.Type != tt.expected[i].Type {
+					t.Errorf("got token type %d, expected %d", token.Type, tt.expected[i].Type)
 				}
-				if token.Value != tt.want[i].Value {
-					t.Errorf("got token value %s, want %s", token.Value, tt.want[i].Value)
+				if token.Value != tt.expected[i].Value {
+					t.Errorf("got token value %s, expected %s", token.Value, tt.expected[i].Value)
 				}
 			}
 		})

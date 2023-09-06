@@ -53,7 +53,7 @@ func (s *SQLLexer) ScanAll() []Token {
 }
 
 // ScanAllTokens scans the entire input string and returns a channel of tokens.
-// Use this if you want to process the tokens as they are scanned.
+// Use this if you expected to process the tokens as they are scanned.
 func (s *SQLLexer) ScanAllTokens() <-chan *Token {
 	tokenCh := make(chan *Token)
 
@@ -359,7 +359,7 @@ func (s *SQLLexer) scanDollarQuotedString() Token {
 			// keep track of the number of dollar signs we've seen
 			// a valid dollar quoted string is either $$string$$ or $tag$string$tag$
 			// we technically should see 4 dollar signs
-			// this is a bit of a hack because we don't want to keep track of the tag
+			// this is a bit of a hack because we don't expected to keep track of the tag
 			// but it's good enough for our purposes of tokenization and obfuscation
 			dollars += 1
 		}

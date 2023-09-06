@@ -179,10 +179,10 @@ func dedupeCollectedMetadata(metadata []string) []string {
 	// e.g. [SELECT, JOIN, SELECT, JOIN] -> [SELECT, JOIN]
 	//
 	var dedupedMetadata = []string{}
-	var metadataSeen = make(map[string]bool)
+	var metadataSeen = make(map[string]struct{})
 	for _, m := range metadata {
 		if _, seen := metadataSeen[m]; !seen {
-			metadataSeen[m] = true
+			metadataSeen[m] = struct{}{}
 			dedupedMetadata = append(dedupedMetadata, m)
 		}
 	}
