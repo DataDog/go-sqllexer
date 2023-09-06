@@ -5,17 +5,37 @@ import (
 	"strings"
 )
 
-type SQLObfuscatorConfig struct {
+type obfuscatorConfig struct {
 	ReplaceDigits    bool
 	DollarQuotedFunc bool
 }
 
-type SQLObfuscator struct {
-	config *SQLObfuscatorConfig
+func WithReplaceDigits(replaceDigits bool) func(*obfuscatorConfig) {
+	return func(c *obfuscatorConfig) {
+		c.ReplaceDigits = replaceDigits
+	}
 }
 
-func NewObfuscator(config *SQLObfuscatorConfig) *SQLObfuscator {
-	return &SQLObfuscator{config: config}
+func WithDollarQuotedFunc(dollarQuotedFunc bool) func(*obfuscatorConfig) {
+	return func(c *obfuscatorConfig) {
+		c.DollarQuotedFunc = dollarQuotedFunc
+	}
+}
+
+type Obfuscator struct {
+	config *obfuscatorConfig
+}
+
+func NewObfuscator(opts ...func(*obfuscatorConfig)) *Obfuscator {
+	obfuscator := &Obfuscator{
+		config: &obfuscatorConfig{},
+	}
+
+	for _, opt := range opts {
+		opt(obfuscator.config)
+	}
+
+	return obfuscator
 }
 
 const (
@@ -25,7 +45,7 @@ const (
 
 // Obfuscate takes an input SQL string and returns an obfuscated SQL string.
 // The obfuscator replaces all literal values with a single placeholder
-func (o *SQLObfuscator) Obfuscate(input string) string {
+func (o *Obfuscator) Obfuscate(input string) string {
 	var obfuscatedSQL string
 
 	lexer := New(input)

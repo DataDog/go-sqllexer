@@ -9,7 +9,7 @@ func TestObfuscator(t *testing.T) {
 		input            string
 		want             string
 		replaceDigits    bool
-		DollarQuotedFunc bool
+		dollarQuotedFunc bool
 	}{
 		{
 			input:         "SELECT * FROM users where id = 1",
@@ -69,12 +69,12 @@ func TestObfuscator(t *testing.T) {
 		{
 			input:            "SELECT $func$INSERT INTO table VALUES ('a', 1, 2)$func$ FROM users where id = 1",
 			want:             "SELECT ? FROM users where id = ?",
-			DollarQuotedFunc: false,
+			dollarQuotedFunc: false,
 		},
 		{
 			input:            "SELECT $func$INSERT INTO table VALUES ('a', 1, 2)$func$ FROM users where id = 1",
 			want:             "SELECT $func$INSERT INTO table VALUES (?, ?, ?)$func$ FROM users where id = ?",
-			DollarQuotedFunc: true,
+			dollarQuotedFunc: true,
 		},
 		{
 			input: "SELECT * FROM users where id = $tag$test$tag$",
@@ -313,11 +313,10 @@ func TestObfuscator(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run("", func(t *testing.T) {
-			obfuscatorConfig := &SQLObfuscatorConfig{
-				ReplaceDigits:    tt.replaceDigits,
-				DollarQuotedFunc: tt.DollarQuotedFunc,
-			}
-			obfuscator := NewObfuscator(obfuscatorConfig)
+			obfuscator := NewObfuscator(
+				WithReplaceDigits(tt.replaceDigits),
+				WithDollarQuotedFunc(tt.dollarQuotedFunc),
+			)
 			got := obfuscator.Obfuscate(tt.input)
 			if got != tt.want {
 				t.Errorf("Obfuscate() = %v, want %v", got, tt.want)

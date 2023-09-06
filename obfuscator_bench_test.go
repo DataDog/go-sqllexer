@@ -85,10 +85,9 @@ GROUP BY sales.product_key;
 		{"Complex", ComplexQuery},
 		{"SuperLarge", fmt.Sprintf(superLargeQuery, 1)},
 	}
-	obfuscatorConfig := &SQLObfuscatorConfig{
-		ReplaceDigits: false,
-	}
-	obfuscator := NewObfuscator(obfuscatorConfig)
+	obfuscator := NewObfuscator(
+		WithReplaceDigits(false),
+	)
 
 	for _, bm := range benchmarks {
 		b.Run(bm.name+"/"+strconv.Itoa(len(bm.query)), func(b *testing.B) {

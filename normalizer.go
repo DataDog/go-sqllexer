@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-type SQLNormalizerConfig struct {
+type normalizerConfig struct {
 	DBMS string `json:"dbms"`
 
 	// CollectTables specifies whether the normalizer should also extract the table names that a query addresses
@@ -21,18 +21,56 @@ type SQLNormalizerConfig struct {
 	KeepSQLAlias bool `json:"keep_sql_alias"`
 }
 
+func WithDBMS(dbms string) func(*normalizerConfig) {
+	return func(c *normalizerConfig) {
+		c.DBMS = dbms
+	}
+}
+
+func WithCollectTables(collectTables bool) func(*normalizerConfig) {
+	return func(c *normalizerConfig) {
+		c.CollectTables = collectTables
+	}
+}
+
+func WithCollectCommands(collectCommands bool) func(*normalizerConfig) {
+	return func(c *normalizerConfig) {
+		c.CollectCommands = collectCommands
+	}
+}
+
+func WithCollectComments(collectComments bool) func(*normalizerConfig) {
+	return func(c *normalizerConfig) {
+		c.CollectComments = collectComments
+	}
+}
+
+func WithKeepSQLAlias(keepSQLAlias bool) func(*normalizerConfig) {
+	return func(c *normalizerConfig) {
+		c.KeepSQLAlias = keepSQLAlias
+	}
+}
+
 type NormalizedInfo struct {
 	Tables   []string
 	Comments []string
 	Commands []string
 }
 
-type SQLNormalizer struct {
-	config *SQLNormalizerConfig
+type Normalizer struct {
+	config *normalizerConfig
 }
 
-func NewNormalizer(config *SQLNormalizerConfig) *SQLNormalizer {
-	return &SQLNormalizer{config: config}
+func NewNormalizer(opts ...func(*normalizerConfig)) *Normalizer {
+	normalizer := Normalizer{
+		config: &normalizerConfig{},
+	}
+
+	for _, opt := range opts {
+		opt(normalizer.config)
+	}
+
+	return &normalizer
 }
 
 const (
@@ -43,7 +81,7 @@ const (
 // Normalize takes an input SQL string and returns a normalized SQL string, a NormalizedInfo struct, and an error.
 // The normalizer collapses input SQL into compact format, groups obfuscated values into single placeholder,
 // and collects metadata such as table names, comments, and commands.
-func (n *SQLNormalizer) Normalize(input string) (string, *NormalizedInfo, error) {
+func (n *Normalizer) Normalize(input string) (string, *NormalizedInfo, error) {
 	lexer := New(input)
 
 	var normalizedSQL string

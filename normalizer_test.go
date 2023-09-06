@@ -280,12 +280,12 @@ multiline comment */
 		},
 	}
 
-	normalizer := NewNormalizer(&SQLNormalizerConfig{
-		CollectComments: true,
-		CollectCommands: true,
-		CollectTables:   true,
-		KeepSQLAlias:    false,
-	})
+	normalizer := NewNormalizer(
+		WithCollectComments(true),
+		WithCollectCommands(true),
+		WithCollectTables(true),
+		WithKeepSQLAlias(false),
+	)
 
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
@@ -355,12 +355,12 @@ func TestNormalizerNotCollectMetadata(t *testing.T) {
 		},
 	}
 
-	normalizer := NewNormalizer(&SQLNormalizerConfig{
-		CollectComments: false,
-		CollectCommands: false,
-		CollectTables:   false,
-		KeepSQLAlias:    true,
-	})
+	normalizer := NewNormalizer(
+		WithCollectComments(false),
+		WithCollectCommands(false),
+		WithCollectTables(false),
+		WithKeepSQLAlias(true),
+	)
 
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
@@ -416,9 +416,9 @@ func TestNormalizerFormatting(t *testing.T) {
 		},
 	}
 
-	normalizer := NewNormalizer(&SQLNormalizerConfig{
-		KeepSQLAlias: false,
-	})
+	normalizer := NewNormalizer(
+		WithCollectComments(false),
+	)
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
 			for _, query := range test.queries {
