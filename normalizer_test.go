@@ -7,14 +7,14 @@ import (
 
 func TestNormalizer(t *testing.T) {
 	tests := []struct {
-		input          string
-		want           string
-		normalizedInfo NormalizedInfo
+		input             string
+		want              string
+		statementMetadata StatementMetadata
 	}{
 		{
 			input: "SELECT ?",
 			want:  "SELECT ?",
-			normalizedInfo: NormalizedInfo{
+			statementMetadata: StatementMetadata{
 				Tables:   []string{},
 				Comments: []string{},
 				Commands: []string{"SELECT"},
@@ -26,7 +26,7 @@ func TestNormalizer(t *testing.T) {
 			/* date='12%2F31',key='val' */
 			SELECT * FROM users WHERE id = ?`,
 			want: "SELECT * FROM users WHERE id = ?",
-			normalizedInfo: NormalizedInfo{
+			statementMetadata: StatementMetadata{
 				Tables:   []string{"users"},
 				Comments: []string{"/*dddbs='orders-mysql',dde='dbm-agent-integration',ddps='orders-app',ddpv='7825a16',traceparent='00-000000000000000068e229d784ee697c-569d1b940c1fb3ac-00'*/", "/* date='12%2F31',key='val' */"},
 				Commands: []string{"SELECT"},
@@ -35,7 +35,7 @@ func TestNormalizer(t *testing.T) {
 		{
 			input: "SELECT * FROM users WHERE id IN (?, ?) and name IN ARRAY[?, ?]",
 			want:  "SELECT * FROM users WHERE id IN ( ? ) AND name IN ARRAY [ ? ]",
-			normalizedInfo: NormalizedInfo{
+			statementMetadata: StatementMetadata{
 				Tables:   []string{"users"},
 				Comments: []string{},
 				Commands: []string{"SELECT"},
@@ -49,7 +49,7 @@ func TestNormalizer(t *testing.T) {
 			WHERE ha.org_id = ? AND ha.name = ANY ( ?, ? )
 			`,
 			want: "SELECT h.id, h.org_id, h.name, ha.name, h.created FROM vs?.host h JOIN vs?.host_alias ha ON ha.host_id = h.id WHERE ha.org_id = ? AND ha.name = ANY ( ? )",
-			normalizedInfo: NormalizedInfo{
+			statementMetadata: StatementMetadata{
 				Tables:   []string{"vs?.host", "vs?.host_alias"},
 				Comments: []string{},
 				Commands: []string{"SELECT", "JOIN"},
@@ -58,7 +58,7 @@ func TestNormalizer(t *testing.T) {
 		{
 			input: "/* this is a comment */ SELECT * FROM users WHERE id = ?",
 			want:  "SELECT * FROM users WHERE id = ?",
-			normalizedInfo: NormalizedInfo{
+			statementMetadata: StatementMetadata{
 				Tables:   []string{"users"},
 				Comments: []string{"/* this is a comment */"},
 				Commands: []string{"SELECT"},
@@ -72,7 +72,7 @@ multiline comment */
 			-- this is another comment
 			`,
 			want: "SELECT * FROM users WHERE id = ?",
-			normalizedInfo: NormalizedInfo{
+			statementMetadata: StatementMetadata{
 				Tables:   []string{"users"},
 				Comments: []string{"/* this is a \nmultiline comment */", "/* comment comment */", "-- this is another comment"},
 				Commands: []string{"SELECT"},
@@ -81,7 +81,7 @@ multiline comment */
 		{
 			input: "SELECT u.id as ID, u.name as Name FROM users as u WHERE u.id = ?",
 			want:  "SELECT u.id, u.name FROM users WHERE u.id = ?",
-			normalizedInfo: NormalizedInfo{
+			statementMetadata: StatementMetadata{
 				Tables:   []string{"users"},
 				Comments: []string{},
 				Commands: []string{"SELECT"},
@@ -90,7 +90,7 @@ multiline comment */
 		{
 			input: "UPDATE users SET name = (SELECT name FROM test_users WHERE id = ?) WHERE id = ?",
 			want:  "UPDATE users SET name = ( SELECT name FROM test_users WHERE id = ? ) WHERE id = ?",
-			normalizedInfo: NormalizedInfo{
+			statementMetadata: StatementMetadata{
 				Tables:   []string{"users", "test_users"},
 				Comments: []string{},
 				Commands: []string{"UPDATE", "SELECT"},
@@ -113,7 +113,7 @@ multiline comment */
 				LIMIT ? 
 			) )`,
 			want: "INSERT INTO order_status_change ( dbm_order_id, message, price, state ) VALUES ( ( SELECT id FROM dbm_order WHERE id = ? ) ( SELECT ( t.price * t.quantity * d.discount_percent ) FROM dbm_order o JOIN order_item t ON o.id = t.dbm_order_id JOIN discount d ON d.dbm_item_id = t.id WHERE o.id = ? LIMIT ? ) )",
-			normalizedInfo: NormalizedInfo{
+			statementMetadata: StatementMetadata{
 				Tables:   []string{"order_status_change", "dbm_order", "order_item", "discount"},
 				Comments: []string{"-- random comment"},
 				Commands: []string{"INSERT", "SELECT", "JOIN"},
@@ -122,7 +122,7 @@ multiline comment */
 		{
 			input: "DELETE FROM users WHERE id IN (?, ?)",
 			want:  "DELETE FROM users WHERE id IN ( ? )",
-			normalizedInfo: NormalizedInfo{
+			statementMetadata: StatementMetadata{
 				Tables:   []string{"users"},
 				Comments: []string{},
 				Commands: []string{"DELETE"},
@@ -138,7 +138,7 @@ multiline comment */
 			END
 			`,
 			want: "CREATE PROCEDURE test_procedure ( ) BEGIN SELECT * FROM users WHERE id = ? ; UPDATE test_users SET name = ? WHERE id = ? ; DELETE FROM user? WHERE id = ? ; END",
-			normalizedInfo: NormalizedInfo{
+			statementMetadata: StatementMetadata{
 				Tables:   []string{"users", "test_users", "user?"},
 				Comments: []string{},
 				Commands: []string{"CREATE", "BEGIN", "SELECT", "UPDATE", "DELETE"},
@@ -151,7 +151,7 @@ multiline comment */
 			WHERE org_id IN ( ? ) AND resource_type IN ( ? ) AND meta_key IN ( ? )
 			`,
 			want: "SELECT org_id, resource_type, meta_key, meta_value FROM public.schema_meta WHERE org_id IN ( ? ) AND resource_type IN ( ? ) AND meta_key IN ( ? )",
-			normalizedInfo: NormalizedInfo{
+			statementMetadata: StatementMetadata{
 				Tables:   []string{"public.schema_meta"},
 				Comments: []string{},
 				Commands: []string{"SELECT"},
@@ -161,7 +161,7 @@ multiline comment */
 			// double quoted table name
 			input: `SELECT * FROM "users" WHERE id = ?`,
 			want:  `SELECT * FROM "users" WHERE id = ?`,
-			normalizedInfo: NormalizedInfo{
+			statementMetadata: StatementMetadata{
 				Tables:   []string{`"users"`},
 				Comments: []string{},
 				Commands: []string{"SELECT"},
@@ -171,7 +171,7 @@ multiline comment */
 			// double quoted table name
 			input: `SELECT * FROM "public"."users" WHERE id = ?`,
 			want:  `SELECT * FROM "public"."users" WHERE id = ?`,
-			normalizedInfo: NormalizedInfo{
+			statementMetadata: StatementMetadata{
 				Tables:   []string{`"public"."users"`},
 				Comments: []string{},
 				Commands: []string{"SELECT"},
@@ -193,7 +193,7 @@ multiline comment */
 			WHERE age <= ?;
 			`,
 			want: "WITH cte AS ( SELECT id, name, age FROM person WHERE age > ? ) UPDATE person SET age = ? WHERE id IN ( SELECT id FROM cte ) ; INSERT INTO person ( name, age ) SELECT name, ? FROM cte WHERE age <= ? ;",
-			normalizedInfo: NormalizedInfo{
+			statementMetadata: StatementMetadata{
 				Tables:   []string{"person", "cte"},
 				Comments: []string{},
 				Commands: []string{"SELECT", "UPDATE", "INSERT"},
@@ -202,7 +202,7 @@ multiline comment */
 		{
 			input: "WITH updates AS ( UPDATE metrics_metadata SET metric_type = ? updated = ? :: timestamp, interval = ? unit_id = ? per_unit_id = ? description = ? orientation = ? integration = ? short_name = ? WHERE metric_key = ? AND org_id = ? RETURNING ? ) INSERT INTO metrics_metadata ( org_id, metric_key, metric_type, interval, unit_id, per_unit_id, description, orientation, integration, short_name ) SELECT ? WHERE NOT EXISTS ( SELECT ? FROM updates )",
 			want:  "WITH updates AS ( UPDATE metrics_metadata SET metric_type = ? updated = ? :: timestamp, interval = ? unit_id = ? per_unit_id = ? description = ? orientation = ? integration = ? short_name = ? WHERE metric_key = ? AND org_id = ? RETURNING ? ) INSERT INTO metrics_metadata ( org_id, metric_key, metric_type, interval, unit_id, per_unit_id, description, orientation, integration, short_name ) SELECT ? WHERE NOT EXISTS ( SELECT ? FROM updates )",
-			normalizedInfo: NormalizedInfo{
+			statementMetadata: StatementMetadata{
 				Tables:   []string{"metrics_metadata", "updates"},
 				Comments: []string{},
 				Commands: []string{"UPDATE", "INSERT", "SELECT"},
@@ -213,7 +213,7 @@ multiline comment */
 			/* Multi-line comment */
 			SELECT * FROM clients WHERE (clients.first_name = ?) LIMIT ? BEGIN INSERT INTO owners (created_at, first_name, locked, orders_count, updated_at) VALUES (?, ?, ?, ?, ?) COMMIT`,
 			want: "SELECT * FROM clients WHERE ( clients.first_name = ? ) LIMIT ? BEGIN INSERT INTO owners ( created_at, first_name, locked, orders_count, updated_at ) VALUES ( ? ) COMMIT",
-			normalizedInfo: NormalizedInfo{
+			statementMetadata: StatementMetadata{
 				Tables:   []string{"clients", "owners"},
 				Comments: []string{"/* Multi-line comment */"},
 				Commands: []string{"SELECT", "BEGIN", "INSERT", "COMMIT"},
@@ -225,7 +225,7 @@ multiline comment */
 			-- Another another single line comment
 			GRANT USAGE, DELETE ON SCHEMA datadog TO datadog`,
 			want: "GRANT USAGE, DELETE ON SCHEMA datadog TO datadog",
-			normalizedInfo: NormalizedInfo{
+			statementMetadata: StatementMetadata{
 				Tables:   []string{},
 				Comments: []string{"-- Single line comment", "-- Another single line comment", "-- Another another single line comment"},
 				Commands: []string{"GRANT", "DELETE"},
@@ -235,7 +235,7 @@ multiline comment */
 			input: `-- Testing table value constructor SQL expression
 			SELECT * FROM (VALUES (?, ?)) AS d (id, animal)`,
 			want: "SELECT * FROM ( VALUES ( ? ) ) ( id, animal )",
-			normalizedInfo: NormalizedInfo{
+			statementMetadata: StatementMetadata{
 				Tables:   []string{},
 				Comments: []string{"-- Testing table value constructor SQL expression"},
 				Commands: []string{"SELECT"},
@@ -244,7 +244,7 @@ multiline comment */
 		{
 			input: `ALTER TABLE tabletest DROP COLUMN columna`,
 			want:  "ALTER TABLE tabletest DROP COLUMN columna",
-			normalizedInfo: NormalizedInfo{
+			statementMetadata: StatementMetadata{
 				Tables:   []string{"tabletest"},
 				Comments: []string{},
 				Commands: []string{"ALTER", "DROP"},
@@ -253,7 +253,7 @@ multiline comment */
 		{
 			input: `REVOKE ALL ON SCHEMA datadog FROM datadog`,
 			want:  "REVOKE ALL ON SCHEMA datadog FROM datadog",
-			normalizedInfo: NormalizedInfo{
+			statementMetadata: StatementMetadata{
 				Tables:   []string{"datadog"},
 				Comments: []string{},
 				Commands: []string{"REVOKE"},
@@ -262,7 +262,7 @@ multiline comment */
 		{
 			input: "/* Testing explicit table SQL expression */ WITH T1 AS (SELECT PNO , PNAME , COLOR , WEIGHT , CITY FROM P WHERE CITY = ?), T2 AS (SELECT PNO, PNAME, COLOR, WEIGHT, CITY, ? * WEIGHT AS NEW_WEIGHT, ? AS NEW_CITY FROM T1), T3 AS ( SELECT PNO , PNAME, COLOR, NEW_WEIGHT AS WEIGHT, NEW_CITY AS CITY FROM T2), T4 AS ( TABLE P EXCEPT CORRESPONDING TABLE T1) TABLE T4 UNION CORRESPONDING TABLE T3",
 			want:  "WITH T1 AS ( SELECT PNO, PNAME, COLOR, WEIGHT, CITY FROM P WHERE CITY = ? ), T2 AS ( SELECT PNO, PNAME, COLOR, WEIGHT, CITY, ? * WEIGHT, ? FROM T1 ), T3 AS ( SELECT PNO, PNAME, COLOR, NEW_WEIGHT, NEW_CITY FROM T2 ), T4 AS ( TABLE P EXCEPT CORRESPONDING TABLE T1 ) TABLE T4 UNION CORRESPONDING TABLE T3",
-			normalizedInfo: NormalizedInfo{
+			statementMetadata: StatementMetadata{
 				Tables:   []string{"P", "T1", "T2", "T4", "T3"},
 				Comments: []string{"/* Testing explicit table SQL expression */"},
 				Commands: []string{"SELECT"},
@@ -272,7 +272,7 @@ multiline comment */
 			// truncated
 			input: "SELECT * FROM users WHERE id =",
 			want:  "SELECT * FROM users WHERE id =",
-			normalizedInfo: NormalizedInfo{
+			statementMetadata: StatementMetadata{
 				Tables:   []string{"users"},
 				Comments: []string{},
 				Commands: []string{"SELECT"},
@@ -289,23 +289,23 @@ multiline comment */
 
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			got, normalizedInfo, err := normalizer.Normalize(test.input)
+			got, statementMetadata, err := normalizer.Normalize(test.input)
 			if err != nil {
 				t.Errorf("error during normalization: %v", err)
 			}
 			if got != test.want {
 				t.Errorf("got %q, want %q", got, test.want)
 			}
-			if !reflect.DeepEqual(normalizedInfo.Commands, test.normalizedInfo.Commands) {
-				t.Errorf("got %v, want %v", normalizedInfo.Commands, test.normalizedInfo.Commands)
+			if !reflect.DeepEqual(statementMetadata.Commands, test.statementMetadata.Commands) {
+				t.Errorf("got %v, want %v", statementMetadata.Commands, test.statementMetadata.Commands)
 			}
-			if !reflect.DeepEqual(normalizedInfo.Comments, test.normalizedInfo.Comments) {
-				t.Errorf("got %v, want %v", normalizedInfo.Comments, test.normalizedInfo.Comments)
-				t.Errorf(normalizedInfo.Comments[0])
-				t.Errorf(test.normalizedInfo.Comments[0])
+			if !reflect.DeepEqual(statementMetadata.Comments, test.statementMetadata.Comments) {
+				t.Errorf("got %v, want %v", statementMetadata.Comments, test.statementMetadata.Comments)
+				t.Errorf(statementMetadata.Comments[0])
+				t.Errorf(test.statementMetadata.Comments[0])
 			}
-			if !reflect.DeepEqual(normalizedInfo.Tables, test.normalizedInfo.Tables) {
-				t.Errorf("got %v, want %v", normalizedInfo.Tables, test.normalizedInfo.Tables)
+			if !reflect.DeepEqual(statementMetadata.Tables, test.statementMetadata.Tables) {
+				t.Errorf("got %v, want %v", statementMetadata.Tables, test.statementMetadata.Tables)
 			}
 		})
 	}
@@ -313,14 +313,14 @@ multiline comment */
 
 func TestNormalizerNotCollectMetadata(t *testing.T) {
 	tests := []struct {
-		input          string
-		want           string
-		normalizedInfo NormalizedInfo
+		input             string
+		want              string
+		statementMetadata StatementMetadata
 	}{
 		{
 			input: "SELECT ?",
 			want:  "SELECT ?",
-			normalizedInfo: NormalizedInfo{
+			statementMetadata: StatementMetadata{
 				Tables:   []string{},
 				Comments: []string{},
 				Commands: []string{},
@@ -329,7 +329,7 @@ func TestNormalizerNotCollectMetadata(t *testing.T) {
 		{
 			input: "SELECT * FROM users WHERE id = ?",
 			want:  "SELECT * FROM users WHERE id = ?",
-			normalizedInfo: NormalizedInfo{
+			statementMetadata: StatementMetadata{
 				Tables:   []string{},
 				Comments: []string{},
 				Commands: []string{},
@@ -338,7 +338,7 @@ func TestNormalizerNotCollectMetadata(t *testing.T) {
 		{
 			input: "SELECT id as ID, name as Name FROM users WHERE id IN (?, ?)",
 			want:  "SELECT id AS ID, name AS Name FROM users WHERE id IN ( ? )",
-			normalizedInfo: NormalizedInfo{
+			statementMetadata: StatementMetadata{
 				Tables:   []string{},
 				Comments: []string{},
 				Commands: []string{},
@@ -347,7 +347,7 @@ func TestNormalizerNotCollectMetadata(t *testing.T) {
 		{
 			input: `TRUNCATE TABLE datadog`,
 			want:  "TRUNCATE TABLE datadog",
-			normalizedInfo: NormalizedInfo{
+			statementMetadata: StatementMetadata{
 				Tables:   []string{},
 				Comments: []string{},
 				Commands: []string{},
@@ -364,21 +364,21 @@ func TestNormalizerNotCollectMetadata(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			got, normalizedInfo, err := normalizer.Normalize(test.input)
+			got, statementMetadata, err := normalizer.Normalize(test.input)
 			if err != nil {
 				t.Errorf("error during normalization: %v", err)
 			}
 			if got != test.want {
 				t.Errorf("got %q, want %q", got, test.want)
 			}
-			if !reflect.DeepEqual(normalizedInfo.Commands, test.normalizedInfo.Commands) {
-				t.Errorf("got %v, want %v", normalizedInfo.Commands, test.normalizedInfo.Commands)
+			if !reflect.DeepEqual(statementMetadata.Commands, test.statementMetadata.Commands) {
+				t.Errorf("got %v, want %v", statementMetadata.Commands, test.statementMetadata.Commands)
 			}
-			if !reflect.DeepEqual(normalizedInfo.Comments, test.normalizedInfo.Comments) {
-				t.Errorf("got %v, want %v", normalizedInfo.Comments, test.normalizedInfo.Comments)
+			if !reflect.DeepEqual(statementMetadata.Comments, test.statementMetadata.Comments) {
+				t.Errorf("got %v, want %v", statementMetadata.Comments, test.statementMetadata.Comments)
 			}
-			if !reflect.DeepEqual(normalizedInfo.Tables, test.normalizedInfo.Tables) {
-				t.Errorf("got %v, want %v", normalizedInfo.Tables, test.normalizedInfo.Tables)
+			if !reflect.DeepEqual(statementMetadata.Tables, test.statementMetadata.Tables) {
+				t.Errorf("got %v, want %v", statementMetadata.Tables, test.statementMetadata.Tables)
 			}
 		})
 	}

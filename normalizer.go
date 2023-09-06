@@ -51,7 +51,7 @@ func WithKeepSQLAlias(keepSQLAlias bool) func(*normalizerConfig) {
 	}
 }
 
-type NormalizedInfo struct {
+type StatementMetadata struct {
 	Tables   []string
 	Comments []string
 	Commands []string
@@ -78,14 +78,14 @@ const (
 	BracketPlaceholder = "[ ? ]"
 )
 
-// Normalize takes an input SQL string and returns a normalized SQL string, a NormalizedInfo struct, and an error.
+// Normalize takes an input SQL string and returns a normalized SQL string, a StatementMetadata struct, and an error.
 // The normalizer collapses input SQL into compact format, groups obfuscated values into single placeholder,
 // and collects metadata such as table names, comments, and commands.
-func (n *Normalizer) Normalize(input string) (normalized string, info *NormalizedInfo, err error) {
+func (n *Normalizer) Normalize(input string) (normalized string, info *StatementMetadata, err error) {
 	lexer := New(input)
 
 	var normalizedSQL string
-	var normalizedInfo = &NormalizedInfo{
+	var statementMetadata = &StatementMetadata{
 		Tables:   []string{},
 		Comments: []string{},
 		Commands: []string{},
@@ -97,16 +97,16 @@ func (n *Normalizer) Normalize(input string) (normalized string, info *Normalize
 		if token.Type == COMMENT || token.Type == MULTILINE_COMMENT {
 			// Collect comments
 			if n.config.CollectComments {
-				normalizedInfo.Comments = append(normalizedInfo.Comments, token.Value)
+				statementMetadata.Comments = append(statementMetadata.Comments, token.Value)
 			}
 		} else if token.Type == IDENT {
 			if isCommand(strings.ToUpper(token.Value)) && n.config.CollectCommands {
 				// Collect commands
-				normalizedInfo.Commands = append(normalizedInfo.Commands, strings.ToUpper(token.Value))
+				statementMetadata.Commands = append(statementMetadata.Commands, strings.ToUpper(token.Value))
 			} else if lastToken != nil && isTableIndicator(strings.ToUpper(lastToken.Value)) {
 				// Collect table names
 				if n.config.CollectTables {
-					normalizedInfo.Tables = append(normalizedInfo.Tables, token.Value)
+					statementMetadata.Tables = append(statementMetadata.Tables, token.Value)
 				}
 			}
 		}
@@ -132,9 +132,9 @@ func (n *Normalizer) Normalize(input string) (normalized string, info *Normalize
 	}
 
 	// Dedupe collected metadata
-	dedupeNormalizedInfo(normalizedInfo)
+	dedupeStatementMetadata(statementMetadata)
 
-	return strings.TrimSpace(normalizedSQL), normalizedInfo, nil
+	return strings.TrimSpace(normalizedSQL), statementMetadata, nil
 }
 
 func writeNormalizedSQL(token *Token, lastToken *Token, normalizedSQL *string) {
@@ -191,7 +191,7 @@ func dedupeCollectedMetadata(metadata []string) []string {
 	return dedupedMetadata
 }
 
-func dedupeNormalizedInfo(info *NormalizedInfo) {
+func dedupeStatementMetadata(info *StatementMetadata) {
 	info.Tables = dedupeCollectedMetadata(info.Tables)
 	info.Comments = dedupeCollectedMetadata(info.Comments)
 	info.Commands = dedupeCollectedMetadata(info.Commands)

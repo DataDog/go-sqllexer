@@ -69,7 +69,7 @@ func main() {
         WithCollectTables(true),
         WithKeepSQLAlias(false),
     )
-    normalized, normalizedInfo, err := normalizer.Normalize(query)
+    normalized, statementMetadata, err := normalizer.Normalize(query)
     // "SELECT * FROM users WHERE id in (?)"
     fmt.Println(normalized)
 }
