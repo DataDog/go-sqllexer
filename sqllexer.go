@@ -34,7 +34,7 @@ type SQLLexer struct {
 	start  int    // the start position of the current token
 }
 
-func NewSQLLexer(input string) *SQLLexer {
+func New(input string) *SQLLexer {
 	return &SQLLexer{src: input}
 }
 

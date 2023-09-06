@@ -88,7 +88,7 @@ GROUP BY sales.product_key;
 	obfuscatorConfig := &SQLObfuscatorConfig{
 		ReplaceDigits: false,
 	}
-	obfuscator := NewSQLObfuscator(obfuscatorConfig)
+	obfuscator := NewObfuscator(obfuscatorConfig)
 
 	for _, bm := range benchmarks {
 		b.Run(bm.name+"/"+strconv.Itoa(len(bm.query)), func(b *testing.B) {

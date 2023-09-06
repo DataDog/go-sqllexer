@@ -31,7 +31,7 @@ type SQLNormalizer struct {
 	config *SQLNormalizerConfig
 }
 
-func NewSQLNormalizer(config *SQLNormalizerConfig) *SQLNormalizer {
+func NewNormalizer(config *SQLNormalizerConfig) *SQLNormalizer {
 	return &SQLNormalizer{config: config}
 }
 
@@ -44,7 +44,7 @@ const (
 // The normalizer collapses input SQL into compact format, groups obfuscated values into single placeholder,
 // and collects metadata such as table names, comments, and commands.
 func (n *SQLNormalizer) Normalize(input string) (string, *NormalizedInfo, error) {
-	lexer := NewSQLLexer(input)
+	lexer := New(input)
 
 	var normalizedSQL string
 	var normalizedInfo = &NormalizedInfo{

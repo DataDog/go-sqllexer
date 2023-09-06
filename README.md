@@ -26,7 +26,7 @@ import "github.com/DataDog/go-sqllexer"
 
 func main() {
     query := "SELECT * FROM users WHERE id = 1"
-    lexer := NewSQLLexer(query)
+    lexer := New(query)
     tokens := lexer.ScanAll()
     for _, token := range tokens {
         fmt.Println(token)
@@ -44,7 +44,7 @@ import (
 
 func main() {
     query := "SELECT * FROM users WHERE id = 1"
-    obfuscator := NewSQLObfuscator(&SQLObfuscatorConfig{})
+    obfuscator := NewObfuscator(&SQLObfuscatorConfig{})
     obfuscated := obfuscator.Obfuscate(query)
     // "SELECT * FROM users WHERE id = ?"
     fmt.Println(obfuscated)
@@ -63,7 +63,7 @@ import (
 
 func main() {
     query := "SELECT * FROM users WHERE id in (?, ?)"
-    normalizer := NewSQLNormalizer(&SQLNormalizerConfig{
+    normalizer := NewNormalizer(&SQLNormalizerConfig{
         CollectComments: true,
         CollectCommands: true,
         CollectTables:      true,

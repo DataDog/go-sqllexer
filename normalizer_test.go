@@ -280,7 +280,7 @@ multiline comment */
 		},
 	}
 
-	normalizer := NewSQLNormalizer(&SQLNormalizerConfig{
+	normalizer := NewNormalizer(&SQLNormalizerConfig{
 		CollectComments: true,
 		CollectCommands: true,
 		CollectTables:   true,
@@ -355,7 +355,7 @@ func TestNormalizerNotCollectMetadata(t *testing.T) {
 		},
 	}
 
-	normalizer := NewSQLNormalizer(&SQLNormalizerConfig{
+	normalizer := NewNormalizer(&SQLNormalizerConfig{
 		CollectComments: false,
 		CollectCommands: false,
 		CollectTables:   false,
@@ -416,7 +416,7 @@ func TestNormalizerFormatting(t *testing.T) {
 		},
 	}
 
-	normalizer := NewSQLNormalizer(&SQLNormalizerConfig{
+	normalizer := NewNormalizer(&SQLNormalizerConfig{
 		KeepSQLAlias: false,
 	})
 	for _, test := range tests {

@@ -14,7 +14,7 @@ type SQLObfuscator struct {
 	config *SQLObfuscatorConfig
 }
 
-func NewSQLObfuscator(config *SQLObfuscatorConfig) *SQLObfuscator {
+func NewObfuscator(config *SQLObfuscatorConfig) *SQLObfuscator {
 	return &SQLObfuscator{config: config}
 }
 
@@ -28,7 +28,7 @@ const (
 func (o *SQLObfuscator) Obfuscate(input string) string {
 	var obfuscatedSQL string
 
-	lexer := NewSQLLexer(input)
+	lexer := New(input)
 	for token := range lexer.ScanAllTokens() {
 		switch token.Type {
 		case NUMBER:

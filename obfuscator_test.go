@@ -317,7 +317,7 @@ func TestObfuscator(t *testing.T) {
 				ReplaceDigits:    tt.replaceDigits,
 				DollarQuotedFunc: tt.DollarQuotedFunc,
 			}
-			obfuscator := NewSQLObfuscator(obfuscatorConfig)
+			obfuscator := NewObfuscator(obfuscatorConfig)
 			got := obfuscator.Obfuscate(tt.input)
 			if got != tt.want {
 				t.Errorf("Obfuscate() = %v, want %v", got, tt.want)
