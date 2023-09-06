@@ -81,7 +81,7 @@ const (
 // Normalize takes an input SQL string and returns a normalized SQL string, a NormalizedInfo struct, and an error.
 // The normalizer collapses input SQL into compact format, groups obfuscated values into single placeholder,
 // and collects metadata such as table names, comments, and commands.
-func (n *Normalizer) Normalize(input string) (string, *NormalizedInfo, error) {
+func (n *Normalizer) Normalize(input string) (normalized string, info *NormalizedInfo, err error) {
 	lexer := New(input)
 
 	var normalizedSQL string
