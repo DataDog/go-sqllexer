@@ -1,6 +1,7 @@
 package sqllexer
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -480,4 +481,25 @@ func TestGroupObfuscatedValues(t *testing.T) {
 			}
 		})
 	}
+}
+
+func ExampleNormalizer() {
+	normalizer := NewNormalizer(
+		WithCollectComments(true),
+		WithCollectCommands(true),
+		WithCollectTables(true),
+		WithKeepSQLAlias(false),
+	)
+
+	normalizedSQL, statementMetadata, _ := normalizer.Normalize(
+		`
+		/* this is a comment */
+		SELECT * FROM users WHERE id in (?, ?)
+		`,
+	)
+
+	fmt.Println(normalizedSQL)
+	fmt.Println(statementMetadata)
+	// Output: SELECT * FROM users WHERE id IN ( ? )
+	// &{[users] [/* this is a comment */] [SELECT]}
 }

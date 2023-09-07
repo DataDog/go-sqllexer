@@ -1,6 +1,7 @@
 package sqllexer
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -323,4 +324,11 @@ func TestObfuscator(t *testing.T) {
 			}
 		})
 	}
+}
+
+func ExampleObfuscator() {
+	obfuscator := NewObfuscator()
+	obfuscated := obfuscator.Obfuscate("SELECT * FROM users WHERE id = 1")
+	fmt.Println(obfuscated)
+	// Output: SELECT * FROM users WHERE id = ?
 }

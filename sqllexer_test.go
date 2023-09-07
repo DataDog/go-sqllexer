@@ -1,6 +1,7 @@
 package sqllexer
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -423,4 +424,12 @@ func TestLexer(t *testing.T) {
 			}
 		})
 	}
+}
+
+func ExampleLexer() {
+	query := "SELECT * FROM users WHERE id = 1"
+	lexer := New(query)
+	tokens := lexer.ScanAll()
+	fmt.Println(tokens)
+	// Output: [{6 SELECT} {2  } {8 *} {2  } {6 FROM} {2  } {6 users} {2  } {6 WHERE} {2  } {6 id} {2  } {7 =} {2  } {5 1}]
 }

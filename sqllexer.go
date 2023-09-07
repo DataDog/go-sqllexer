@@ -28,18 +28,18 @@ type Token struct {
 }
 
 // SQL Lexer inspired from Rob Pike's talk on Lexical Scanning in Go
-type SQLLexer struct {
+type Lexer struct {
 	src    string // the input src string
 	cursor int    // the current position of the cursor
 	start  int    // the start position of the current token
 }
 
-func New(input string) *SQLLexer {
-	return &SQLLexer{src: input}
+func New(input string) *Lexer {
+	return &Lexer{src: input}
 }
 
 // ScanAll scans the entire input string and returns a slice of tokens.
-func (s *SQLLexer) ScanAll() []Token {
+func (s *Lexer) ScanAll() []Token {
 	var tokens []Token
 	for {
 		token := s.Scan()
@@ -54,7 +54,7 @@ func (s *SQLLexer) ScanAll() []Token {
 
 // ScanAllTokens scans the entire input string and returns a channel of tokens.
 // Use this if you want to process the tokens as they are scanned.
-func (s *SQLLexer) ScanAllTokens() <-chan *Token {
+func (s *Lexer) ScanAllTokens() <-chan *Token {
 	tokenCh := make(chan *Token)
 
 	go func() {
@@ -74,7 +74,7 @@ func (s *SQLLexer) ScanAllTokens() <-chan *Token {
 }
 
 // Scan scans the next token and returns it.
-func (s *SQLLexer) Scan() Token {
+func (s *Lexer) Scan() Token {
 	ch := s.peek()
 	switch {
 	case isWhitespace(ch):
@@ -124,7 +124,7 @@ func (s *SQLLexer) Scan() Token {
 }
 
 // lookAhead returns the rune n positions ahead of the cursor.
-func (s *SQLLexer) lookAhead(n int) rune {
+func (s *Lexer) lookAhead(n int) rune {
 	if s.cursor+n >= len(s.src) || s.cursor+n < 0 {
 		return 0
 	}
@@ -132,7 +132,7 @@ func (s *SQLLexer) lookAhead(n int) rune {
 }
 
 // peekBy returns a slice of runes n positions ahead of the cursor.
-func (s *SQLLexer) peekBy(n int) []rune {
+func (s *Lexer) peekBy(n int) []rune {
 	if s.cursor+n >= len(s.src) || s.cursor+n < 0 {
 		return []rune{}
 	}
@@ -140,12 +140,12 @@ func (s *SQLLexer) peekBy(n int) []rune {
 }
 
 // peek returns the rune at the cursor position.
-func (s *SQLLexer) peek() rune {
+func (s *Lexer) peek() rune {
 	return s.lookAhead(0)
 }
 
 // nextBy advances the cursor by n positions and returns the rune at the cursor position.
-func (s *SQLLexer) nextBy(n int) rune {
+func (s *Lexer) nextBy(n int) rune {
 	// advance the cursor by n and return the rune at the cursor position
 	if s.cursor+n > len(s.src) {
 		return 0
@@ -158,11 +158,11 @@ func (s *SQLLexer) nextBy(n int) rune {
 }
 
 // next advances the cursor by 1 position and returns the rune at the cursor position.
-func (s *SQLLexer) next() rune {
+func (s *Lexer) next() rune {
 	return s.nextBy(1)
 }
 
-func (s *SQLLexer) scanNumber() Token {
+func (s *Lexer) scanNumber() Token {
 	s.start = s.cursor
 	ch := s.peek()
 	nextCh := s.lookAhead(1)
@@ -195,7 +195,7 @@ func (s *SQLLexer) scanNumber() Token {
 	return Token{NUMBER, s.src[s.start:s.cursor]}
 }
 
-func (s *SQLLexer) scanHexNumber() Token {
+func (s *Lexer) scanHexNumber() Token {
 	s.start = s.cursor
 	s.nextBy(2) // consume the leading 0x
 	for digitVal(s.peek()) < 16 {
@@ -204,7 +204,7 @@ func (s *SQLLexer) scanHexNumber() Token {
 	return Token{NUMBER, s.src[s.start:s.cursor]}
 }
 
-func (s *SQLLexer) scanOctalNumber() Token {
+func (s *Lexer) scanOctalNumber() Token {
 	s.start = s.cursor
 	s.next() // consume the leading 0
 	for digitVal(s.peek()) < 8 {
@@ -213,7 +213,7 @@ func (s *SQLLexer) scanOctalNumber() Token {
 	return Token{NUMBER, s.src[s.start:s.cursor]}
 }
 
-func (s *SQLLexer) scanString() Token {
+func (s *Lexer) scanString() Token {
 	s.start = s.cursor
 	s.next() // consume the opening quote
 	for {
@@ -241,7 +241,7 @@ func (s *SQLLexer) scanString() Token {
 	return Token{STRING, s.src[s.start:s.cursor]}
 }
 
-func (s *SQLLexer) scanIdentifier() Token {
+func (s *Lexer) scanIdentifier() Token {
 	// NOTE: this func does not distinguish between SQL keywords and identifiers
 	s.start = s.cursor
 	ch := s.peek()
@@ -252,7 +252,7 @@ func (s *SQLLexer) scanIdentifier() Token {
 	return Token{IDENT, s.src[s.start:s.cursor]}
 }
 
-func (s *SQLLexer) scanDoubleQuotedIdentifier() Token {
+func (s *Lexer) scanDoubleQuotedIdentifier() Token {
 	s.start = s.cursor
 	s.next() // consume the opening quote
 	for {
@@ -276,7 +276,7 @@ func (s *SQLLexer) scanDoubleQuotedIdentifier() Token {
 	return Token{IDENT, s.src[s.start:s.cursor]}
 }
 
-func (s *SQLLexer) scanWhitespace() Token {
+func (s *Lexer) scanWhitespace() Token {
 	// scan whitespace, tab, newline, carriage return
 	s.start = s.cursor
 	for isWhitespace(s.peek()) {
@@ -285,7 +285,7 @@ func (s *SQLLexer) scanWhitespace() Token {
 	return Token{WS, s.src[s.start:s.cursor]}
 }
 
-func (s *SQLLexer) scanOperator() Token {
+func (s *Lexer) scanOperator() Token {
 	s.start = s.cursor
 	for isOperator(s.peek()) {
 		s.next()
@@ -293,13 +293,13 @@ func (s *SQLLexer) scanOperator() Token {
 	return Token{OPERATOR, s.src[s.start:s.cursor]}
 }
 
-func (s *SQLLexer) scanWildcard() Token {
+func (s *Lexer) scanWildcard() Token {
 	s.start = s.cursor
 	s.next()
 	return Token{WILDCARD, s.src[s.start:s.cursor]}
 }
 
-func (s *SQLLexer) scanSingleLineComment() Token {
+func (s *Lexer) scanSingleLineComment() Token {
 	s.start = s.cursor
 	for s.peek() != '\n' && !isEOF(s.peek()) {
 		s.next()
@@ -307,7 +307,7 @@ func (s *SQLLexer) scanSingleLineComment() Token {
 	return Token{COMMENT, s.src[s.start:s.cursor]}
 }
 
-func (s *SQLLexer) scanMultiLineComment() Token {
+func (s *Lexer) scanMultiLineComment() Token {
 	s.start = s.cursor
 	s.nextBy(2) // consume the opening slash and asterisk
 	for {
@@ -326,13 +326,13 @@ func (s *SQLLexer) scanMultiLineComment() Token {
 	return Token{MULTILINE_COMMENT, s.src[s.start:s.cursor]}
 }
 
-func (s *SQLLexer) scanPunctuation() Token {
+func (s *Lexer) scanPunctuation() Token {
 	s.start = s.cursor
 	s.next()
 	return Token{PUNCTUATION, s.src[s.start:s.cursor]}
 }
 
-func (s *SQLLexer) scanDollarQuotedFunction() Token {
+func (s *Lexer) scanDollarQuotedFunction() Token {
 	s.start = s.cursor
 	s.nextBy(6) // consume the opening dollar and the function name
 	for {
@@ -349,7 +349,7 @@ func (s *SQLLexer) scanDollarQuotedFunction() Token {
 	return Token{DOLLAR_QUOTED_FUNCTION, s.src[s.start:s.cursor]}
 }
 
-func (s *SQLLexer) scanDollarQuotedString() Token {
+func (s *Lexer) scanDollarQuotedString() Token {
 	s.start = s.cursor
 	s.next() // consume the dollar sign
 	dollars := 1
@@ -375,7 +375,7 @@ func (s *SQLLexer) scanDollarQuotedString() Token {
 	return Token{DOLLAR_QUOTED_STRING, s.src[s.start:s.cursor]}
 }
 
-func (s *SQLLexer) scanNumberedParameter() Token {
+func (s *Lexer) scanNumberedParameter() Token {
 	s.start = s.cursor
 	s.next() // consume the dollar sign
 	for {
@@ -388,7 +388,7 @@ func (s *SQLLexer) scanNumberedParameter() Token {
 	return Token{NUMBERED_PARAMETER, s.src[s.start:s.cursor]}
 }
 
-func (s *SQLLexer) scanUnknown() Token {
+func (s *Lexer) scanUnknown() Token {
 	// When we see an unknown token, we advance the cursor until we see something that looks like a token boundary.
 	s.start = s.cursor
 	s.next()
