@@ -3,6 +3,8 @@ package sqllexer
 import (
 	"fmt"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestObfuscator(t *testing.T) {
@@ -319,9 +321,7 @@ func TestObfuscator(t *testing.T) {
 				WithDollarQuotedFunc(tt.dollarQuotedFunc),
 			)
 			got := obfuscator.Obfuscate(tt.input)
-			if got != tt.expected {
-				t.Errorf("Obfuscate() = %v, expected %v", got, tt.expected)
-			}
+			assert.Equal(t, got, tt.expected)
 		})
 	}
 }

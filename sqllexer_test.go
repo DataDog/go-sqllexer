@@ -3,6 +3,8 @@ package sqllexer
 import (
 	"fmt"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestLexer(t *testing.T) {
@@ -411,17 +413,7 @@ func TestLexer(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			lexer := New(tt.input)
 			tokens := lexer.ScanAll()
-			if len(tokens) != len(tt.expected) {
-				t.Errorf("got %d tokens, expected %d", len(tokens), len(tt.expected))
-			}
-			for i, token := range tokens {
-				if token.Type != tt.expected[i].Type {
-					t.Errorf("got token type %d, expected %d", token.Type, tt.expected[i].Type)
-				}
-				if token.Value != tt.expected[i].Value {
-					t.Errorf("got token value %s, expected %s", token.Value, tt.expected[i].Value)
-				}
-			}
+			assert.Equal(t, tokens, tt.expected)
 		})
 	}
 }

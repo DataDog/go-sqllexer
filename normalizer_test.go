@@ -292,12 +292,8 @@ multiline comment */
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
 			got, statementMetadata, err := normalizer.Normalize(test.input)
-			if err != nil {
-				t.Errorf("error during normalization: %v", err)
-			}
-			if got != test.expected {
-				t.Errorf("got %q, expected %q", got, test.expected)
-			}
+			assert.NoError(t, err)
+			assert.Equal(t, got, test.expected)
 			assert.Equal(t, statementMetadata, &test.statementMetadata)
 		})
 	}
@@ -357,12 +353,8 @@ func TestNormalizerNotCollectMetadata(t *testing.T) {
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
 			got, statementMetadata, err := normalizer.Normalize(test.input)
-			if err != nil {
-				t.Errorf("error during normalization: %v", err)
-			}
-			if got != test.expected {
-				t.Errorf("got %q, expected %q", got, test.expected)
-			}
+			assert.NoError(t, err)
+			assert.Equal(t, got, test.expected)
 			assert.Equal(t, statementMetadata, &test.statementMetadata)
 		})
 	}
@@ -407,12 +399,8 @@ func TestNormalizerFormatting(t *testing.T) {
 		t.Run("", func(t *testing.T) {
 			for _, query := range test.queries {
 				got, _, err := normalizer.Normalize(query)
-				if err != nil {
-					t.Errorf("error during normalization: %v", err)
-				}
-				if got != test.expected {
-					t.Errorf("got %q, expected %q", got, test.expected)
-				}
+				assert.NoError(t, err)
+				assert.Equal(t, got, test.expected)
 			}
 		})
 	}
@@ -476,12 +464,8 @@ func TestNormalizerRepeatedExecution(t *testing.T) {
 			input := test.input
 			for i := 0; i < 10; i++ {
 				got, statementMetadata, err := normalizer.Normalize(input)
-				if err != nil {
-					t.Errorf("error during normalization: %v", err)
-				}
-				if got != test.expected {
-					t.Errorf("got %q, expected %q", got, test.expected)
-				}
+				assert.NoError(t, err)
+				assert.Equal(t, got, test.expected)
 				assert.Equal(t, statementMetadata.Commands, test.statementMetadata.Commands)
 				assert.Equal(t, statementMetadata.Tables, test.statementMetadata.Tables)
 				// comments are stripped after the first execution
@@ -554,9 +538,7 @@ func TestGroupObfuscatedValues(t *testing.T) {
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
 			got := groupObfuscatedValues(test.input)
-			if got != test.expected {
-				t.Errorf("got %q, expected %q", got, test.expected)
-			}
+			assert.Equal(t, got, test.expected)
 		})
 	}
 }
