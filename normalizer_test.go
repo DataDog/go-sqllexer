@@ -418,6 +418,84 @@ func TestNormalizerFormatting(t *testing.T) {
 	}
 }
 
+func TestNormalizerRepeatedExecution(t *testing.T) {
+	// This test is to ensure that repeated executions of the normalizer
+	// should always produce the same normalized SQL.
+	// This is also a good test to normalize a previous normalized SQL.
+	tests := []struct {
+		input             string
+		expected          string
+		statementMetadata StatementMetadata
+	}{
+		{
+			input:    "SELECT * FROM users WHERE id = ?",
+			expected: "SELECT * FROM users WHERE id = ?",
+			statementMetadata: StatementMetadata{
+				Tables:   []string{"users"},
+				Comments: []string{},
+				Commands: []string{"SELECT"},
+			},
+		},
+		{
+			input:    "SELECT * FROM users WHERE id IN (?, ?)",
+			expected: "SELECT * FROM users WHERE id IN ( ? )",
+			statementMetadata: StatementMetadata{
+				Tables:   []string{"users"},
+				Comments: []string{},
+				Commands: []string{"SELECT"},
+			},
+		},
+		{
+			input: `
+			/* this is a comment */
+			SELECT h.id, h.org_id, h.name, ha.name as alias, h.created`,
+			expected: "SELECT h.id, h.org_id, h.name, ha.name, h.created",
+			statementMetadata: StatementMetadata{
+				Tables:   []string{},
+				Comments: []string{"/* this is a comment */"},
+				Commands: []string{"SELECT"},
+			},
+		},
+		{
+			input:    "SELECT u.id as ID, u.name as Name FROM users as u WHERE u.id = ?",
+			expected: "SELECT u.id, u.name FROM users WHERE u.id = ?",
+			statementMetadata: StatementMetadata{
+				Tables:   []string{"users"},
+				Comments: []string{},
+				Commands: []string{"SELECT"},
+			},
+		},
+	}
+	normalizer := NewNormalizer(
+		WithCollectCommands(true),
+		WithCollectTables(true),
+		WithCollectComments(true),
+	)
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			input := test.input
+			for i := 0; i < 10; i++ {
+				got, statementMetadata, err := normalizer.Normalize(input)
+				if err != nil {
+					t.Errorf("error during normalization: %v", err)
+				}
+				if got != test.expected {
+					t.Errorf("got %q, expected %q", got, test.expected)
+				}
+				assert.Equal(t, statementMetadata.Commands, test.statementMetadata.Commands)
+				assert.Equal(t, statementMetadata.Tables, test.statementMetadata.Tables)
+				// comments are stripped after the first execution
+				if i == 0 {
+					assert.Equal(t, statementMetadata.Comments, test.statementMetadata.Comments)
+				} else {
+					assert.Equal(t, statementMetadata.Comments, []string{})
+				}
+				input = got
+			}
+		})
+	}
+}
+
 func TestGroupObfuscatedValues(t *testing.T) {
 	tests := []struct {
 		input    string
