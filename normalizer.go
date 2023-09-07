@@ -110,7 +110,7 @@ func (n *Normalizer) Normalize(input string) (normalized string, info *Statement
 			}
 		}
 
-		normalizedSQL = writeNormalizedSQL(token, lastToken, normalizedSQL)
+		normalizedSQL = normalizeSQL(token, lastToken, normalizedSQL)
 
 		// TODO: We rely on the WS token to determine if we should add a whitespace
 		// This is not ideal, as SQLs with slightly different formatting will NOT be normalized into single family
@@ -136,7 +136,7 @@ func (n *Normalizer) Normalize(input string) (normalized string, info *Statement
 	return strings.TrimSpace(normalizedSQL), statementMetadata, nil
 }
 
-func writeNormalizedSQL(token *Token, lastToken *Token, statement string) string {
+func normalizeSQL(token *Token, lastToken *Token, statement string) string {
 	if token.Type == WS || token.Type == COMMENT || token.Type == MULTILINE_COMMENT {
 		// We don't rely on the WS token to determine if we should add a whitespace
 		return statement
