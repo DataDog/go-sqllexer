@@ -1,8 +1,9 @@
 package sqllexer
 
 import (
-	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNormalizer(t *testing.T) {
@@ -296,17 +297,7 @@ multiline comment */
 			if got != test.expected {
 				t.Errorf("got %q, expected %q", got, test.expected)
 			}
-			if !reflect.DeepEqual(statementMetadata.Commands, test.statementMetadata.Commands) {
-				t.Errorf("got %v, expected %v", statementMetadata.Commands, test.statementMetadata.Commands)
-			}
-			if !reflect.DeepEqual(statementMetadata.Comments, test.statementMetadata.Comments) {
-				t.Errorf("got %v, expected %v", statementMetadata.Comments, test.statementMetadata.Comments)
-				t.Errorf(statementMetadata.Comments[0])
-				t.Errorf(test.statementMetadata.Comments[0])
-			}
-			if !reflect.DeepEqual(statementMetadata.Tables, test.statementMetadata.Tables) {
-				t.Errorf("got %v, expected %v", statementMetadata.Tables, test.statementMetadata.Tables)
-			}
+			assert.Equal(t, statementMetadata, &test.statementMetadata)
 		})
 	}
 }
@@ -371,15 +362,7 @@ func TestNormalizerNotCollectMetadata(t *testing.T) {
 			if got != test.expected {
 				t.Errorf("got %q, expected %q", got, test.expected)
 			}
-			if !reflect.DeepEqual(statementMetadata.Commands, test.statementMetadata.Commands) {
-				t.Errorf("got %v, expected %v", statementMetadata.Commands, test.statementMetadata.Commands)
-			}
-			if !reflect.DeepEqual(statementMetadata.Comments, test.statementMetadata.Comments) {
-				t.Errorf("got %v, expected %v", statementMetadata.Comments, test.statementMetadata.Comments)
-			}
-			if !reflect.DeepEqual(statementMetadata.Tables, test.statementMetadata.Tables) {
-				t.Errorf("got %v, expected %v", statementMetadata.Tables, test.statementMetadata.Tables)
-			}
+			assert.Equal(t, statementMetadata, &test.statementMetadata)
 		})
 	}
 }
