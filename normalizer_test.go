@@ -480,6 +480,145 @@ func TestNormalizerRepeatedExecution(t *testing.T) {
 	}
 }
 
+func TestNormalizeDeobfuscatedSQL(t *testing.T) {
+	// This test is to ensure that normalizer works with deobfuscated SQL.
+	// This is important to allow users to opt out of obfuscation.
+	tests := []struct {
+		input               string
+		expected            string
+		statementMetadata   StatementMetadata
+		normalizationConfig *normalizerConfig
+	}{
+		{
+			input:    "SELECT id,name, address FROM users where id = 1",
+			expected: "SELECT id, name, address FROM users WHERE id = 1",
+			statementMetadata: StatementMetadata{
+				Tables:   []string{"users"},
+				Comments: []string{},
+				Commands: []string{"SELECT"},
+			},
+			normalizationConfig: &normalizerConfig{
+				CollectComments: true,
+				CollectCommands: true,
+				CollectTables:   true,
+				KeepSQLAlias:    false,
+			},
+		},
+		{
+			input:    "SELECT id,name, address FROM users where id IN (1, 2, 3, 4)",
+			expected: "SELECT id, name, address FROM users WHERE id IN ( 1, 2, 3, 4 )",
+			statementMetadata: StatementMetadata{
+				Tables:   []string{"users"},
+				Comments: []string{},
+				Commands: []string{"SELECT"},
+			},
+			normalizationConfig: &normalizerConfig{
+				CollectComments: true,
+				CollectCommands: true,
+				CollectTables:   true,
+				KeepSQLAlias:    false,
+			},
+		},
+		{
+			input: `
+			/* test comment */
+			SELECT id,name, address FROM users where id IN (1, 2, 3, 4)`,
+			expected: "SELECT id, name, address FROM users WHERE id IN ( 1, 2, 3, 4 )",
+			statementMetadata: StatementMetadata{
+				Tables:   []string{"users"},
+				Comments: []string{"/* test comment */"},
+				Commands: []string{"SELECT"},
+			},
+			normalizationConfig: &normalizerConfig{
+				CollectComments: true,
+				CollectCommands: true,
+				CollectTables:   true,
+				KeepSQLAlias:    false,
+			},
+		},
+		{
+			// comments should be stripped even when CollectComments is false
+			input: `
+			/* test comment */
+			SELECT id,name, address FROM users where id IN (1, 2, 3, 4)`,
+			expected: "SELECT id, name, address FROM users WHERE id IN ( 1, 2, 3, 4 )",
+			statementMetadata: StatementMetadata{
+				Tables:   []string{"users"},
+				Comments: []string{},
+				Commands: []string{"SELECT"},
+			},
+			normalizationConfig: &normalizerConfig{
+				CollectComments: false,
+				CollectCommands: true,
+				CollectTables:   true,
+				KeepSQLAlias:    false,
+			},
+		},
+		{
+			input: `
+			/* this is a comment */
+			SELECT h.id, h.org_id, h.name, ha.name as alias, h.created`,
+			expected: "SELECT h.id, h.org_id, h.name, ha.name, h.created",
+			statementMetadata: StatementMetadata{
+				Tables:   []string{},
+				Comments: []string{"/* this is a comment */"},
+				Commands: []string{"SELECT"},
+			},
+			normalizationConfig: &normalizerConfig{
+				CollectComments: true,
+				CollectCommands: true,
+				CollectTables:   true,
+				KeepSQLAlias:    false,
+			},
+		},
+		{
+			input:    "SELECT u.id as ID, u.name as Name FROM users as u WHERE u.id = '123'",
+			expected: "SELECT u.id, u.name FROM users WHERE u.id = '123'",
+			statementMetadata: StatementMetadata{
+				Tables:   []string{"users"},
+				Comments: []string{},
+				Commands: []string{"SELECT"},
+			},
+			normalizationConfig: &normalizerConfig{
+				CollectComments: true,
+				CollectCommands: true,
+				CollectTables:   true,
+				KeepSQLAlias:    false,
+			},
+		},
+		{
+			input:    "SELECT u.id as ID, u.name as Name FROM users as u WHERE u.id = '123'",
+			expected: "SELECT u.id AS ID, u.name AS Name FROM users AS u WHERE u.id = '123'",
+			statementMetadata: StatementMetadata{
+				Tables:   []string{"users"},
+				Comments: []string{},
+				Commands: []string{"SELECT"},
+			},
+			normalizationConfig: &normalizerConfig{
+				CollectComments: true,
+				CollectCommands: true,
+				CollectTables:   true,
+				KeepSQLAlias:    true,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			normalizer := NewNormalizer(
+				WithCollectComments(test.normalizationConfig.CollectComments),
+				WithCollectCommands(test.normalizationConfig.CollectCommands),
+				WithCollectTables(test.normalizationConfig.CollectTables),
+				WithKeepSQLAlias(test.normalizationConfig.KeepSQLAlias),
+			)
+			got, statementMetadata, err := normalizer.Normalize(test.input)
+			assert.NoError(t, err)
+			assert.Equal(t, got, test.expected)
+			assert.Equal(t, statementMetadata, &test.statementMetadata)
+		})
+	}
+}
+
 func TestGroupObfuscatedValues(t *testing.T) {
 	tests := []struct {
 		input    string

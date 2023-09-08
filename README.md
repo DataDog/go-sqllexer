@@ -53,8 +53,6 @@ func main() {
 
 ### Normalize
 
-**Note**: By design, normalization works on obfuscated queries.
-
 ```go
 import (
     "fmt"
