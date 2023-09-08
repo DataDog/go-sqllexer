@@ -126,8 +126,3 @@ func digitVal(ch rune) int {
 	}
 	return 16 // larger than any legal digit val
 }
-
-func collapseWhitespace(val string) string {
-	collapse_whitespace_regex := regexp.MustCompile(`[\s]+`)
-	return collapse_whitespace_regex.ReplaceAllString(val, " ")
-}
