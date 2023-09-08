@@ -28,7 +28,10 @@ func BenchmarkNormalizer(b *testing.B) {
 			b.ResetTimer()
 			b.ReportAllocs()
 			for i := 0; i < b.N; i++ {
-				normalizer.Normalize(bm.query)
+				_, _, err := normalizer.Normalize(bm.query)
+				if err != nil {
+					b.Fatal(err)
+				}
 			}
 		})
 	}
