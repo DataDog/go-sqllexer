@@ -274,6 +274,27 @@ func TestLexer(t *testing.T) {
 			},
 		},
 		{
+			name:  "dollar quoted string",
+			input: "SELECT * FROM users where id = $$test$$",
+			expected: []Token{
+				{IDENT, "SELECT"},
+				{WS, " "},
+				{WILDCARD, "*"},
+				{WS, " "},
+				{IDENT, "FROM"},
+				{WS, " "},
+				{IDENT, "users"},
+				{WS, " "},
+				{IDENT, "where"},
+				{WS, " "},
+				{IDENT, "id"},
+				{WS, " "},
+				{OPERATOR, "="},
+				{WS, " "},
+				{DOLLAR_QUOTED_STRING, "$$test$$"},
+			},
+		},
+		{
 			name:  "numbered parameter",
 			input: "SELECT * FROM users where id = $1",
 			expected: []Token{
