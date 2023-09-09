@@ -407,6 +407,27 @@ func TestLexer(t *testing.T) {
 				{IDENT, `"public"."users table"`},
 			},
 		},
+		{
+			name:  "select with escaped string",
+			input: "SELECT * FROM users where id = 'j\\'s'",
+			expected: []Token{
+				{IDENT, "SELECT"},
+				{WS, " "},
+				{WILDCARD, "*"},
+				{WS, " "},
+				{IDENT, "FROM"},
+				{WS, " "},
+				{IDENT, "users"},
+				{WS, " "},
+				{IDENT, "where"},
+				{WS, " "},
+				{IDENT, "id"},
+				{WS, " "},
+				{OPERATOR, "="},
+				{WS, " "},
+				{STRING, "'j\\'s'"},
+			},
+		},
 	}
 
 	for _, tt := range tests {

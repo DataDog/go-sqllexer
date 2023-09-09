@@ -20,9 +20,24 @@ func TestObfuscator(t *testing.T) {
 			replaceDigits: true,
 		},
 		{
+			input:         "SELECT * FROM users where id = 0x124af",
+			expected:      "SELECT * FROM users where id = ?",
+			replaceDigits: true,
+		},
+		{
+			input:         "SELECT * FROM users where id = 0617",
+			expected:      "SELECT * FROM users where id = ?",
+			replaceDigits: true,
+		},
+		{
 			input:         "SELECT * FROM users where id = '12'",
 			expected:      "SELECT * FROM users where id = ?",
 			replaceDigits: true,
+		},
+		{
+			input:         "SELECT * FROM users where id = 'j\\'s'",
+			expected:      "SELECT * FROM users where id = ?",
+			replaceDigits: false,
 		},
 		{
 			input:         "SELECT * FROM \"users table\" where id = 1",

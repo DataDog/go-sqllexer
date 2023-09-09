@@ -106,7 +106,7 @@ func (s *Lexer) Scan() Token {
 			// if the dollar sign is followed by a digit, then it's a numbered parameter
 			return s.scanNumberedParameter()
 		}
-		if isDollarQuotedFunction(s.peekBy(6)) {
+		if s.matchAt([]rune("$func$")) {
 			// check for dollar quoted function
 			// dollar quoted function will be obfuscated as a SQL query
 			return s.scanDollarQuotedFunction()
@@ -129,14 +129,6 @@ func (s *Lexer) lookAhead(n int) rune {
 		return 0
 	}
 	return rune(s.src[s.cursor+n])
-}
-
-// peekBy returns a slice of runes n positions ahead of the cursor.
-func (s *Lexer) peekBy(n int) []rune {
-	if s.cursor+n >= len(s.src) || s.cursor+n < 0 {
-		return []rune{}
-	}
-	return []rune(s.src[s.cursor : s.cursor+n])
 }
 
 // peek returns the rune at the cursor position.
@@ -162,12 +154,22 @@ func (s *Lexer) next() rune {
 	return s.nextBy(1)
 }
 
+func (s *Lexer) matchAt(match []rune) bool {
+	if s.cursor+len(match) > len(s.src) {
+		return false
+	}
+	for i, ch := range match {
+		if s.src[s.cursor+i] != byte(ch) {
+			return false
+		}
+	}
+	return true
+}
+
 func (s *Lexer) scanNumber() Token {
-	s.start = s.cursor
 	ch := s.peek()
 	nextCh := s.lookAhead(1)
 
-	// check for hex or octal number
 	if ch == '0' {
 		if nextCh == 'x' || nextCh == 'X' {
 			return s.scanHexNumber()
@@ -175,6 +177,13 @@ func (s *Lexer) scanNumber() Token {
 			return s.scanOctalNumber()
 		}
 	}
+
+	return s.scanDecimalNumber()
+}
+
+func (s *Lexer) scanDecimalNumber() Token {
+	s.start = s.cursor
+	ch := s.peek()
 
 	// optional leading sign e.g. +1, -1
 	if isLeadingSign(ch) {
@@ -198,8 +207,10 @@ func (s *Lexer) scanNumber() Token {
 func (s *Lexer) scanHexNumber() Token {
 	s.start = s.cursor
 	s.nextBy(2) // consume the leading 0x
-	for digitVal(s.peek()) < 16 {
-		s.next()
+	ch := s.peek()
+
+	for isDigit(ch) || ('a' <= ch && ch <= 'f') || ('A' <= ch && ch <= 'F') {
+		ch = s.next()
 	}
 	return Token{NUMBER, s.src[s.start:s.cursor]}
 }
@@ -207,8 +218,10 @@ func (s *Lexer) scanHexNumber() Token {
 func (s *Lexer) scanOctalNumber() Token {
 	s.start = s.cursor
 	s.next() // consume the leading 0
-	for digitVal(s.peek()) < 8 {
-		s.next()
+	ch := s.peek()
+
+	for '0' <= ch && ch <= '7' {
+		ch = s.next()
 	}
 	return Token{NUMBER, s.src[s.start:s.cursor]}
 }
@@ -216,20 +229,30 @@ func (s *Lexer) scanOctalNumber() Token {
 func (s *Lexer) scanString() Token {
 	s.start = s.cursor
 	s.next() // consume the opening quote
+	escaped := false
+
 	for {
 		ch := s.peek()
-		if ch == '\'' {
-			// encountered the closing quote
-			break
+
+		if escaped {
+			// encountered an escape character
+			// reset the escaped flag and continue
+			escaped = false
+			s.next()
+			continue
 		}
+
 		if ch == '\\' {
-			// Encountered an escape character, look ahead the next character
-			// If it's a single quote or a backslash, consume the escape character
-			nextCh := s.lookAhead(1)
-			if nextCh == '\'' || nextCh == '\\' {
-				s.next()
-			}
+			escaped = true
+			s.next()
+			continue
 		}
+
+		if ch == '\'' {
+			s.next() // consume the closing quote
+			return Token{STRING, s.src[s.start:s.cursor]}
+		}
+
 		if isEOF(ch) {
 			// encountered EOF before closing quote
 			// this usually happens when the string is truncated
@@ -237,8 +260,6 @@ func (s *Lexer) scanString() Token {
 		}
 		s.next()
 	}
-	s.next() // consume the closing quote
-	return Token{STRING, s.src[s.start:s.cursor]}
 }
 
 func (s *Lexer) scanIdentifier() Token {
@@ -261,7 +282,7 @@ func (s *Lexer) scanDoubleQuotedIdentifier() Token {
 		// BUT if it's followed by .", then we should keep going
 		// e.g. postgre "foo"."bar"
 		if ch == '"' {
-			if string(s.peekBy(3)) == `"."` {
+			if s.matchAt([]rune(`"."`)) {
 				s.nextBy(3) // consume the "."
 				continue
 			}
@@ -337,7 +358,7 @@ func (s *Lexer) scanDollarQuotedFunction() Token {
 	s.nextBy(6) // consume the opening dollar and the function name
 	for {
 		ch := s.peek()
-		if ch == '$' && isDollarQuotedFunction(s.peekBy(6)) {
+		if ch == '$' && s.matchAt([]rune("$func$")) {
 			break
 		}
 		if isEOF(ch) {
@@ -393,4 +414,11 @@ func (s *Lexer) scanUnknown() Token {
 	s.start = s.cursor
 	s.next()
 	return Token{UNKNOWN, s.src[s.start:s.cursor]}
+}
+
+func (s *Lexer) skipWhitespace() {
+	ch := s.peek()
+	for isWhitespace(ch) {
+		ch = s.next()
+	}
 }

@@ -101,10 +101,6 @@ func isEOF(ch rune) bool {
 	return ch == 0
 }
 
-func isDollarQuotedFunction(chs []rune) bool {
-	return string(chs) == "$func$"
-}
-
 func isCommand(ident string) bool {
 	_, ok := Commands[ident]
 	return ok
@@ -113,16 +109,4 @@ func isCommand(ident string) bool {
 func isTableIndicator(ident string) bool {
 	_, ok := tableIndicators[ident]
 	return ok
-}
-
-func digitVal(ch rune) int {
-	switch {
-	case '0' <= ch && ch <= '9':
-		return int(ch) - '0'
-	case 'a' <= ch && ch <= 'f':
-		return int(ch) - 'a' + 10
-	case 'A' <= ch && ch <= 'F':
-		return int(ch) - 'A' + 10
-	}
-	return 16 // larger than any legal digit val
 }
