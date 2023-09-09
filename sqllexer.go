@@ -94,11 +94,11 @@ func (s *Lexer) Scan() Token {
 		// although this is not strictly true, it's good enough for our purposes
 		nextCh := s.lookAhead(1)
 		if isDigit(nextCh) || nextCh == '.' {
-			return s.scanNumber(true)
+			return s.scanNumberWithLeadingSign()
 		}
 		return s.scanOperator()
 	case isDigit(ch):
-		return s.scanNumber(false)
+		return s.scanNumber()
 	case isWildcard(ch):
 		return s.scanWildcard()
 	case ch == '$':
@@ -161,13 +161,18 @@ func (s *Lexer) matchAt(match []rune) bool {
 	return true
 }
 
-func (s *Lexer) scanNumber(leadingSign bool) Token {
+func (s *Lexer) scanNumberWithLeadingSign() Token {
 	s.start = s.cursor
+	s.next() // consume the leading sign
+	return s.scanNumberic()
+}
 
-	if leadingSign {
-		s.next() // consume the leading sign
-	}
+func (s *Lexer) scanNumber() Token {
+	s.start = s.cursor
+	return s.scanNumberic()
+}
 
+func (s *Lexer) scanNumberic() Token {
 	if s.peek() == '0' {
 		nextCh := s.lookAhead(1)
 		if nextCh == 'x' || nextCh == 'X' {
@@ -198,8 +203,7 @@ func (s *Lexer) scanDecimalNumber() Token {
 }
 
 func (s *Lexer) scanHexNumber() Token {
-	s.nextBy(2) // consume the leading 0x
-	ch := s.peek()
+	ch := s.nextBy(2) // consume the leading 0x
 
 	for isDigit(ch) || ('a' <= ch && ch <= 'f') || ('A' <= ch && ch <= 'F') {
 		ch = s.next()
@@ -208,8 +212,7 @@ func (s *Lexer) scanHexNumber() Token {
 }
 
 func (s *Lexer) scanOctalNumber() Token {
-	s.nextBy(2) // consume the leading 0 and number
-	ch := s.peek()
+	ch := s.nextBy(2) // consume the leading 0 and number
 
 	for '0' <= ch && ch <= '7' {
 		ch = s.next()
