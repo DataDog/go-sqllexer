@@ -2,6 +2,7 @@ package sqllexer
 
 import (
 	"regexp"
+	"strings"
 	"unicode"
 )
 
@@ -109,4 +110,23 @@ func isCommand(ident string) bool {
 func isTableIndicator(ident string) bool {
 	_, ok := tableIndicators[ident]
 	return ok
+}
+
+func replaceDigits(input string, placeholder string) string {
+	var builder strings.Builder
+
+	i := 0
+	for i < len(input) {
+		if isDigit(rune(input[i])) {
+			builder.WriteString(placeholder)
+			for i < len(input) && isDigit(rune(input[i])) {
+				i++
+			}
+		} else {
+			builder.WriteByte(input[i])
+			i++
+		}
+	}
+
+	return builder.String()
 }

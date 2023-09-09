@@ -455,7 +455,7 @@ func TestLexer(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			lexer := New(tt.input)
 			tokens := lexer.ScanAll()
-			assert.Equal(t, tokens, tt.expected)
+			assert.Equal(t, tt.expected, tokens)
 		})
 	}
 }

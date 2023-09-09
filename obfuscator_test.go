@@ -336,7 +336,7 @@ func TestObfuscator(t *testing.T) {
 				WithDollarQuotedFunc(tt.dollarQuotedFunc),
 			)
 			got := obfuscator.Obfuscate(tt.input)
-			assert.Equal(t, got, tt.expected)
+			assert.Equal(t, tt.expected, got)
 		})
 	}
 }
