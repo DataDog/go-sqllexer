@@ -48,7 +48,7 @@ func (o *Obfuscator) Obfuscate(input string) string {
 	var obfuscatedSQL strings.Builder
 
 	lexer := New(input)
-	for token := range lexer.ScanAllTokens() {
+	for _, token := range lexer.ScanAll() {
 		switch token.Type {
 		case NUMBER:
 			obfuscatedSQL.WriteString(NumberPlaceholder)
