@@ -90,15 +90,14 @@ func (s *Lexer) Scan() Token {
 	case isMultiLineComment(ch, s.lookAhead(1)):
 		return s.scanMultiLineComment()
 	case isLeadingSign(ch):
-		// if the leading sign is followed by a digit,
-		// and preceded by whitespace, then it's a number
+		// if the leading sign is followed by a digit, then it's a number
 		// although this is not strictly true, it's good enough for our purposes
-		if (isDigit(s.lookAhead(1)) || s.lookAhead(1) == '.') && isWhitespace(s.lookAhead(-1)) {
-			return s.scanNumber()
+		if isDigit(s.lookAhead(1)) || s.lookAhead(1) == '.' {
+			return s.scanNumber(true)
 		}
 		return s.scanOperator()
 	case isDigit(ch):
-		return s.scanNumber()
+		return s.scanNumber(false)
 	case isWildcard(ch):
 		return s.scanWildcard()
 	case ch == '$':
@@ -166,11 +165,15 @@ func (s *Lexer) matchAt(match []rune) bool {
 	return true
 }
 
-func (s *Lexer) scanNumber() Token {
-	ch := s.peek()
-	nextCh := s.lookAhead(1)
+func (s *Lexer) scanNumber(leadingSign bool) Token {
+	s.start = s.cursor
 
-	if ch == '0' {
+	if leadingSign {
+		s.next() // consume the leading sign
+	}
+
+	if s.peek() == '0' {
+		nextCh := s.lookAhead(1)
 		if nextCh == 'x' || nextCh == 'X' {
 			return s.scanHexNumber()
 		} else if nextCh >= '0' && nextCh <= '7' {
@@ -182,13 +185,8 @@ func (s *Lexer) scanNumber() Token {
 }
 
 func (s *Lexer) scanDecimalNumber() Token {
-	s.start = s.cursor
+	s.next()
 	ch := s.peek()
-
-	// optional leading sign e.g. +1, -1
-	if isLeadingSign(ch) {
-		ch = s.next()
-	}
 
 	// scan digits
 	for isDigit(ch) || ch == '.' || isExpontent(ch) {
@@ -205,7 +203,6 @@ func (s *Lexer) scanDecimalNumber() Token {
 }
 
 func (s *Lexer) scanHexNumber() Token {
-	s.start = s.cursor
 	s.nextBy(2) // consume the leading 0x
 	ch := s.peek()
 
@@ -216,8 +213,7 @@ func (s *Lexer) scanHexNumber() Token {
 }
 
 func (s *Lexer) scanOctalNumber() Token {
-	s.start = s.cursor
-	s.next() // consume the leading 0
+	s.nextBy(2) // consume the leading 0 and number
 	ch := s.peek()
 
 	for '0' <= ch && ch <= '7' {
@@ -300,16 +296,18 @@ func (s *Lexer) scanDoubleQuotedIdentifier() Token {
 func (s *Lexer) scanWhitespace() Token {
 	// scan whitespace, tab, newline, carriage return
 	s.start = s.cursor
-	for isWhitespace(s.peek()) {
-		s.next()
+	ch := s.peek()
+	for isWhitespace(ch) {
+		ch = s.next()
 	}
 	return Token{WS, s.src[s.start:s.cursor]}
 }
 
 func (s *Lexer) scanOperator() Token {
 	s.start = s.cursor
-	for isOperator(s.peek()) {
-		s.next()
+	ch := s.peek()
+	for isOperator(ch) {
+		ch = s.next()
 	}
 	return Token{OPERATOR, s.src[s.start:s.cursor]}
 }
@@ -322,8 +320,10 @@ func (s *Lexer) scanWildcard() Token {
 
 func (s *Lexer) scanSingleLineComment() Token {
 	s.start = s.cursor
-	for s.peek() != '\n' && !isEOF(s.peek()) {
-		s.next()
+	s.nextBy(2) // consume the opening dashes
+	ch := s.peek()
+	for ch != '\n' && !isEOF(ch) {
+		ch = s.next()
 	}
 	return Token{COMMENT, s.src[s.start:s.cursor]}
 }
@@ -334,16 +334,16 @@ func (s *Lexer) scanMultiLineComment() Token {
 	for {
 		ch := s.peek()
 		if ch == '*' && s.lookAhead(1) == '/' {
+			s.nextBy(2) // consume the closing asterisk and slash
 			break
 		}
-		if ch == 0 {
+		if isEOF(ch) {
 			// encountered EOF before closing comment
 			// this usually happens when the comment is truncated
 			return Token{ERROR, s.src[s.start:s.cursor]}
 		}
 		s.next()
 	}
-	s.nextBy(2) // consume the closing asterisk and slash
 	return Token{MULTILINE_COMMENT, s.src[s.start:s.cursor]}
 }
 
@@ -398,7 +398,7 @@ func (s *Lexer) scanDollarQuotedString() Token {
 
 func (s *Lexer) scanNumberedParameter() Token {
 	s.start = s.cursor
-	s.next() // consume the dollar sign
+	s.nextBy(2) // consume the dollar sign and the number
 	for {
 		ch := s.peek()
 		if !isDigit(ch) {
