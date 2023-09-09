@@ -110,6 +110,10 @@ func isTableIndicator(ident string) bool {
 	return ok
 }
 
+func isSQLKeyword(token Token) bool {
+	return token.Type == IDENT && keywordsRegex.MatchString(token.Value)
+}
+
 func replaceDigits(input string, placeholder string) string {
 	var builder strings.Builder
 

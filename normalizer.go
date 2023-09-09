@@ -197,10 +197,6 @@ func dedupeStatementMetadata(info *StatementMetadata) {
 	info.Commands = dedupeCollectedMetadata(info.Commands)
 }
 
-func isSQLKeyword(token Token) bool {
-	return token.Type == IDENT && keywordsRegex.MatchString(token.Value)
-}
-
 func appendWhitespace(lastToken Token, token Token, normalizedSQL string) string {
 	switch token.Value {
 	case ",":
