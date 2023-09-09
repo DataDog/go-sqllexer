@@ -241,7 +241,7 @@ func (s *Lexer) scanString() Token {
 		}
 
 		if ch == '\'' {
-			ch = s.next() // consume the closing quote
+			s.next() // consume the closing quote
 			return Token{STRING, s.src[s.start:s.cursor]}
 		}
 
@@ -327,7 +327,7 @@ func (s *Lexer) scanMultiLineComment() Token {
 	ch := s.nextBy(2) // consume the opening slash and asterisk
 	for {
 		if ch == '*' && s.lookAhead(1) == '/' {
-			ch = s.nextBy(2) // consume the closing asterisk and slash
+			s.nextBy(2) // consume the closing asterisk and slash
 			break
 		}
 		if isEOF(ch) {
@@ -354,7 +354,7 @@ func (s *Lexer) scanDollarQuotedString() Token {
 	for s.cursor < len(s.src) && ch != '$' {
 		ch = s.next()
 	}
-	ch = s.next()                       // consume the closing dollar sign of the tag
+	s.next()                            // consume the closing dollar sign of the tag
 	tag := s.src[tagStart-1 : s.cursor] // include the opening and closing dollar sign e.g. $tag$
 
 	for s.cursor < len(s.src) {
@@ -365,7 +365,7 @@ func (s *Lexer) scanDollarQuotedString() Token {
 			}
 			return Token{DOLLAR_QUOTED_STRING, s.src[s.start:s.cursor]}
 		}
-		ch = s.next()
+		s.next()
 	}
 	return Token{ERROR, s.src[s.start:s.cursor]}
 }
