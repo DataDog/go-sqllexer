@@ -54,8 +54,8 @@ func (s *Lexer) ScanAll() []Token {
 
 // ScanAllTokens scans the entire input string and returns a channel of tokens.
 // Use this if you want to process the tokens as they are scanned.
-func (s *Lexer) ScanAllTokens() <-chan *Token {
-	tokenCh := make(chan *Token)
+func (s *Lexer) ScanAllTokens() <-chan Token {
+	tokenCh := make(chan Token)
 
 	go func() {
 		defer close(tokenCh)
@@ -66,7 +66,7 @@ func (s *Lexer) ScanAllTokens() <-chan *Token {
 				// don't include EOF token in the result
 				break
 			}
-			tokenCh <- &token
+			tokenCh <- token
 		}
 	}()
 
