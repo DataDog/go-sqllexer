@@ -5,46 +5,40 @@ import (
 )
 
 type normalizerConfig struct {
-	DBMS string `json:"dbms"`
-
 	// CollectTables specifies whether the normalizer should also extract the table names that a query addresses
-	CollectTables bool `json:"collect_tables"`
+	CollectTables bool
 
 	// CollectCommands specifies whether the normalizer should extract and return commands as SQL metadata
-	CollectCommands bool `json:"collect_commands"`
+	CollectCommands bool
 
 	// CollectComments specifies whether the normalizer should extract and return comments as SQL metadata
-	CollectComments bool `json:"collect_comments"`
+	CollectComments bool
 
 	// KeepSQLAlias reports whether SQL aliases ("AS") should be truncated.
-	KeepSQLAlias bool `json:"keep_sql_alias"`
+	KeepSQLAlias bool
 }
 
-func WithDBMS(dbms string) func(*normalizerConfig) {
-	return func(c *normalizerConfig) {
-		c.DBMS = dbms
-	}
-}
+type normalizerOption func(*normalizerConfig)
 
-func WithCollectTables(collectTables bool) func(*normalizerConfig) {
+func WithCollectTables(collectTables bool) normalizerOption {
 	return func(c *normalizerConfig) {
 		c.CollectTables = collectTables
 	}
 }
 
-func WithCollectCommands(collectCommands bool) func(*normalizerConfig) {
+func WithCollectCommands(collectCommands bool) normalizerOption {
 	return func(c *normalizerConfig) {
 		c.CollectCommands = collectCommands
 	}
 }
 
-func WithCollectComments(collectComments bool) func(*normalizerConfig) {
+func WithCollectComments(collectComments bool) normalizerOption {
 	return func(c *normalizerConfig) {
 		c.CollectComments = collectComments
 	}
 }
 
-func WithKeepSQLAlias(keepSQLAlias bool) func(*normalizerConfig) {
+func WithKeepSQLAlias(keepSQLAlias bool) normalizerOption {
 	return func(c *normalizerConfig) {
 		c.KeepSQLAlias = keepSQLAlias
 	}
@@ -60,7 +54,7 @@ type Normalizer struct {
 	config *normalizerConfig
 }
 
-func NewNormalizer(opts ...func(*normalizerConfig)) *Normalizer {
+func NewNormalizer(opts ...normalizerOption) *Normalizer {
 	normalizer := Normalizer{
 		config: &normalizerConfig{},
 	}
@@ -80,8 +74,11 @@ const (
 // Normalize takes an input SQL string and returns a normalized SQL string, a StatementMetadata struct, and an error.
 // The normalizer collapses input SQL into compact format, groups obfuscated values into single placeholder,
 // and collects metadata such as table names, comments, and commands.
-func (n *Normalizer) Normalize(input string) (normalized string, info *StatementMetadata, err error) {
-	lexer := New(input)
+func (n *Normalizer) Normalize(input string, lexerOpts ...lexerOption) (normalized string, info *StatementMetadata, err error) {
+	lexer := New(
+		input,
+		lexerOpts...,
+	)
 
 	var normalizedSQL string
 	var statementMetadata = &StatementMetadata{

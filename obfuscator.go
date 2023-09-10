@@ -9,13 +9,15 @@ type obfuscatorConfig struct {
 	DollarQuotedFunc bool
 }
 
-func WithReplaceDigits(replaceDigits bool) func(*obfuscatorConfig) {
+type obfuscatorOption func(*obfuscatorConfig)
+
+func WithReplaceDigits(replaceDigits bool) obfuscatorOption {
 	return func(c *obfuscatorConfig) {
 		c.ReplaceDigits = replaceDigits
 	}
 }
 
-func WithDollarQuotedFunc(dollarQuotedFunc bool) func(*obfuscatorConfig) {
+func WithDollarQuotedFunc(dollarQuotedFunc bool) obfuscatorOption {
 	return func(c *obfuscatorConfig) {
 		c.DollarQuotedFunc = dollarQuotedFunc
 	}
@@ -25,7 +27,7 @@ type Obfuscator struct {
 	config *obfuscatorConfig
 }
 
-func NewObfuscator(opts ...func(*obfuscatorConfig)) *Obfuscator {
+func NewObfuscator(opts ...obfuscatorOption) *Obfuscator {
 	obfuscator := &Obfuscator{
 		config: &obfuscatorConfig{},
 	}
@@ -44,10 +46,13 @@ const (
 
 // Obfuscate takes an input SQL string and returns an obfuscated SQL string.
 // The obfuscator replaces all literal values with a single placeholder
-func (o *Obfuscator) Obfuscate(input string) string {
+func (o *Obfuscator) Obfuscate(input string, lexerOpts ...lexerOption) string {
 	var obfuscatedSQL strings.Builder
 
-	lexer := New(input)
+	lexer := New(
+		input,
+		lexerOpts...,
+	)
 	for token := range lexer.ScanAllTokens() {
 		switch token.Type {
 		case NUMBER:
@@ -78,7 +83,7 @@ func (o *Obfuscator) Obfuscate(input string) string {
 				quotedFunc := strings.TrimPrefix(token.Value, "$func$")
 				quotedFunc = strings.TrimSuffix(quotedFunc, "$func$")
 				obfuscatedSQL.WriteString("$func$")
-				obfuscatedSQL.WriteString(o.Obfuscate(quotedFunc))
+				obfuscatedSQL.WriteString(o.Obfuscate(quotedFunc, lexerOpts...))
 				obfuscatedSQL.WriteString("$func$")
 			} else {
 				// treat dollar quoted function as dollar quoted string

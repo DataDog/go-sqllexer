@@ -27,15 +27,32 @@ type Token struct {
 	Value string
 }
 
+type LexerConfig struct {
+	DBMS DBMSType
+}
+
+type lexerOption func(*LexerConfig)
+
+func WithDBMS(dbms DBMSType) lexerOption {
+	return func(c *LexerConfig) {
+		c.DBMS = dbms
+	}
+}
+
 // SQL Lexer inspired from Rob Pike's talk on Lexical Scanning in Go
 type Lexer struct {
 	src    string // the input src string
 	cursor int    // the current position of the cursor
 	start  int    // the start position of the current token
+	config *LexerConfig
 }
 
-func New(input string) *Lexer {
-	return &Lexer{src: input}
+func New(input string, opts ...lexerOption) *Lexer {
+	lexer := &Lexer{src: input, config: &LexerConfig{}}
+	for _, opt := range opts {
+		opt(lexer.config)
+	}
+	return lexer
 }
 
 // ScanAll scans the entire input string and returns a slice of tokens.
@@ -105,6 +122,9 @@ func (s *Lexer) Scan() Token {
 		if isDigit(s.lookAhead(1)) {
 			// if the dollar sign is followed by a digit, then it's a numbered parameter
 			return s.scanNumberedParameter()
+		}
+		if s.config.DBMS == DBMSSQLServer && isLetter(s.lookAhead(1)) {
+			return s.scanIdentifier()
 		}
 		if isDollarQuotedFunction(s.peekBy(6)) {
 			// check for dollar quoted function
@@ -244,7 +264,7 @@ func (s *Lexer) scanString() Token {
 func (s *Lexer) scanIdentifier() Token {
 	// NOTE: this func does not distinguish between SQL keywords and identifiers
 	s.start = s.cursor
-	ch := s.peek()
+	ch := s.next()
 	for isLetter(ch) || isDigit(ch) || ch == '.' || ch == '?' {
 		ch = s.next()
 	}
