@@ -53,45 +53,28 @@ func (o *Obfuscator) Obfuscate(input string, lexerOpts ...lexerOption) string {
 		input,
 		lexerOpts...,
 	)
-	for token := range lexer.ScanAllTokens() {
+	for _, token := range lexer.ScanAll() {
 		switch token.Type {
 		case NUMBER:
 			obfuscatedSQL.WriteString(NumberPlaceholder)
-		case STRING:
-			obfuscatedSQL.WriteString(StringPlaceholder)
-		case INCOMPLETE_STRING:
-			obfuscatedSQL.WriteString(StringPlaceholder)
-		case IDENT:
-			if o.config.ReplaceDigits {
-				// regex to replace digits in identifier
-				// we try to avoid using regex as much as possible,
-				// as regex isn't the most performant,
-				// but it's the easiest to implement and maintain
-				obfuscatedSQL.WriteString(digitsRegex.ReplaceAllString(token.Value, "?"))
-			} else {
-				obfuscatedSQL.WriteString(token.Value)
-			}
-		case COMMENT:
-			obfuscatedSQL.WriteString(token.Value)
-		case MULTILINE_COMMENT:
-			obfuscatedSQL.WriteString(token.Value)
-		case DOLLAR_QUOTED_STRING:
-			obfuscatedSQL.WriteString(StringPlaceholder)
 		case DOLLAR_QUOTED_FUNCTION:
 			if o.config.DollarQuotedFunc {
 				// obfuscate the content of dollar quoted function
-				quotedFunc := strings.TrimPrefix(token.Value, "$func$")
-				quotedFunc = strings.TrimSuffix(quotedFunc, "$func$")
+				quotedFunc := token.Value[6 : len(token.Value)-6] // remove the $func$ prefix and suffix
 				obfuscatedSQL.WriteString("$func$")
 				obfuscatedSQL.WriteString(o.Obfuscate(quotedFunc, lexerOpts...))
 				obfuscatedSQL.WriteString("$func$")
 			} else {
-				// treat dollar quoted function as dollar quoted string
 				obfuscatedSQL.WriteString(StringPlaceholder)
 			}
-		case ERROR | UNKNOWN:
-			// if we encounter an error or unknown token, we just append the value
-			obfuscatedSQL.WriteString(token.Value)
+		case STRING, INCOMPLETE_STRING, DOLLAR_QUOTED_STRING:
+			obfuscatedSQL.WriteString(StringPlaceholder)
+		case IDENT:
+			if o.config.ReplaceDigits {
+				obfuscatedSQL.WriteString(replaceDigits(token.Value, "?"))
+			} else {
+				obfuscatedSQL.WriteString(token.Value)
+			}
 		default:
 			obfuscatedSQL.WriteString(token.Value)
 		}

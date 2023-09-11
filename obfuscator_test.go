@@ -21,9 +21,24 @@ func TestObfuscator(t *testing.T) {
 			replaceDigits: true,
 		},
 		{
+			input:         "SELECT * FROM users where id = 0x124af",
+			expected:      "SELECT * FROM users where id = ?",
+			replaceDigits: true,
+		},
+		{
+			input:         "SELECT * FROM users where id = 0617",
+			expected:      "SELECT * FROM users where id = ?",
+			replaceDigits: true,
+		},
+		{
 			input:         "SELECT * FROM users where id = '12'",
 			expected:      "SELECT * FROM users where id = ?",
 			replaceDigits: true,
+		},
+		{
+			input:         "SELECT * FROM users where id = 'j\\'s'",
+			expected:      "SELECT * FROM users where id = ?",
+			replaceDigits: false,
 		},
 		{
 			input:         "SELECT * FROM \"users table\" where id = 1",
@@ -177,8 +192,8 @@ func TestObfuscator(t *testing.T) {
 			replaceDigits: true,
 		},
 		{
-			input:         `SELECT * FROM Items WHERE id = -1 OR id = -01 OR id = -108 OR id = -.018 OR id = -.08 OR id = -908129`,
-			expected:      `SELECT * FROM Items WHERE id = ? OR id = ? OR id = ? OR id = ? OR id = ? OR id = ?`,
+			input:         `SELECT * FROM Items WHERE id = -1 OR id = +01 OR id = -108 OR id = -.018 OR id = -.08 OR id = -908129 OR id = 1e2 OR id = 1e-1`,
+			expected:      `SELECT * FROM Items WHERE id = ? OR id = ? OR id = ? OR id = ? OR id = ? OR id = ? OR id = ? OR id = ?`,
 			replaceDigits: true,
 		},
 		{
@@ -323,7 +338,7 @@ func TestObfuscator(t *testing.T) {
 				WithDollarQuotedFunc(tt.dollarQuotedFunc),
 			)
 			got := obfuscator.Obfuscate(tt.input, WithDBMS(tt.dbms))
-			assert.Equal(t, got, tt.expected)
+			assert.Equal(t, tt.expected, got)
 		})
 	}
 }

@@ -2,6 +2,7 @@ package sqllexer
 
 import (
 	"regexp"
+	"strings"
 	"unicode"
 )
 
@@ -42,8 +43,6 @@ var tableIndicators = map[string]bool{
 	"UPDATE": true,
 	"TABLE":  true,
 }
-
-var digitsRegex = regexp.MustCompile(`\d+`)
 
 var keywordsRegex = regexp.MustCompile(`(?i)^(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|GRANT|REVOKE|ADD|ALL|AND|ANY|AS|ASC|BEGIN|BETWEEN|BY|CASE|CHECK|COLUMN|COMMIT|CONSTRAINT|DATABASE|DECLARE|DEFAULT|DESC|DISTINCT|ELSE|END|EXEC|EXISTS|FOREIGN|FROM|GROUP|HAVING|IN|INDEX|INNER|INTO|IS|JOIN|KEY|LEFT|LIKE|LIMIT|NOT|ON|OR|ORDER|OUTER|PRIMARY|PROCEDURE|REPLACE|RETURNS|RIGHT|ROLLBACK|ROWNUM|SET|SOME|TABLE|TOP|TRUNCATE|UNION|UNIQUE|USE|VALUES|VIEW|WHERE|CUBE|ROLLUP|LITERAL|WINDOW|VACCUM|ANALYZE|ILIKE|USING|ASSERTION|DOMAIN|CLUSTER|COPY|EXPLAIN|PLPGSQL|TRIGGER|TEMPORARY|UNLOGGED|RECURSIVE|RETURNING)$`)
 
@@ -103,10 +102,6 @@ func isEOF(ch rune) bool {
 	return ch == 0
 }
 
-func isDollarQuotedFunction(chs []rune) bool {
-	return string(chs) == "$func$"
-}
-
 func isCommand(ident string) bool {
 	_, ok := Commands[ident]
 	return ok
@@ -117,14 +112,25 @@ func isTableIndicator(ident string) bool {
 	return ok
 }
 
-func digitVal(ch rune) int {
-	switch {
-	case '0' <= ch && ch <= '9':
-		return int(ch) - '0'
-	case 'a' <= ch && ch <= 'f':
-		return int(ch) - 'a' + 10
-	case 'A' <= ch && ch <= 'F':
-		return int(ch) - 'A' + 10
+func isSQLKeyword(token Token) bool {
+	return token.Type == IDENT && keywordsRegex.MatchString(token.Value)
+}
+
+func replaceDigits(input string, placeholder string) string {
+	var builder strings.Builder
+
+	i := 0
+	for i < len(input) {
+		if isDigit(rune(input[i])) {
+			builder.WriteString(placeholder)
+			for i < len(input) && isDigit(rune(input[i])) {
+				i++
+			}
+		} else {
+			builder.WriteByte(input[i])
+			i++
+		}
 	}
-	return 16 // larger than any legal digit val
+
+	return builder.String()
 }

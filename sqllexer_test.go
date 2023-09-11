@@ -274,6 +274,27 @@ func TestLexer(t *testing.T) {
 			},
 		},
 		{
+			name:  "dollar quoted string",
+			input: "SELECT * FROM users where id = $$test$$",
+			expected: []Token{
+				{IDENT, "SELECT"},
+				{WS, " "},
+				{WILDCARD, "*"},
+				{WS, " "},
+				{IDENT, "FROM"},
+				{WS, " "},
+				{IDENT, "users"},
+				{WS, " "},
+				{IDENT, "where"},
+				{WS, " "},
+				{IDENT, "id"},
+				{WS, " "},
+				{OPERATOR, "="},
+				{WS, " "},
+				{DOLLAR_QUOTED_STRING, "$$test$$"},
+			},
+		},
+		{
 			name:  "numbered parameter",
 			input: "SELECT * FROM users where id = $1",
 			expected: []Token{
@@ -407,13 +428,34 @@ func TestLexer(t *testing.T) {
 				{IDENT, `"public"."users table"`},
 			},
 		},
+		{
+			name:  "select with escaped string",
+			input: "SELECT * FROM users where id = 'j\\'s'",
+			expected: []Token{
+				{IDENT, "SELECT"},
+				{WS, " "},
+				{WILDCARD, "*"},
+				{WS, " "},
+				{IDENT, "FROM"},
+				{WS, " "},
+				{IDENT, "users"},
+				{WS, " "},
+				{IDENT, "where"},
+				{WS, " "},
+				{IDENT, "id"},
+				{WS, " "},
+				{OPERATOR, "="},
+				{WS, " "},
+				{STRING, "'j\\'s'"},
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			lexer := New(tt.input)
 			tokens := lexer.ScanAll()
-			assert.Equal(t, tokens, tt.expected)
+			assert.Equal(t, tt.expected, tokens)
 		})
 	}
 }
