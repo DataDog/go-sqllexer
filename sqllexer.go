@@ -320,8 +320,11 @@ func (s *Lexer) scanWhitespace() Token {
 
 func (s *Lexer) scanOperator() Token {
 	s.start = s.cursor
+	lastCh := s.peek()
 	ch := s.next()
-	for isOperator(ch) {
+	for isOperator(ch) && !(lastCh == '=' && ch == '?') {
+		// hack: we don't want to treat "=?" as an single operator
+		lastCh = ch
 		ch = s.next()
 	}
 	return Token{OPERATOR, s.src[s.start:s.cursor]}
