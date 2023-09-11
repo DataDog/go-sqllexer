@@ -36,7 +36,7 @@ func TestNormalizer(t *testing.T) {
 		},
 		{
 			input:    "SELECT * FROM users WHERE id IN (?, ?) and name IN ARRAY[?, ?]",
-			expected: "SELECT * FROM users WHERE id IN ( ? ) AND name IN ARRAY [ ? ]",
+			expected: "SELECT * FROM users WHERE id IN ( ? ) and name IN ARRAY [ ? ]",
 			statementMetadata: StatementMetadata{
 				Tables:   []string{"users"},
 				Comments: []string{},
@@ -50,7 +50,7 @@ func TestNormalizer(t *testing.T) {
 				JOIN vs?.host_alias ha on ha.host_id = h.id 
 			WHERE ha.org_id = ? AND ha.name = ANY ( ?, ? )
 			`,
-			expected: "SELECT h.id, h.org_id, h.name, ha.name, h.created FROM vs?.host h JOIN vs?.host_alias ha ON ha.host_id = h.id WHERE ha.org_id = ? AND ha.name = ANY ( ? )",
+			expected: "SELECT h.id, h.org_id, h.name, ha.name, h.created FROM vs?.host h JOIN vs?.host_alias ha on ha.host_id = h.id WHERE ha.org_id = ? AND ha.name = ANY ( ? )",
 			statementMetadata: StatementMetadata{
 				Tables:   []string{"vs?.host", "vs?.host_alias"},
 				Comments: []string{},
@@ -139,7 +139,7 @@ multiline comment */
 				Delete FROM user? WHERE id = ?;
 			END
 			`,
-			expected: "CREATE PROCEDURE test_procedure ( ) BEGIN SELECT * FROM users WHERE id = ? ; UPDATE test_users SET name = ? WHERE id = ? ; DELETE FROM user? WHERE id = ? ; END",
+			expected: "CREATE PROCEDURE test_procedure ( ) BEGIN SELECT * FROM users WHERE id = ? ; Update test_users set name = ? WHERE id = ? ; Delete FROM user? WHERE id = ? ; END",
 			statementMetadata: StatementMetadata{
 				Tables:   []string{"users", "test_users", "user?"},
 				Comments: []string{},
@@ -280,6 +280,24 @@ multiline comment */
 				Commands: []string{"SELECT"},
 			},
 		},
+		{
+			input:    "SELECT d.id, d.uuid, d.org_id, d.creator_id, d.updater_id, d.monitor_id, d.parent_id, d.original_parent_id, d.scope, d.start_dt, d.end_dt, d.canceled_dt, d.active, d.disabled, d.created, d.modified, d.message, d.monitor_tags, d.recurrence, d.mute_first_recovery_notification, d.scope_v2_query, d.scope_v2 FROM monitor_downtime d, org o WHERE o.id = d.org_id AND d.modified >= ? AND o.partition_num = ANY (?, ?, ?)",
+			expected: "SELECT d.id, d.uuid, d.org_id, d.creator_id, d.updater_id, d.monitor_id, d.parent_id, d.original_parent_id, d.scope, d.start_dt, d.end_dt, d.canceled_dt, d.active, d.disabled, d.created, d.modified, d.message, d.monitor_tags, d.recurrence, d.mute_first_recovery_notification, d.scope_v2_query, d.scope_v2 FROM monitor_downtime d, org o WHERE o.id = d.org_id AND d.modified >= ? AND o.partition_num = ANY ( ? )",
+			statementMetadata: StatementMetadata{
+				Tables:   []string{"monitor_downtime"},
+				Comments: []string{},
+				Commands: []string{"SELECT"},
+			},
+		},
+		{
+			input:    "SELECT set_host_tags_bigint (? ARRAY[?, ?, ?])",
+			expected: "SELECT set_host_tags_bigint ( ? ARRAY [ ? ] )",
+			statementMetadata: StatementMetadata{
+				Tables:   []string{},
+				Comments: []string{},
+				Commands: []string{"SELECT"},
+			},
+		},
 	}
 
 	normalizer := NewNormalizer(
@@ -325,7 +343,7 @@ func TestNormalizerNotCollectMetadata(t *testing.T) {
 		},
 		{
 			input:    "SELECT id as ID, name as Name FROM users WHERE id IN (?, ?)",
-			expected: "SELECT id AS ID, name AS Name FROM users WHERE id IN ( ? )",
+			expected: "SELECT id as ID, name as Name FROM users WHERE id IN ( ? )",
 			statementMetadata: StatementMetadata{
 				Tables:   []string{},
 				Comments: []string{},
@@ -362,25 +380,26 @@ func TestNormalizerNotCollectMetadata(t *testing.T) {
 
 func TestNormalizerFormatting(t *testing.T) {
 	tests := []struct {
-		queries  []string
-		expected string
+		queries           []string
+		expected          string
+		uppercaseKeywords bool
 	}{
 		{
 			queries: []string{
 				"SELECT id,name, address FROM users where id = ?",
-				"select id, name, address FROM users where id = ?",
-				"select id as ID, name as Name, address FROM users where id = ?",
+				"SELECT id, name, address FROM users where id = ?",
+				"SELECT id as ID, name as Name, address FROM users where id = ?",
 			},
-			expected: "SELECT id, name, address FROM users WHERE id = ?",
+			expected: "SELECT id, name, address FROM users where id = ?",
 		},
 		{
 			queries: []string{
 				"SELECT id,name, address FROM users where id IN (?, ?,?, ?)",
-				"select id, name, address FROM users where id IN ( ? )",
-				"select id, name, address FROM users where id IN ( ? )",
-				"select id, name, address FROM users where id IN (?,?,?)",
+				"SELECT id, name, address FROM users where id IN ( ? )",
+				"SELECT id, name, address FROM users where id IN ( ? )",
+				"SELECT id, name, address FROM users where id IN (?,?,?)",
 			},
-			expected: "SELECT id, name, address FROM users WHERE id IN ( ? )",
+			expected: "SELECT id, name, address FROM users where id IN ( ? )",
 		},
 		{
 			queries: []string{
@@ -388,15 +407,17 @@ func TestNormalizerFormatting(t *testing.T) {
 				"select * from discount where description LIKE ?",
 				"select * from discount where description like ?",
 			},
-			expected: "SELECT * FROM discount WHERE description LIKE ?",
+			expected:          "SELECT * FROM discount WHERE description LIKE ?",
+			uppercaseKeywords: true,
 		},
 	}
 
-	normalizer := NewNormalizer(
-		WithCollectComments(false),
-	)
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
+			normalizer := NewNormalizer(
+				WithCollectComments(false),
+				WithUppercaseKeywords(test.uppercaseKeywords),
+			)
 			for _, query := range test.queries {
 				got, _, err := normalizer.Normalize(query)
 				assert.NoError(t, err)
@@ -491,7 +512,7 @@ func TestNormalizeDeobfuscatedSQL(t *testing.T) {
 	}{
 		{
 			input:    "SELECT id,name, address FROM users where id = 1",
-			expected: "SELECT id, name, address FROM users WHERE id = 1",
+			expected: "SELECT id, name, address FROM users where id = 1",
 			statementMetadata: StatementMetadata{
 				Tables:   []string{"users"},
 				Comments: []string{},
@@ -506,7 +527,7 @@ func TestNormalizeDeobfuscatedSQL(t *testing.T) {
 		},
 		{
 			input:    "SELECT id,name, address FROM users where id IN (1, 2, 3, 4)",
-			expected: "SELECT id, name, address FROM users WHERE id IN ( 1, 2, 3, 4 )",
+			expected: "SELECT id, name, address FROM users where id IN ( 1, 2, 3, 4 )",
 			statementMetadata: StatementMetadata{
 				Tables:   []string{"users"},
 				Comments: []string{},
@@ -523,7 +544,7 @@ func TestNormalizeDeobfuscatedSQL(t *testing.T) {
 			input: `
 			/* test comment */
 			SELECT id,name, address FROM users where id IN (1, 2, 3, 4)`,
-			expected: "SELECT id, name, address FROM users WHERE id IN ( 1, 2, 3, 4 )",
+			expected: "SELECT id, name, address FROM users where id IN ( 1, 2, 3, 4 )",
 			statementMetadata: StatementMetadata{
 				Tables:   []string{"users"},
 				Comments: []string{"/* test comment */"},
@@ -541,7 +562,7 @@ func TestNormalizeDeobfuscatedSQL(t *testing.T) {
 			input: `
 			/* test comment */
 			SELECT id,name, address FROM users where id IN (1, 2, 3, 4)`,
-			expected: "SELECT id, name, address FROM users WHERE id IN ( 1, 2, 3, 4 )",
+			expected: "SELECT id, name, address FROM users where id IN ( 1, 2, 3, 4 )",
 			statementMetadata: StatementMetadata{
 				Tables:   []string{"users"},
 				Comments: []string{},
@@ -588,7 +609,7 @@ func TestNormalizeDeobfuscatedSQL(t *testing.T) {
 		},
 		{
 			input:    "SELECT u.id as ID, u.name as Name FROM users as u WHERE u.id = '123'",
-			expected: "SELECT u.id AS ID, u.name AS Name FROM users AS u WHERE u.id = '123'",
+			expected: "SELECT u.id as ID, u.name as Name FROM users as u WHERE u.id = '123'",
 			statementMetadata: StatementMetadata{
 				Tables:   []string{"users"},
 				Comments: []string{},
@@ -699,6 +720,6 @@ func ExampleNormalizer() {
 
 	fmt.Println(normalizedSQL)
 	fmt.Println(statementMetadata)
-	// Output: SELECT * FROM users WHERE id IN ( ? )
+	// Output: SELECT * FROM users WHERE id in ( ? )
 	// &{[users] [/* this is a comment */] [SELECT]}
 }

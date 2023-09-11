@@ -5,48 +5,51 @@ import (
 )
 
 type normalizerConfig struct {
-	DBMS string `json:"dbms"`
-
 	// CollectTables specifies whether the normalizer should also extract the table names that a query addresses
-	CollectTables bool `json:"collect_tables"`
+	CollectTables bool
 
 	// CollectCommands specifies whether the normalizer should extract and return commands as SQL metadata
-	CollectCommands bool `json:"collect_commands"`
+	CollectCommands bool
 
 	// CollectComments specifies whether the normalizer should extract and return comments as SQL metadata
-	CollectComments bool `json:"collect_comments"`
+	CollectComments bool
 
 	// KeepSQLAlias reports whether SQL aliases ("AS") should be truncated.
-	KeepSQLAlias bool `json:"keep_sql_alias"`
+	KeepSQLAlias bool
+
+	// UppercaseKeywords reports whether SQL keywords should be uppercased.
+	UppercaseKeywords bool
 }
 
-func WithDBMS(dbms string) func(*normalizerConfig) {
-	return func(c *normalizerConfig) {
-		c.DBMS = dbms
-	}
-}
+type normalizerOption func(*normalizerConfig)
 
-func WithCollectTables(collectTables bool) func(*normalizerConfig) {
+func WithCollectTables(collectTables bool) normalizerOption {
 	return func(c *normalizerConfig) {
 		c.CollectTables = collectTables
 	}
 }
 
-func WithCollectCommands(collectCommands bool) func(*normalizerConfig) {
+func WithCollectCommands(collectCommands bool) normalizerOption {
 	return func(c *normalizerConfig) {
 		c.CollectCommands = collectCommands
 	}
 }
 
-func WithCollectComments(collectComments bool) func(*normalizerConfig) {
+func WithCollectComments(collectComments bool) normalizerOption {
 	return func(c *normalizerConfig) {
 		c.CollectComments = collectComments
 	}
 }
 
-func WithKeepSQLAlias(keepSQLAlias bool) func(*normalizerConfig) {
+func WithKeepSQLAlias(keepSQLAlias bool) normalizerOption {
 	return func(c *normalizerConfig) {
 		c.KeepSQLAlias = keepSQLAlias
+	}
+}
+
+func WithUppercaseKeywords(uppercaseKeywords bool) normalizerOption {
+	return func(c *normalizerConfig) {
+		c.UppercaseKeywords = uppercaseKeywords
 	}
 }
 
@@ -60,7 +63,7 @@ type Normalizer struct {
 	config *normalizerConfig
 }
 
-func NewNormalizer(opts ...func(*normalizerConfig)) *Normalizer {
+func NewNormalizer(opts ...normalizerOption) *Normalizer {
 	normalizer := Normalizer{
 		config: &normalizerConfig{},
 	}
@@ -80,8 +83,11 @@ const (
 // Normalize takes an input SQL string and returns a normalized SQL string, a StatementMetadata struct, and an error.
 // The normalizer collapses input SQL into compact format, groups obfuscated values into single placeholder,
 // and collects metadata such as table names, comments, and commands.
-func (n *Normalizer) Normalize(input string) (normalized string, info *StatementMetadata, err error) {
-	lexer := New(input)
+func (n *Normalizer) Normalize(input string, lexerOpts ...lexerOption) (normalized string, info *StatementMetadata, err error) {
+	lexer := New(
+		input,
+		lexerOpts...,
+	)
 
 	var normalizedSQL string
 	var statementMetadata = &StatementMetadata{
@@ -110,7 +116,7 @@ func (n *Normalizer) Normalize(input string) (normalized string, info *Statement
 			}
 		}
 
-		normalizedSQL = normalizeSQL(token, lastToken, normalizedSQL)
+		normalizedSQL = normalizeSQL(token, lastToken, normalizedSQL, n.config)
 
 		// TODO: We rely on the WS token to determine if we should add a whitespace
 		// This is not ideal, as SQLs with slightly different formatting will NOT be normalized into single family
@@ -136,7 +142,7 @@ func (n *Normalizer) Normalize(input string) (normalized string, info *Statement
 	return strings.TrimSpace(normalizedSQL), statementMetadata, nil
 }
 
-func normalizeSQL(token Token, lastToken Token, statement string) string {
+func normalizeSQL(token Token, lastToken Token, statement string, config *normalizerConfig) string {
 	if token.Type == WS || token.Type == COMMENT || token.Type == MULTILINE_COMMENT {
 		// We don't rely on the WS token to determine if we should add a whitespace
 		return statement
@@ -144,13 +150,11 @@ func normalizeSQL(token Token, lastToken Token, statement string) string {
 
 	// determine if we should add a whitespace
 	statement = appendWhitespace(lastToken, token, statement)
-
-	// UPPER CASE SQL keywords
-	if isSQLKeyword(token) {
+	if isSQLKeyword(token) && config.UppercaseKeywords {
 		statement += strings.ToUpper(token.Value)
-		return statement
+	} else {
+		statement += token.Value
 	}
-	statement += token.Value
 
 	return statement
 }

@@ -13,6 +13,7 @@ func TestObfuscator(t *testing.T) {
 		expected         string
 		replaceDigits    bool
 		dollarQuotedFunc bool
+		dbms             DBMSType
 	}{
 		{
 			input:         "SELECT * FROM users where id = 1",
@@ -60,11 +61,11 @@ func TestObfuscator(t *testing.T) {
 			replaceDigits: true,
 		},
 		{
-			input: `/* this is a comment 
+			input: `/* this is a comment
 			with multiple lines
 			*/
 			SELECT * FROM users where id = 1`,
-			expected: `/* this is a comment 
+			expected: `/* this is a comment
 			with multiple lines
 			*/
 			SELECT * FROM users where id = ?`,
@@ -73,11 +74,11 @@ func TestObfuscator(t *testing.T) {
 		{
 			input: `
 			SELECT * FROM users where id = 1
-			/* this is a comment 
+			/* this is a comment
 			with multiple lines */
 			`,
 			expected: `SELECT * FROM users where id = ?
-			/* this is a comment 
+			/* this is a comment
 			with multiple lines */`,
 		},
 		{
@@ -326,6 +327,7 @@ func TestObfuscator(t *testing.T) {
 			WHEN NOT MATCHED BY SOURCE THEN
 				DELETE
 			OUTPUT $action, inserted.*, deleted.*;`,
+			dbms: DBMSSQLServer,
 		},
 	}
 
@@ -335,7 +337,7 @@ func TestObfuscator(t *testing.T) {
 				WithReplaceDigits(tt.replaceDigits),
 				WithDollarQuotedFunc(tt.dollarQuotedFunc),
 			)
-			got := obfuscator.Obfuscate(tt.input)
+			got := obfuscator.Obfuscate(tt.input, WithDBMS(tt.dbms))
 			assert.Equal(t, tt.expected, got)
 		})
 	}

@@ -6,15 +6,17 @@ import (
 	"unicode"
 )
 
+type DBMSType string
+
 const (
 	// DBMSSQLServer is a MS SQL Server
-	DBMSSQLServer = "mssql"
+	DBMSSQLServer DBMSType = "mssql"
 	// DBMSPostgres is a PostgreSQL Server
-	DBMSPostgres = "postgresql"
+	DBMSPostgres DBMSType = "postgresql"
 	// DBMSMySQL is a MySQL Server
-	DBMSMySQL = "mysql"
+	DBMSMySQL DBMSType = "mysql"
 	// DBMSOracle is a Oracle Server
-	DBMSOracle = "oracle"
+	DBMSOracle DBMSType = "oracle"
 )
 
 var Commands = map[string]bool{
