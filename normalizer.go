@@ -141,12 +141,6 @@ func normalizeSQL(token Token, lastToken Token, statement string) string {
 
 	// determine if we should add a whitespace
 	statement = appendWhitespace(lastToken, token, statement)
-
-	// UPPER CASE SQL keywords
-	if isSQLKeyword(token) {
-		statement += strings.ToUpper(token.Value)
-		return statement
-	}
 	statement += token.Value
 
 	return statement
