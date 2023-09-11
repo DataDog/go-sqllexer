@@ -87,4 +87,4 @@ go test -bench=. -benchmem ./...
 
 ## License
 
-[Apache License, v2.0](LICENSE)
+[MIT License](LICENSE)
