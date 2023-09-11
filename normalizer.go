@@ -16,6 +16,9 @@ type normalizerConfig struct {
 
 	// KeepSQLAlias reports whether SQL aliases ("AS") should be truncated.
 	KeepSQLAlias bool
+
+	// UppercaseKeywords reports whether SQL keywords should be uppercased.
+	UppercaseKeywords bool
 }
 
 type normalizerOption func(*normalizerConfig)
@@ -41,6 +44,12 @@ func WithCollectComments(collectComments bool) normalizerOption {
 func WithKeepSQLAlias(keepSQLAlias bool) normalizerOption {
 	return func(c *normalizerConfig) {
 		c.KeepSQLAlias = keepSQLAlias
+	}
+}
+
+func WithUppercaseKeywords(uppercaseKeywords bool) normalizerOption {
+	return func(c *normalizerConfig) {
+		c.UppercaseKeywords = uppercaseKeywords
 	}
 }
 
@@ -107,7 +116,7 @@ func (n *Normalizer) Normalize(input string, lexerOpts ...lexerOption) (normaliz
 			}
 		}
 
-		normalizedSQL = normalizeSQL(token, lastToken, normalizedSQL)
+		normalizedSQL = normalizeSQL(token, lastToken, normalizedSQL, n.config)
 
 		// TODO: We rely on the WS token to determine if we should add a whitespace
 		// This is not ideal, as SQLs with slightly different formatting will NOT be normalized into single family
@@ -133,7 +142,7 @@ func (n *Normalizer) Normalize(input string, lexerOpts ...lexerOption) (normaliz
 	return strings.TrimSpace(normalizedSQL), statementMetadata, nil
 }
 
-func normalizeSQL(token Token, lastToken Token, statement string) string {
+func normalizeSQL(token Token, lastToken Token, statement string, config *normalizerConfig) string {
 	if token.Type == WS || token.Type == COMMENT || token.Type == MULTILINE_COMMENT {
 		// We don't rely on the WS token to determine if we should add a whitespace
 		return statement
@@ -141,7 +150,11 @@ func normalizeSQL(token Token, lastToken Token, statement string) string {
 
 	// determine if we should add a whitespace
 	statement = appendWhitespace(lastToken, token, statement)
-	statement += token.Value
+	if isSQLKeyword(token) && config.UppercaseKeywords {
+		statement += strings.ToUpper(token.Value)
+	} else {
+		statement += token.Value
+	}
 
 	return statement
 }

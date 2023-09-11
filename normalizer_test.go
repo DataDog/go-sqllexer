@@ -362,8 +362,9 @@ func TestNormalizerNotCollectMetadata(t *testing.T) {
 
 func TestNormalizerFormatting(t *testing.T) {
 	tests := []struct {
-		queries  []string
-		expected string
+		queries           []string
+		expected          string
+		uppercaseKeywords bool
 	}{
 		{
 			queries: []string{
@@ -382,13 +383,23 @@ func TestNormalizerFormatting(t *testing.T) {
 			},
 			expected: "SELECT id, name, address FROM users where id IN ( ? )",
 		},
+		{
+			queries: []string{
+				"SELECT * FROM discount where description LIKE ?",
+				"select * from discount where description LIKE ?",
+				"select * from discount where description like ?",
+			},
+			expected:          "SELECT * FROM discount WHERE description LIKE ?",
+			uppercaseKeywords: true,
+		},
 	}
 
-	normalizer := NewNormalizer(
-		WithCollectComments(false),
-	)
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
+			normalizer := NewNormalizer(
+				WithCollectComments(false),
+				WithUppercaseKeywords(test.uppercaseKeywords),
+			)
 			for _, query := range test.queries {
 				got, _, err := normalizer.Normalize(query)
 				assert.NoError(t, err)
