@@ -293,8 +293,8 @@ multiline comment */
 		t.Run("", func(t *testing.T) {
 			got, statementMetadata, err := normalizer.Normalize(test.input)
 			assert.NoError(t, err)
-			assert.Equal(t, got, test.expected)
-			assert.Equal(t, statementMetadata, &test.statementMetadata)
+			assert.Equal(t, test.expected, got)
+			assert.Equal(t, &test.statementMetadata, statementMetadata)
 		})
 	}
 }
@@ -354,8 +354,8 @@ func TestNormalizerNotCollectMetadata(t *testing.T) {
 		t.Run("", func(t *testing.T) {
 			got, statementMetadata, err := normalizer.Normalize(test.input)
 			assert.NoError(t, err)
-			assert.Equal(t, got, test.expected)
-			assert.Equal(t, statementMetadata, &test.statementMetadata)
+			assert.Equal(t, test.expected, got)
+			assert.Equal(t, &test.statementMetadata, statementMetadata)
 		})
 	}
 }
@@ -400,7 +400,7 @@ func TestNormalizerFormatting(t *testing.T) {
 			for _, query := range test.queries {
 				got, _, err := normalizer.Normalize(query)
 				assert.NoError(t, err)
-				assert.Equal(t, got, test.expected)
+				assert.Equal(t, test.expected, got)
 			}
 		})
 	}
@@ -465,14 +465,14 @@ func TestNormalizerRepeatedExecution(t *testing.T) {
 			for i := 0; i < 10; i++ {
 				got, statementMetadata, err := normalizer.Normalize(input)
 				assert.NoError(t, err)
-				assert.Equal(t, got, test.expected)
-				assert.Equal(t, statementMetadata.Commands, test.statementMetadata.Commands)
-				assert.Equal(t, statementMetadata.Tables, test.statementMetadata.Tables)
+				assert.Equal(t, test.expected, got)
+				assert.Equal(t, test.statementMetadata.Commands, statementMetadata.Commands)
+				assert.Equal(t, test.statementMetadata.Tables, statementMetadata.Tables)
 				// comments are stripped after the first execution
 				if i == 0 {
-					assert.Equal(t, statementMetadata.Comments, test.statementMetadata.Comments)
+					assert.Equal(t, test.statementMetadata.Comments, statementMetadata.Comments)
 				} else {
-					assert.Equal(t, statementMetadata.Comments, []string{})
+					assert.Equal(t, []string{}, statementMetadata.Comments)
 				}
 				input = got
 			}
@@ -613,8 +613,8 @@ func TestNormalizeDeobfuscatedSQL(t *testing.T) {
 			)
 			got, statementMetadata, err := normalizer.Normalize(test.input)
 			assert.NoError(t, err)
-			assert.Equal(t, got, test.expected)
-			assert.Equal(t, statementMetadata, &test.statementMetadata)
+			assert.Equal(t, test.expected, got)
+			assert.Equal(t, &test.statementMetadata, statementMetadata)
 		})
 	}
 }
@@ -677,7 +677,7 @@ func TestGroupObfuscatedValues(t *testing.T) {
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
 			got := groupObfuscatedValues(test.input)
-			assert.Equal(t, got, test.expected)
+			assert.Equal(t, test.expected, got)
 		})
 	}
 }

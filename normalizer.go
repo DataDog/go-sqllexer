@@ -90,9 +90,9 @@ func (n *Normalizer) Normalize(input string) (normalized string, info *Statement
 		Commands: []string{},
 	}
 
-	var lastToken *Token // The last token that is not whitespace or comment
+	var lastToken Token // The last token that is not whitespace or comment
 
-	for token := range lexer.ScanAllTokens() {
+	for _, token := range lexer.ScanAll() {
 		if token.Type == COMMENT || token.Type == MULTILINE_COMMENT {
 			// Collect comments
 			if n.config.CollectComments {
@@ -102,7 +102,7 @@ func (n *Normalizer) Normalize(input string) (normalized string, info *Statement
 			if isCommand(strings.ToUpper(token.Value)) && n.config.CollectCommands {
 				// Collect commands
 				statementMetadata.Commands = append(statementMetadata.Commands, strings.ToUpper(token.Value))
-			} else if lastToken != nil && isTableIndicator(strings.ToUpper(lastToken.Value)) {
+			} else if isTableIndicator(strings.ToUpper(lastToken.Value)) {
 				// Collect table names
 				if n.config.CollectTables {
 					statementMetadata.Tables = append(statementMetadata.Tables, token.Value)
@@ -136,7 +136,7 @@ func (n *Normalizer) Normalize(input string) (normalized string, info *Statement
 	return strings.TrimSpace(normalizedSQL), statementMetadata, nil
 }
 
-func normalizeSQL(token *Token, lastToken *Token, statement string) string {
+func normalizeSQL(token Token, lastToken Token, statement string) string {
 	if token.Type == WS || token.Type == COMMENT || token.Type == MULTILINE_COMMENT {
 		// We don't rely on the WS token to determine if we should add a whitespace
 		return statement
@@ -197,15 +197,11 @@ func dedupeStatementMetadata(info *StatementMetadata) {
 	info.Commands = dedupeCollectedMetadata(info.Commands)
 }
 
-func isSQLKeyword(token *Token) bool {
-	return token.Type == IDENT && keywordsRegex.MatchString(token.Value)
-}
-
-func appendWhitespace(lastToken *Token, token *Token, normalizedSQL string) string {
+func appendWhitespace(lastToken Token, token Token, normalizedSQL string) string {
 	switch token.Value {
 	case ",":
 	case "=":
-		if lastToken != nil && lastToken.Value == ":" {
+		if lastToken.Value == ":" {
 			// do not add a space before an equals if a colon was
 			// present before it.
 			break
