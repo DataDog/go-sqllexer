@@ -388,6 +388,7 @@ func TestNormalizerFormatting(t *testing.T) {
 			queries: []string{
 				"SELECT id,name, address FROM users where id = ?",
 				"SELECT id, name, address FROM users where id = ?",
+				"SELECT id,name, address FROM users where id =?",
 				"SELECT id as ID, name as Name, address FROM users where id = ?",
 			},
 			expected: "SELECT id, name, address FROM users where id = ?",
