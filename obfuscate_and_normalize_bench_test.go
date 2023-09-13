@@ -102,7 +102,10 @@ GROUP BY sales.product_key;
 			b.ResetTimer()
 			b.ReportAllocs()
 			for i := 0; i < b.N; i++ {
-				ObfuscateAndNormalize(bm.query, obfuscator, normalizer)
+				_, _, err := ObfuscateAndNormalize(bm.query, obfuscator, normalizer)
+				if err != nil {
+					b.Fatal(err)
+				}
 			}
 		})
 	}
