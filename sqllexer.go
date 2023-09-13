@@ -17,7 +17,7 @@ const (
 	PUNCTUATION            // punctuation
 	DOLLAR_QUOTED_FUNCTION // dollar quoted function
 	DOLLAR_QUOTED_STRING   // dollar quoted string
-	NUMBERED_PARAMETER     // numbered parameter
+	POSITIONAL_PARAMETER   // numbered parameter
 	UNKNOWN                // unknown token
 )
 
@@ -121,7 +121,7 @@ func (s *Lexer) Scan() Token {
 	case ch == '$':
 		if isDigit(s.lookAhead(1)) {
 			// if the dollar sign is followed by a digit, then it's a numbered parameter
-			return s.scanNumberedParameter()
+			return s.scanPositionalParameter()
 		}
 		if s.config.DBMS == DBMSSQLServer && isLetter(s.lookAhead(1)) {
 			return s.scanIdentifier()
@@ -393,7 +393,7 @@ func (s *Lexer) scanDollarQuotedString() Token {
 	return Token{ERROR, s.src[s.start:s.cursor]}
 }
 
-func (s *Lexer) scanNumberedParameter() Token {
+func (s *Lexer) scanPositionalParameter() Token {
 	s.start = s.cursor
 	ch := s.nextBy(2) // consume the dollar sign and the number
 	for {
@@ -402,7 +402,7 @@ func (s *Lexer) scanNumberedParameter() Token {
 		}
 		ch = s.next()
 	}
-	return Token{NUMBERED_PARAMETER, s.src[s.start:s.cursor]}
+	return Token{POSITIONAL_PARAMETER, s.src[s.start:s.cursor]}
 }
 
 func (s *Lexer) scanUnknown() Token {

@@ -312,7 +312,7 @@ func TestLexer(t *testing.T) {
 				{WS, " "},
 				{OPERATOR, "="},
 				{WS, " "},
-				{NUMBERED_PARAMETER, "$1"},
+				{POSITIONAL_PARAMETER, "$1"},
 			},
 		},
 		{
