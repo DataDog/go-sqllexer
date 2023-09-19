@@ -5,8 +5,11 @@ import (
 )
 
 type obfuscatorConfig struct {
-	ReplaceDigits    bool
-	DollarQuotedFunc bool
+	DollarQuotedFunc           bool
+	ReplaceDigits              bool
+	ReplacePositionalParameter bool
+	ReplaceBoolean             bool
+	ReplaceNull                bool
 }
 
 type obfuscatorOption func(*obfuscatorConfig)
@@ -14,6 +17,24 @@ type obfuscatorOption func(*obfuscatorConfig)
 func WithReplaceDigits(replaceDigits bool) obfuscatorOption {
 	return func(c *obfuscatorConfig) {
 		c.ReplaceDigits = replaceDigits
+	}
+}
+
+func WithReplacePositionalParameter(replacePositionalParameter bool) obfuscatorOption {
+	return func(c *obfuscatorConfig) {
+		c.ReplacePositionalParameter = replacePositionalParameter
+	}
+}
+
+func WithReplaceBoolean(replaceBoolean bool) obfuscatorOption {
+	return func(c *obfuscatorConfig) {
+		c.ReplaceBoolean = replaceBoolean
+	}
+}
+
+func WithReplaceNull(replaceNull bool) obfuscatorOption {
+	return func(c *obfuscatorConfig) {
+		c.ReplaceNull = replaceNull
 	}
 }
 
@@ -78,7 +99,20 @@ func (o *Obfuscator) ObfuscateTokenValue(token Token, lexerOpts ...lexerOption) 
 		}
 	case STRING, INCOMPLETE_STRING, DOLLAR_QUOTED_STRING:
 		return StringPlaceholder
+	case POSITIONAL_PARAMETER:
+		if o.config.ReplacePositionalParameter {
+			return StringPlaceholder
+		} else {
+			return token.Value
+		}
 	case IDENT:
+		if o.config.ReplaceBoolean && isBoolean(token.Value) {
+			return StringPlaceholder
+		}
+		if o.config.ReplaceNull && isNull(token.Value) {
+			return StringPlaceholder
+		}
+
 		if o.config.ReplaceDigits {
 			return replaceDigits(token.Value, "?")
 		} else {

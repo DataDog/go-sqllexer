@@ -116,6 +116,14 @@ func isSQLKeyword(token Token) bool {
 	return token.Type == IDENT && keywordsRegex.MatchString(token.Value)
 }
 
+func isBoolean(ident string) bool {
+	return strings.ToUpper(ident) == "TRUE" || strings.ToUpper(ident) == "FALSE"
+}
+
+func isNull(ident string) bool {
+	return strings.ToUpper(ident) == "NULL"
+}
+
 func replaceDigits(input string, placeholder string) string {
 	var builder strings.Builder
 

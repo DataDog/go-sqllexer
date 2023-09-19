@@ -9,11 +9,14 @@ import (
 
 func TestObfuscator(t *testing.T) {
 	tests := []struct {
-		input            string
-		expected         string
-		replaceDigits    bool
-		dollarQuotedFunc bool
-		dbms             DBMSType
+		input                      string
+		expected                   string
+		replaceDigits              bool
+		replacePositionalParameter bool
+		replaceBoolean             bool
+		replaceNull                bool
+		dollarQuotedFunc           bool
+		dbms                       DBMSType
 	}{
 		{
 			input:         "SELECT * FROM users where id = 1",
@@ -54,6 +57,30 @@ func TestObfuscator(t *testing.T) {
 			input:         "SELECT * FROM users1 where id = ?",
 			expected:      "SELECT * FROM users? where id = ?",
 			replaceDigits: true,
+		},
+		{
+			input:          "SELECT * FROM users where id is NULL and is_active = TRUE and is_admin = FALSE",
+			expected:       "SELECT * FROM users where id is NULL and is_active = TRUE and is_admin = FALSE",
+			replaceBoolean: false,
+			replaceNull:    false,
+		},
+		{
+			input:          "SELECT * FROM users where id is NULL and is_active = TRUE and is_admin = FALSE",
+			expected:       "SELECT * FROM users where id is NULL and is_active = ? and is_admin = ?",
+			replaceBoolean: true,
+			replaceNull:    false,
+		},
+		{
+			input:          "SELECT * FROM users where id is NULL and is_active = TRUE and is_admin = FALSE",
+			expected:       "SELECT * FROM users where id is ? and is_active = TRUE and is_admin = FALSE",
+			replaceBoolean: false,
+			replaceNull:    true,
+		},
+		{
+			input:          "SELECT * FROM users where id is NULL and is_active = TRUE and is_admin = FALSE",
+			expected:       "SELECT * FROM users where id is ? and is_active = ? and is_admin = ?",
+			replaceBoolean: true,
+			replaceNull:    true,
 		},
 		{
 			input:         "SELECT * FROM users where id = 1 -- this is a comment",
@@ -207,6 +234,16 @@ func TestObfuscator(t *testing.T) {
 			replaceDigits: true,
 		},
 		{
+			input:                      "SELECT * FROM users where id = $1",
+			expected:                   `SELECT * FROM users where id = $1`,
+			replacePositionalParameter: false,
+		},
+		{
+			input:                      "SELECT * FROM users where id = $1",
+			expected:                   `SELECT * FROM users where id = ?`,
+			replacePositionalParameter: true,
+		},
+		{
 			input:    `SELECT * FROM "public"."users" where id = 2`,
 			expected: `SELECT * FROM "public"."users" where id = ?`,
 		},
@@ -335,6 +372,9 @@ func TestObfuscator(t *testing.T) {
 		t.Run("", func(t *testing.T) {
 			obfuscator := NewObfuscator(
 				WithReplaceDigits(tt.replaceDigits),
+				WithReplacePositionalParameter(tt.replacePositionalParameter),
+				WithReplaceBoolean(tt.replaceBoolean),
+				WithReplaceNull(tt.replaceNull),
 				WithDollarQuotedFunc(tt.dollarQuotedFunc),
 			)
 			got := obfuscator.Obfuscate(tt.input, WithDBMS(tt.dbms))
