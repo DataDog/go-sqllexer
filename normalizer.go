@@ -83,14 +83,15 @@ const (
 // Normalize takes an input SQL string and returns a normalized SQL string, a StatementMetadata struct, and an error.
 // The normalizer collapses input SQL into compact format, groups obfuscated values into single placeholder,
 // and collects metadata such as table names, comments, and commands.
-func (n *Normalizer) Normalize(input string, lexerOpts ...lexerOption) (normalized string, info *StatementMetadata, err error) {
+func (n *Normalizer) Normalize(input string, lexerOpts ...lexerOption) (normalizedSQL string, statementMetadata *StatementMetadata, err error) {
 	lexer := New(
 		input,
 		lexerOpts...,
 	)
 
-	var normalizedSQL string
-	var statementMetadata = &StatementMetadata{
+	var normalizedSQLBuilder strings.Builder
+
+	statementMetadata = &StatementMetadata{
 		Tables:   []string{},
 		Comments: []string{},
 		Commands: []string{},
@@ -99,41 +100,15 @@ func (n *Normalizer) Normalize(input string, lexerOpts ...lexerOption) (normaliz
 	var lastToken Token // The last token that is not whitespace or comment
 
 	for _, token := range lexer.ScanAll() {
-		if token.Type == COMMENT || token.Type == MULTILINE_COMMENT {
-			// Collect comments
-			if n.config.CollectComments {
-				statementMetadata.Comments = append(statementMetadata.Comments, token.Value)
-			}
-		} else if token.Type == IDENT {
-			if isCommand(strings.ToUpper(token.Value)) && n.config.CollectCommands {
-				// Collect commands
-				statementMetadata.Commands = append(statementMetadata.Commands, strings.ToUpper(token.Value))
-			} else if isTableIndicator(strings.ToUpper(lastToken.Value)) {
-				// Collect table names
-				if n.config.CollectTables {
-					statementMetadata.Tables = append(statementMetadata.Tables, token.Value)
-				}
-			}
-		}
-
-		normalizedSQL = normalizeSQL(token, lastToken, normalizedSQL, n.config)
-
-		// TODO: We rely on the WS token to determine if we should add a whitespace
-		// This is not ideal, as SQLs with slightly different formatting will NOT be normalized into single family
-		// e.g. "SELECT * FROM table where id = ?" and "SELECT * FROM table where id= ?" will be normalized into different family
-		if token.Type != WS && token.Type != COMMENT && token.Type != MULTILINE_COMMENT {
-			lastToken = token
-		}
+		n.collectMetadata(token, lastToken, statementMetadata)
+		lastToken = n.normalizeSQL(token, lastToken, &normalizedSQLBuilder)
 	}
 
-	// We use regex to group consecutive obfuscated values into single placeholder.
-	// This is "less" performant than token by token processing,
-	// but it is much simpler to implement and maintain.
-	// The trade off made here is assuming normalization runs on backend
-	// where performance is not as critical as the agent.
+	normalizedSQL = normalizedSQLBuilder.String()
+
 	normalizedSQL = groupObfuscatedValues(normalizedSQL)
 	if !n.config.KeepSQLAlias {
-		normalizedSQL = DiscardSQLAlias(normalizedSQL)
+		normalizedSQL = discardSQLAlias(normalizedSQL)
 	}
 
 	// Dedupe collected metadata
@@ -142,27 +117,46 @@ func (n *Normalizer) Normalize(input string, lexerOpts ...lexerOption) (normaliz
 	return strings.TrimSpace(normalizedSQL), statementMetadata, nil
 }
 
-func normalizeSQL(token Token, lastToken Token, statement string, config *normalizerConfig) string {
-	if token.Type == WS || token.Type == COMMENT || token.Type == MULTILINE_COMMENT {
-		// We don't rely on the WS token to determine if we should add a whitespace
-		return statement
+func (n *Normalizer) collectMetadata(token Token, lastToken Token, statementMetadata *StatementMetadata) {
+	if n.config.CollectComments && (token.Type == COMMENT || token.Type == MULTILINE_COMMENT) {
+		// Collect comments
+		statementMetadata.Comments = append(statementMetadata.Comments, token.Value)
+	} else if token.Type == IDENT {
+		if n.config.CollectCommands && isCommand(strings.ToUpper(token.Value)) {
+			// Collect commands
+			statementMetadata.Commands = append(statementMetadata.Commands, strings.ToUpper(token.Value))
+		} else if n.config.CollectTables && isTableIndicator(strings.ToUpper(lastToken.Value)) {
+			// Collect table names
+			statementMetadata.Tables = append(statementMetadata.Tables, token.Value)
+		}
+	}
+}
+
+func (n *Normalizer) normalizeSQL(token Token, lastToken Token, normalizedSQLBuilder *strings.Builder) Token {
+	if token.Type != WS && token.Type != COMMENT && token.Type != MULTILINE_COMMENT {
+		// determine if we should add a whitespace
+		appendWhitespace(lastToken, token, normalizedSQLBuilder)
+		if n.config.UppercaseKeywords && isSQLKeyword(token) {
+			normalizedSQLBuilder.WriteString(strings.ToUpper(token.Value))
+		} else {
+			normalizedSQLBuilder.WriteString(token.Value)
+		}
+
+		lastToken = token
 	}
 
-	// determine if we should add a whitespace
-	statement = appendWhitespace(lastToken, token, statement)
-	if isSQLKeyword(token) && config.UppercaseKeywords {
-		statement += strings.ToUpper(token.Value)
-	} else {
-		statement += token.Value
-	}
-
-	return statement
+	return lastToken
 }
 
 // groupObfuscatedValues groups consecutive obfuscated values in a SQL query into a single placeholder.
 // It replaces "(?, ?, ...)" and "[?, ?, ...]" with "( ? )" and "[ ? ]", respectively.
 // Returns the modified SQL query as a string.
 func groupObfuscatedValues(input string) string {
+	// We use regex to group consecutive obfuscated values into single placeholder.
+	// This is "less" performant than token by token processing,
+	// but it is much simpler to implement and maintain.
+	// The trade off made here is assuming normalization runs on backend
+	// where performance is not as critical as the agent.
 	grouped := groupableRegex.ReplaceAllStringFunc(input, func(match string) string {
 		if match[0] == '(' {
 			return ArrayPlaceholder
@@ -172,11 +166,11 @@ func groupObfuscatedValues(input string) string {
 	return grouped
 }
 
-// DiscardSQLAlias removes any SQL alias from the input string and returns the modified string.
+// discardSQLAlias removes any SQL alias from the input string and returns the modified string.
 // It uses a regular expression to match the alias pattern and replace it with an empty string.
 // The function is case-insensitive and matches the pattern "AS <alias_name>".
 // The input string is not modified in place.
-func DiscardSQLAlias(input string) string {
+func discardSQLAlias(input string) string {
 	return sqlAliasRegex.ReplaceAllString(input, "")
 }
 
@@ -201,7 +195,7 @@ func dedupeStatementMetadata(info *StatementMetadata) {
 	info.Commands = dedupeCollectedMetadata(info.Commands)
 }
 
-func appendWhitespace(lastToken Token, token Token, normalizedSQL string) string {
+func appendWhitespace(lastToken Token, token Token, normalizedSQLBuilder *strings.Builder) {
 	switch token.Value {
 	case ",":
 	case "=":
@@ -212,8 +206,6 @@ func appendWhitespace(lastToken Token, token Token, normalizedSQL string) string
 		}
 		fallthrough
 	default:
-		normalizedSQL += " "
+		normalizedSQLBuilder.WriteString(" ")
 	}
-
-	return normalizedSQL
 }
