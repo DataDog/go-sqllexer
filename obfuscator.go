@@ -99,27 +99,25 @@ func (o *Obfuscator) ObfuscateTokenValue(token Token, lexerOpts ...lexerOption) 
 		}
 	case STRING, INCOMPLETE_STRING, DOLLAR_QUOTED_STRING:
 		return StringPlaceholder
-  case POSITIONAL_PARAMETER:
-    if o.config.ReplacePositionalParameter {
-      obfuscatedSQL.WriteString(StringPlaceholder)
-    } else {
-      obfuscatedSQL.WriteString(token.Value)
-    }
+	case POSITIONAL_PARAMETER:
+		if o.config.ReplacePositionalParameter {
+			return StringPlaceholder
+		} else {
+			return token.Value
+		}
 	case IDENT:
 		if o.config.ReplaceBoolean && isBoolean(token.Value) {
-      obfuscatedSQL.WriteString(StringPlaceholder)
-      continue
-    }
-    if o.config.ReplaceNull && isNull(token.Value) {
-      obfuscatedSQL.WriteString(StringPlaceholder)
-      continue
-    }
+			return StringPlaceholder
+		}
+		if o.config.ReplaceNull && isNull(token.Value) {
+			return StringPlaceholder
+		}
 
-    if o.config.ReplaceDigits {
-      obfuscatedSQL.WriteString(replaceDigits(token.Value, "?"))
-    } else {
-      obfuscatedSQL.WriteString(token.Value)
-    }
+		if o.config.ReplaceDigits {
+			return replaceDigits(token.Value, "?")
+		} else {
+			return token.Value
+		}
 	default:
 		return token.Value
 	}
