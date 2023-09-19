@@ -75,46 +75,52 @@ func (o *Obfuscator) Obfuscate(input string, lexerOpts ...lexerOption) string {
 		lexerOpts...,
 	)
 	for _, token := range lexer.ScanAll() {
-		switch token.Type {
-		case NUMBER:
-			obfuscatedSQL.WriteString(NumberPlaceholder)
-		case DOLLAR_QUOTED_FUNCTION:
-			if o.config.DollarQuotedFunc {
-				// obfuscate the content of dollar quoted function
-				quotedFunc := token.Value[6 : len(token.Value)-6] // remove the $func$ prefix and suffix
-				obfuscatedSQL.WriteString("$func$")
-				obfuscatedSQL.WriteString(o.Obfuscate(quotedFunc, lexerOpts...))
-				obfuscatedSQL.WriteString("$func$")
-			} else {
-				obfuscatedSQL.WriteString(StringPlaceholder)
-			}
-		case STRING, INCOMPLETE_STRING, DOLLAR_QUOTED_STRING:
-			obfuscatedSQL.WriteString(StringPlaceholder)
-		case POSITIONAL_PARAMETER:
-			if o.config.ReplacePositionalParameter {
-				obfuscatedSQL.WriteString(StringPlaceholder)
-			} else {
-				obfuscatedSQL.WriteString(token.Value)
-			}
-		case IDENT:
-			if o.config.ReplaceBoolean && isBoolean(token.Value) {
-				obfuscatedSQL.WriteString(StringPlaceholder)
-				continue
-			}
-			if o.config.ReplaceNull && isNull(token.Value) {
-				obfuscatedSQL.WriteString(StringPlaceholder)
-				continue
-			}
-
-			if o.config.ReplaceDigits {
-				obfuscatedSQL.WriteString(replaceDigits(token.Value, "?"))
-			} else {
-				obfuscatedSQL.WriteString(token.Value)
-			}
-		default:
-			obfuscatedSQL.WriteString(token.Value)
-		}
+		obfuscatedSQL.WriteString(o.ObfuscateTokenValue(token, lexerOpts...))
 	}
 
 	return strings.TrimSpace(obfuscatedSQL.String())
+}
+
+func (o *Obfuscator) ObfuscateTokenValue(token Token, lexerOpts ...lexerOption) string {
+	switch token.Type {
+	case NUMBER:
+		return NumberPlaceholder
+	case DOLLAR_QUOTED_FUNCTION:
+		if o.config.DollarQuotedFunc {
+			// obfuscate the content of dollar quoted function
+			quotedFunc := token.Value[6 : len(token.Value)-6] // remove the $func$ prefix and suffix
+			var obfuscatedDollarQuotedFunc strings.Builder
+			obfuscatedDollarQuotedFunc.WriteString("$func$")
+			obfuscatedDollarQuotedFunc.WriteString(o.Obfuscate(quotedFunc, lexerOpts...))
+			obfuscatedDollarQuotedFunc.WriteString("$func$")
+			return obfuscatedDollarQuotedFunc.String()
+		} else {
+			return StringPlaceholder
+		}
+	case STRING, INCOMPLETE_STRING, DOLLAR_QUOTED_STRING:
+		return StringPlaceholder
+  case POSITIONAL_PARAMETER:
+    if o.config.ReplacePositionalParameter {
+      obfuscatedSQL.WriteString(StringPlaceholder)
+    } else {
+      obfuscatedSQL.WriteString(token.Value)
+    }
+	case IDENT:
+		if o.config.ReplaceBoolean && isBoolean(token.Value) {
+      obfuscatedSQL.WriteString(StringPlaceholder)
+      continue
+    }
+    if o.config.ReplaceNull && isNull(token.Value) {
+      obfuscatedSQL.WriteString(StringPlaceholder)
+      continue
+    }
+
+    if o.config.ReplaceDigits {
+      obfuscatedSQL.WriteString(replaceDigits(token.Value, "?"))
+    } else {
+      obfuscatedSQL.WriteString(token.Value)
+    }
+	default:
+		return token.Value
+	}
 }
