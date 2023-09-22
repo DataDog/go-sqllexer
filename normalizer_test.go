@@ -298,6 +298,15 @@ multiline comment */
 				Commands: []string{"SELECT"},
 			},
 		},
+		{
+			input:    "/* ok comment */ UPDATE /*foo comment*/ table_name SET column_name = ? WHERE column_name = ?",
+			expected: "UPDATE table_name SET column_name = ? WHERE column_name = ?",
+			statementMetadata: StatementMetadata{
+				Tables:   []string{"table_name"},
+				Comments: []string{"/* ok comment */", "/*foo comment*/"},
+				Commands: []string{"UPDATE"},
+			},
+		},
 	}
 
 	normalizer := NewNormalizer(
