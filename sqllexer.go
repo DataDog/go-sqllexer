@@ -18,7 +18,7 @@ const (
 	DOLLAR_QUOTED_FUNCTION // dollar quoted function
 	DOLLAR_QUOTED_STRING   // dollar quoted string
 	POSITIONAL_PARAMETER   // numbered parameter
-	BINDED_PARAMETER       // binded parameter
+	BIND_PARAMETER         // bind parameter
 	UNKNOWN                // unknown token
 )
 
@@ -130,12 +130,12 @@ func (s *Lexer) Scan() Token {
 		return s.scanDollarQuotedString()
 	case ch == ':':
 		if s.config.DBMS == DBMSOracle && isLetter(s.lookAhead(1)) {
-			return s.scanBindedParameter()
+			return s.scanBindParameter()
 		}
 		return s.scanOperator()
 	case ch == '@':
 		if s.config.DBMS == DBMSSQLServer && isLetter(s.lookAhead(1)) {
-			return s.scanBindedParameter()
+			return s.scanBindParameter()
 		}
 		return s.scanOperator()
 	case isOperator(ch):
@@ -416,7 +416,7 @@ func (s *Lexer) scanPositionalParameter() Token {
 	return Token{POSITIONAL_PARAMETER, s.src[s.start:s.cursor]}
 }
 
-func (s *Lexer) scanBindedParameter() Token {
+func (s *Lexer) scanBindParameter() Token {
 	s.start = s.cursor
 	ch := s.nextBy(2) // consume the (colon|at sign) and the char
 	for {
@@ -425,7 +425,7 @@ func (s *Lexer) scanBindedParameter() Token {
 		}
 		ch = s.next()
 	}
-	return Token{BINDED_PARAMETER, s.src[s.start:s.cursor]}
+	return Token{BIND_PARAMETER, s.src[s.start:s.cursor]}
 }
 
 func (s *Lexer) scanUnknown() Token {

@@ -471,7 +471,7 @@ func TestLexer(t *testing.T) {
 			},
 		},
 		{
-			name:  "select with binded parameter",
+			name:  "select with bind parameter",
 			input: "SELECT * FROM users where id = :id",
 			expected: []Token{
 				{IDENT, "SELECT"},
@@ -488,12 +488,12 @@ func TestLexer(t *testing.T) {
 				{WS, " "},
 				{OPERATOR, "="},
 				{WS, " "},
-				{BINDED_PARAMETER, ":id"},
+				{BIND_PARAMETER, ":id"},
 			},
 			lexerOpts: []lexerOption{WithDBMS(DBMSOracle)},
 		},
 		{
-			name:  "select with binded parameter",
+			name:  "select with bind parameter",
 			input: "SELECT * FROM users where id = @id",
 			expected: []Token{
 				{IDENT, "SELECT"},
@@ -510,7 +510,7 @@ func TestLexer(t *testing.T) {
 				{WS, " "},
 				{OPERATOR, "="},
 				{WS, " "},
-				{BINDED_PARAMETER, "@id"},
+				{BIND_PARAMETER, "@id"},
 			},
 			lexerOpts: []lexerOption{WithDBMS(DBMSSQLServer)},
 		},
