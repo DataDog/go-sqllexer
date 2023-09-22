@@ -11,6 +11,7 @@ func TestObfuscationAndNormalization(t *testing.T) {
 		input             string
 		expected          string
 		statementMetadata StatementMetadata
+		lexerOpts         []lexerOption
 	}{
 		{
 			input:    "SELECT 1",
@@ -88,6 +89,61 @@ multiline comment */
 				Commands: []string{"SELECT"},
 			},
 		},
+		{
+			input:    "SELECT TRUNC(SYSDATE@!) from dual",
+			expected: "SELECT TRUNC ( SYSDATE @! ) from dual",
+			statementMetadata: StatementMetadata{
+				Tables:   []string{"dual"},
+				Comments: []string{},
+				Commands: []string{"SELECT"},
+			},
+			lexerOpts: []lexerOption{
+				WithDBMS(DBMSOracle),
+			},
+		},
+		{
+			input: `
+			select sql_fulltext from v$sql where force_matching_signature = 1033183797897134935
+			GROUP BY c.name, force_matching_signature, plan_hash_value
+			HAVING MAX(last_active_time) > sysdate - :seconds/24/60/60
+			FETCH FIRST :limit ROWS ONLY`,
+			expected: "select sql_fulltext from v$sql where force_matching_signature = ? GROUP BY c.name, force_matching_signature, plan_hash_value HAVING MAX ( last_active_time ) > sysdate - :seconds / ? / ? / ? FETCH FIRST :limit ROWS ONLY",
+			statementMetadata: StatementMetadata{
+				Tables:   []string{"v$sql"},
+				Comments: []string{},
+				Commands: []string{"SELECT"},
+			},
+			lexerOpts: []lexerOption{
+				WithDBMS(DBMSOracle),
+			},
+		},
+		{
+			input:    "SELECT TABLESPACE_NAME, USED_SPACE, TABLESPACE_SIZE, USED_PERCENT FROM SYS.DBA_TABLESPACE_USAGE_METRICS K WHERE USED_PERCENT > 85",
+			expected: `SELECT TABLESPACE_NAME, USED_SPACE, TABLESPACE_SIZE, USED_PERCENT FROM SYS.DBA_TABLESPACE_USAGE_METRICS K WHERE USED_PERCENT > ?`,
+			statementMetadata: StatementMetadata{
+				Tables:   []string{"SYS.DBA_TABLESPACE_USAGE_METRICS"},
+				Comments: []string{},
+				Commands: []string{"SELECT"},
+			},
+		},
+		{
+			input:    "SELECT dbms_lob.substr(sql_fulltext, 4000, 1) sql_fulltext FROM sys.dd_session",
+			expected: "SELECT dbms_lob.substr ( sql_fulltext, ?, ? ) sql_fulltext FROM sys.dd_session",
+			statementMetadata: StatementMetadata{
+				Tables:   []string{"sys.dd_session"},
+				Comments: []string{},
+				Commands: []string{"SELECT"},
+			},
+		},
+		{
+			input:    "begin execute immediate 'alter session set sql_trace=true'; end;",
+			expected: "begin execute immediate ? ; end ;",
+			statementMetadata: StatementMetadata{
+				Tables:   []string{},
+				Comments: []string{},
+				Commands: []string{"BEGIN", "EXECUTE"},
+			},
+		},
 	}
 
 	obfuscator := NewObfuscator(
@@ -104,7 +160,7 @@ multiline comment */
 
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			got, statementMetadata, err := ObfuscateAndNormalize(test.input, obfuscator, normalizer)
+			got, statementMetadata, err := ObfuscateAndNormalize(test.input, obfuscator, normalizer, test.lexerOpts...)
 			assert.NoError(t, err)
 			assert.Equal(t, test.expected, got)
 			assert.Equal(t, &test.statementMetadata, statementMetadata)

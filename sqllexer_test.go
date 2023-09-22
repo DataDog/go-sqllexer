@@ -9,9 +9,10 @@ import (
 
 func TestLexer(t *testing.T) {
 	tests := []struct {
-		name     string
-		input    string
-		expected []Token
+		name      string
+		input     string
+		expected  []Token
+		lexerOpts []lexerOption
 	}{
 		{
 			name:  "simple select with number",
@@ -469,11 +470,55 @@ func TestLexer(t *testing.T) {
 				{OPERATOR, "?"},
 			},
 		},
+		{
+			name:  "select with bind parameter",
+			input: "SELECT * FROM users where id = :id",
+			expected: []Token{
+				{IDENT, "SELECT"},
+				{WS, " "},
+				{WILDCARD, "*"},
+				{WS, " "},
+				{IDENT, "FROM"},
+				{WS, " "},
+				{IDENT, "users"},
+				{WS, " "},
+				{IDENT, "where"},
+				{WS, " "},
+				{IDENT, "id"},
+				{WS, " "},
+				{OPERATOR, "="},
+				{WS, " "},
+				{BIND_PARAMETER, ":id"},
+			},
+			lexerOpts: []lexerOption{WithDBMS(DBMSOracle)},
+		},
+		{
+			name:  "select with bind parameter",
+			input: "SELECT * FROM users where id = @id",
+			expected: []Token{
+				{IDENT, "SELECT"},
+				{WS, " "},
+				{WILDCARD, "*"},
+				{WS, " "},
+				{IDENT, "FROM"},
+				{WS, " "},
+				{IDENT, "users"},
+				{WS, " "},
+				{IDENT, "where"},
+				{WS, " "},
+				{IDENT, "id"},
+				{WS, " "},
+				{OPERATOR, "="},
+				{WS, " "},
+				{BIND_PARAMETER, "@id"},
+			},
+			lexerOpts: []lexerOption{WithDBMS(DBMSSQLServer)},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			lexer := New(tt.input)
+			lexer := New(tt.input, tt.lexerOpts...)
 			tokens := lexer.ScanAll()
 			assert.Equal(t, tt.expected, tokens)
 		})

@@ -18,6 +18,7 @@ const (
 	DOLLAR_QUOTED_FUNCTION // dollar quoted function
 	DOLLAR_QUOTED_STRING   // dollar quoted string
 	POSITIONAL_PARAMETER   // numbered parameter
+	BIND_PARAMETER         // bind parameter
 	UNKNOWN                // unknown token
 )
 
@@ -127,6 +128,16 @@ func (s *Lexer) Scan() Token {
 			return s.scanIdentifier()
 		}
 		return s.scanDollarQuotedString()
+	case ch == ':':
+		if s.config.DBMS == DBMSOracle && isLetter(s.lookAhead(1)) {
+			return s.scanBindParameter()
+		}
+		return s.scanOperator()
+	case ch == '@':
+		if s.config.DBMS == DBMSSQLServer && isLetter(s.lookAhead(1)) {
+			return s.scanBindParameter()
+		}
+		return s.scanOperator()
 	case isOperator(ch):
 		return s.scanOperator()
 	case isPunctuation(ch):
@@ -278,7 +289,7 @@ func (s *Lexer) scanIdentifier() Token {
 	// NOTE: this func does not distinguish between SQL keywords and identifiers
 	s.start = s.cursor
 	ch := s.next()
-	for isLetter(ch) || isDigit(ch) || ch == '.' || ch == '?' {
+	for isLetter(ch) || isDigit(ch) || ch == '.' || ch == '?' || ch == '$' {
 		ch = s.next()
 	}
 	// return the token as uppercase so that we can do case insensitive matching
@@ -403,6 +414,18 @@ func (s *Lexer) scanPositionalParameter() Token {
 		ch = s.next()
 	}
 	return Token{POSITIONAL_PARAMETER, s.src[s.start:s.cursor]}
+}
+
+func (s *Lexer) scanBindParameter() Token {
+	s.start = s.cursor
+	ch := s.nextBy(2) // consume the (colon|at sign) and the char
+	for {
+		if !isLetter(ch) {
+			break
+		}
+		ch = s.next()
+	}
+	return Token{BIND_PARAMETER, s.src[s.start:s.cursor]}
 }
 
 func (s *Lexer) scanUnknown() Token {

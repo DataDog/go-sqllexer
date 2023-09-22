@@ -34,6 +34,9 @@ var Commands = map[string]bool{
 	"BEGIN":    true,
 	"TRUNCATE": true,
 	"MERGE":    true,
+	"EXECUTE":  true,
+	"EXEC":     true,
+	"EXPLAIN":  true,
 }
 
 var tableIndicators = map[string]bool{
