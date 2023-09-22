@@ -366,6 +366,38 @@ func TestObfuscator(t *testing.T) {
 			OUTPUT $action, inserted.*, deleted.*;`,
 			dbms: DBMSSQLServer,
 		},
+		{
+			input:    "SELECT TRUNC(SYSDATE@!) from dual",
+			expected: "SELECT TRUNC(SYSDATE@!) from dual",
+			dbms:     DBMSOracle,
+		},
+		{
+			input: `
+			select sql_fulltext from v$sql where force_matching_signature = 1033183797897134935
+			GROUP BY c.name, force_matching_signature, plan_hash_value
+			HAVING MAX(last_active_time) > sysdate - :seconds/24/60/60
+			FETCH FIRST :limit ROWS ONLY`,
+			expected: `select sql_fulltext from v$sql where force_matching_signature = ?
+			GROUP BY c.name, force_matching_signature, plan_hash_value
+			HAVING MAX(last_active_time) > sysdate - :seconds/?/?/?
+			FETCH FIRST :limit ROWS ONLY`,
+			dbms: DBMSOracle,
+		},
+		{
+			input:    "SELECT TABLESPACE_NAME, USED_SPACE, TABLESPACE_SIZE, USED_PERCENT FROM SYS.DBA_TABLESPACE_USAGE_METRICS K WHERE USED_PERCENT > 85",
+			expected: `SELECT TABLESPACE_NAME, USED_SPACE, TABLESPACE_SIZE, USED_PERCENT FROM SYS.DBA_TABLESPACE_USAGE_METRICS K WHERE USED_PERCENT > ?`,
+			dbms:     DBMSOracle,
+		},
+		{
+			input:    "SELECT dbms_lob.substr(sql_fulltext, 4000, 1) sql_fulltext FROM sys.dd_session",
+			expected: `SELECT dbms_lob.substr(sql_fulltext, ?, ?) sql_fulltext FROM sys.dd_session`,
+			dbms:     DBMSOracle,
+		},
+		{
+			input:    "begin execute immediate 'alter session set sql_trace=true'; end;",
+			expected: "begin execute immediate ?; end;",
+			dbms:     DBMSOracle,
+		},
 	}
 
 	for _, tt := range tests {
