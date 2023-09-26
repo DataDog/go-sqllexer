@@ -420,7 +420,7 @@ func (s *Lexer) scanBindParameter() Token {
 	s.start = s.cursor
 	ch := s.nextBy(2) // consume the (colon|at sign) and the char
 	for {
-		if !isLetter(ch) {
+		if !isLetter(ch) && !isDigit(ch) {
 			break
 		}
 		ch = s.next()
