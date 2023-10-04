@@ -7,7 +7,7 @@ const (
 	EOF
 	WS                     // whitespace
 	STRING                 // string literal
-	INCOMPLETE_STRING      // illegal string literal so that we can obfuscate it, e.g. 'abc
+	INCOMPLETE_STRING      // incomplete string literal so that we can obfuscate it, e.g. 'abc
 	NUMBER                 // number literal
 	IDENT                  // identifier
 	OPERATOR               // operator
