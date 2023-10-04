@@ -20,6 +20,7 @@ func TestObfuscationAndNormalization(t *testing.T) {
 				Tables:   []string{},
 				Comments: []string{},
 				Commands: []string{"SELECT"},
+				Size:     6,
 			},
 		},
 		{
@@ -32,6 +33,7 @@ func TestObfuscationAndNormalization(t *testing.T) {
 				Tables:   []string{"users"},
 				Comments: []string{"/*dddbs='orders-mysql',dde='dbm-agent-integration',ddps='orders-app',ddpv='7825a16',traceparent='00-000000000000000068e229d784ee697c-569d1b940c1fb3ac-00'*/", "/* date='12%2F31',key='val' */"},
 				Commands: []string{"SELECT"},
+				Size:     196,
 			},
 		},
 		{
@@ -41,6 +43,7 @@ func TestObfuscationAndNormalization(t *testing.T) {
 				Tables:   []string{"users"},
 				Comments: []string{},
 				Commands: []string{"SELECT"},
+				Size:     11,
 			},
 		},
 		{
@@ -55,6 +58,7 @@ func TestObfuscationAndNormalization(t *testing.T) {
 				Tables:   []string{"vs?.host", "vs?.host_alias"},
 				Comments: []string{},
 				Commands: []string{"SELECT", "JOIN"},
+				Size:     32,
 			},
 		},
 		{
@@ -64,6 +68,7 @@ func TestObfuscationAndNormalization(t *testing.T) {
 				Tables:   []string{"users"},
 				Comments: []string{"/* this is a comment */"},
 				Commands: []string{"SELECT"},
+				Size:     34,
 			},
 		},
 		{
@@ -78,6 +83,7 @@ multiline comment */
 				Tables:   []string{"users"},
 				Comments: []string{"/* this is a \nmultiline comment */", "/* comment comment */", "-- this is another comment"},
 				Commands: []string{"SELECT"},
+				Size:     92,
 			},
 		},
 		{
@@ -87,6 +93,7 @@ multiline comment */
 				Tables:   []string{"users"},
 				Comments: []string{},
 				Commands: []string{"SELECT"},
+				Size:     11,
 			},
 		},
 		{
@@ -96,6 +103,7 @@ multiline comment */
 				Tables:   []string{"dual"},
 				Comments: []string{},
 				Commands: []string{"SELECT"},
+				Size:     10,
 			},
 			lexerOpts: []lexerOption{
 				WithDBMS(DBMSOracle),
@@ -112,6 +120,7 @@ multiline comment */
 				Tables:   []string{"v$sql"},
 				Comments: []string{},
 				Commands: []string{"SELECT"},
+				Size:     11,
 			},
 			lexerOpts: []lexerOption{
 				WithDBMS(DBMSOracle),
@@ -124,6 +133,7 @@ multiline comment */
 				Tables:   []string{"SYS.DBA_TABLESPACE_USAGE_METRICS"},
 				Comments: []string{},
 				Commands: []string{"SELECT"},
+				Size:     38,
 			},
 		},
 		{
@@ -133,6 +143,7 @@ multiline comment */
 				Tables:   []string{"sys.dd_session"},
 				Comments: []string{},
 				Commands: []string{"SELECT"},
+				Size:     20,
 			},
 		},
 		{
@@ -142,6 +153,7 @@ multiline comment */
 				Tables:   []string{},
 				Comments: []string{},
 				Commands: []string{"BEGIN", "EXECUTE"},
+				Size:     12,
 			},
 		},
 	}

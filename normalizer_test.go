@@ -20,6 +20,7 @@ func TestNormalizer(t *testing.T) {
 				Tables:   []string{},
 				Comments: []string{},
 				Commands: []string{"SELECT"},
+				Size:     6,
 			},
 		},
 		{
@@ -32,6 +33,7 @@ func TestNormalizer(t *testing.T) {
 				Tables:   []string{"users"},
 				Comments: []string{"/*dddbs='orders-mysql',dde='dbm-agent-integration',ddps='orders-app',ddpv='7825a16',traceparent='00-000000000000000068e229d784ee697c-569d1b940c1fb3ac-00'*/", "/* date='12%2F31',key='val' */"},
 				Commands: []string{"SELECT"},
+				Size:     196,
 			},
 		},
 		{
@@ -41,6 +43,7 @@ func TestNormalizer(t *testing.T) {
 				Tables:   []string{"users"},
 				Comments: []string{},
 				Commands: []string{"SELECT"},
+				Size:     11,
 			},
 		},
 		{
@@ -55,6 +58,7 @@ func TestNormalizer(t *testing.T) {
 				Tables:   []string{"vs?.host", "vs?.host_alias"},
 				Comments: []string{},
 				Commands: []string{"SELECT", "JOIN"},
+				Size:     32,
 			},
 		},
 		{
@@ -64,6 +68,7 @@ func TestNormalizer(t *testing.T) {
 				Tables:   []string{"users"},
 				Comments: []string{"/* this is a comment */"},
 				Commands: []string{"SELECT"},
+				Size:     34,
 			},
 		},
 		{
@@ -78,6 +83,7 @@ multiline comment */
 				Tables:   []string{"users"},
 				Comments: []string{"/* this is a \nmultiline comment */", "/* comment comment */", "-- this is another comment"},
 				Commands: []string{"SELECT"},
+				Size:     92,
 			},
 		},
 		{
@@ -87,6 +93,7 @@ multiline comment */
 				Tables:   []string{"users"},
 				Comments: []string{},
 				Commands: []string{"SELECT"},
+				Size:     11,
 			},
 		},
 		{
@@ -96,6 +103,7 @@ multiline comment */
 				Tables:   []string{"users", "test_users"},
 				Comments: []string{},
 				Commands: []string{"UPDATE", "SELECT"},
+				Size:     27,
 			},
 		},
 		{
@@ -119,6 +127,7 @@ multiline comment */
 				Tables:   []string{"order_status_change", "dbm_order", "order_item", "discount"},
 				Comments: []string{"-- random comment"},
 				Commands: []string{"INSERT", "SELECT", "JOIN"},
+				Size:     79,
 			},
 		},
 		{
@@ -128,6 +137,7 @@ multiline comment */
 				Tables:   []string{"users"},
 				Comments: []string{},
 				Commands: []string{"DELETE"},
+				Size:     11,
 			},
 		},
 		{
@@ -144,6 +154,7 @@ multiline comment */
 				Tables:   []string{"users", "test_users", "user?"},
 				Comments: []string{},
 				Commands: []string{"CREATE", "BEGIN", "SELECT", "UPDATE", "DELETE"},
+				Size:     49,
 			},
 		},
 		{
@@ -157,6 +168,7 @@ multiline comment */
 				Tables:   []string{"public.schema_meta"},
 				Comments: []string{},
 				Commands: []string{"SELECT"},
+				Size:     24,
 			},
 		},
 		{
@@ -167,6 +179,7 @@ multiline comment */
 				Tables:   []string{`"users"`},
 				Comments: []string{},
 				Commands: []string{"SELECT"},
+				Size:     13,
 			},
 		},
 		{
@@ -177,6 +190,7 @@ multiline comment */
 				Tables:   []string{`"public"."users"`},
 				Comments: []string{},
 				Commands: []string{"SELECT"},
+				Size:     22,
 			},
 		},
 		{
@@ -199,6 +213,7 @@ multiline comment */
 				Tables:   []string{"person", "cte"},
 				Comments: []string{},
 				Commands: []string{"SELECT", "UPDATE", "INSERT"},
+				Size:     27,
 			},
 		},
 		{
@@ -208,6 +223,7 @@ multiline comment */
 				Tables:   []string{"metrics_metadata", "updates"},
 				Comments: []string{},
 				Commands: []string{"UPDATE", "INSERT", "SELECT"},
+				Size:     41,
 			},
 		},
 		{
@@ -219,6 +235,7 @@ multiline comment */
 				Tables:   []string{"clients", "owners"},
 				Comments: []string{"/* Multi-line comment */"},
 				Commands: []string{"SELECT", "BEGIN", "INSERT", "COMMIT"},
+				Size:     60,
 			},
 		},
 		{
@@ -231,6 +248,7 @@ multiline comment */
 				Tables:   []string{},
 				Comments: []string{"-- Single line comment", "-- Another single line comment", "-- Another another single line comment"},
 				Commands: []string{"GRANT", "DELETE"},
+				Size:     101,
 			},
 		},
 		{
@@ -241,6 +259,7 @@ multiline comment */
 				Tables:   []string{},
 				Comments: []string{"-- Testing table value constructor SQL expression"},
 				Commands: []string{"SELECT"},
+				Size:     55,
 			},
 		},
 		{
@@ -250,6 +269,7 @@ multiline comment */
 				Tables:   []string{"tabletest"},
 				Comments: []string{},
 				Commands: []string{"ALTER", "DROP"},
+				Size:     18,
 			},
 		},
 		{
@@ -259,6 +279,7 @@ multiline comment */
 				Tables:   []string{"datadog"},
 				Comments: []string{},
 				Commands: []string{"REVOKE"},
+				Size:     13,
 			},
 		},
 		{
@@ -268,6 +289,7 @@ multiline comment */
 				Tables:   []string{"P", "T1", "T2", "T4", "T3"},
 				Comments: []string{"/* Testing explicit table SQL expression */"},
 				Commands: []string{"SELECT"},
+				Size:     58,
 			},
 		},
 		{
@@ -278,6 +300,7 @@ multiline comment */
 				Tables:   []string{"users"},
 				Comments: []string{},
 				Commands: []string{"SELECT"},
+				Size:     11,
 			},
 		},
 		{
@@ -287,6 +310,7 @@ multiline comment */
 				Tables:   []string{"monitor_downtime"},
 				Comments: []string{},
 				Commands: []string{"SELECT"},
+				Size:     22,
 			},
 		},
 		{
@@ -296,6 +320,7 @@ multiline comment */
 				Tables:   []string{},
 				Comments: []string{},
 				Commands: []string{"SELECT"},
+				Size:     6,
 			},
 		},
 		{
@@ -305,6 +330,7 @@ multiline comment */
 				Tables:   []string{"table_name"},
 				Comments: []string{"/* ok comment */", "/*foo comment*/"},
 				Commands: []string{"UPDATE"},
+				Size:     47,
 			},
 		},
 	}
@@ -339,6 +365,7 @@ func TestNormalizerNotCollectMetadata(t *testing.T) {
 				Tables:   []string{},
 				Comments: []string{},
 				Commands: []string{},
+				Size:     0,
 			},
 		},
 		{
@@ -348,6 +375,7 @@ func TestNormalizerNotCollectMetadata(t *testing.T) {
 				Tables:   []string{},
 				Comments: []string{},
 				Commands: []string{},
+				Size:     0,
 			},
 		},
 		{
@@ -357,6 +385,7 @@ func TestNormalizerNotCollectMetadata(t *testing.T) {
 				Tables:   []string{},
 				Comments: []string{},
 				Commands: []string{},
+				Size:     0,
 			},
 		},
 		{
@@ -366,6 +395,7 @@ func TestNormalizerNotCollectMetadata(t *testing.T) {
 				Tables:   []string{},
 				Comments: []string{},
 				Commands: []string{},
+				Size:     0,
 			},
 		},
 	}
@@ -453,6 +483,7 @@ func TestNormalizerRepeatedExecution(t *testing.T) {
 				Tables:   []string{"users"},
 				Comments: []string{},
 				Commands: []string{"SELECT"},
+				Size:     11,
 			},
 		},
 		{
@@ -462,6 +493,7 @@ func TestNormalizerRepeatedExecution(t *testing.T) {
 				Tables:   []string{"users"},
 				Comments: []string{},
 				Commands: []string{"SELECT"},
+				Size:     11,
 			},
 		},
 		{
@@ -482,6 +514,7 @@ func TestNormalizerRepeatedExecution(t *testing.T) {
 				Tables:   []string{"users"},
 				Comments: []string{},
 				Commands: []string{"SELECT"},
+				Size:     11,
 			},
 		},
 	}
@@ -527,6 +560,7 @@ func TestNormalizeDeobfuscatedSQL(t *testing.T) {
 				Tables:   []string{"users"},
 				Comments: []string{},
 				Commands: []string{"SELECT"},
+				Size:     11,
 			},
 			normalizationConfig: &normalizerConfig{
 				CollectComments: true,
@@ -542,6 +576,7 @@ func TestNormalizeDeobfuscatedSQL(t *testing.T) {
 				Tables:   []string{"users"},
 				Comments: []string{},
 				Commands: []string{"SELECT"},
+				Size:     11,
 			},
 			normalizationConfig: &normalizerConfig{
 				CollectComments: true,
@@ -559,6 +594,7 @@ func TestNormalizeDeobfuscatedSQL(t *testing.T) {
 				Tables:   []string{"users"},
 				Comments: []string{"/* test comment */"},
 				Commands: []string{"SELECT"},
+				Size:     29,
 			},
 			normalizationConfig: &normalizerConfig{
 				CollectComments: true,
@@ -577,6 +613,7 @@ func TestNormalizeDeobfuscatedSQL(t *testing.T) {
 				Tables:   []string{"users"},
 				Comments: []string{},
 				Commands: []string{"SELECT"},
+				Size:     11,
 			},
 			normalizationConfig: &normalizerConfig{
 				CollectComments: false,
@@ -594,6 +631,7 @@ func TestNormalizeDeobfuscatedSQL(t *testing.T) {
 				Tables:   []string{},
 				Comments: []string{"/* this is a comment */"},
 				Commands: []string{"SELECT"},
+				Size:     29,
 			},
 			normalizationConfig: &normalizerConfig{
 				CollectComments: true,
@@ -609,6 +647,7 @@ func TestNormalizeDeobfuscatedSQL(t *testing.T) {
 				Tables:   []string{"users"},
 				Comments: []string{},
 				Commands: []string{"SELECT"},
+				Size:     11,
 			},
 			normalizationConfig: &normalizerConfig{
 				CollectComments: true,
@@ -624,6 +663,7 @@ func TestNormalizeDeobfuscatedSQL(t *testing.T) {
 				Tables:   []string{"users"},
 				Comments: []string{},
 				Commands: []string{"SELECT"},
+				Size:     11,
 			},
 			normalizationConfig: &normalizerConfig{
 				CollectComments: true,
@@ -731,5 +771,5 @@ func ExampleNormalizer() {
 	fmt.Println(normalizedSQL)
 	fmt.Println(statementMetadata)
 	// Output: SELECT * FROM users WHERE id in ( ? )
-	// &{[users] [/* this is a comment */] [SELECT]}
+	// &{34 [users] [/* this is a comment */] [SELECT]}
 }

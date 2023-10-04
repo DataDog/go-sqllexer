@@ -54,6 +54,7 @@ func WithUppercaseKeywords(uppercaseKeywords bool) normalizerOption {
 }
 
 type StatementMetadata struct {
+	Size     int
 	Tables   []string
 	Comments []string
 	Commands []string
@@ -174,25 +175,27 @@ func discardSQLAlias(input string) string {
 	return sqlAliasRegex.ReplaceAllString(input, "")
 }
 
-func dedupeCollectedMetadata(metadata []string) []string {
+func dedupeCollectedMetadata(metadata []string) (dedupedMetadata []string, size int) {
 	// Dedupe collected metadata
 	// e.g. [SELECT, JOIN, SELECT, JOIN] -> [SELECT, JOIN]
-	//
-	var dedupedMetadata = []string{}
+	dedupedMetadata = []string{}
 	var metadataSeen = make(map[string]struct{})
 	for _, m := range metadata {
 		if _, seen := metadataSeen[m]; !seen {
 			metadataSeen[m] = struct{}{}
 			dedupedMetadata = append(dedupedMetadata, m)
+			size += len(m)
 		}
 	}
-	return dedupedMetadata
+	return dedupedMetadata, size
 }
 
 func dedupeStatementMetadata(info *StatementMetadata) {
-	info.Tables = dedupeCollectedMetadata(info.Tables)
-	info.Comments = dedupeCollectedMetadata(info.Comments)
-	info.Commands = dedupeCollectedMetadata(info.Commands)
+	var tablesSize, commentsSize, commandsSize int
+	info.Tables, tablesSize = dedupeCollectedMetadata(info.Tables)
+	info.Comments, commentsSize = dedupeCollectedMetadata(info.Comments)
+	info.Commands, commandsSize = dedupeCollectedMetadata(info.Commands)
+	info.Size += tablesSize + commentsSize + commandsSize
 }
 
 func appendWhitespace(lastToken Token, token Token, normalizedSQLBuilder *strings.Builder) {
