@@ -156,6 +156,31 @@ multiline comment */
 				Size:     12,
 			},
 		},
+		{
+			// double quoted table name
+			input:    `SELECT * FROM "public"."users" WHERE id = 1`,
+			expected: `SELECT * FROM "public"."users" WHERE id = ?`,
+			statementMetadata: StatementMetadata{
+				Tables:   []string{`"public"."users"`},
+				Comments: []string{},
+				Commands: []string{"SELECT"},
+				Size:     22,
+			},
+		},
+		{
+			// [] quoted table name
+			input:    `SELECT * FROM [public].[users] WHERE id = 1`,
+			expected: `SELECT * FROM [public].[users] WHERE id = ?`,
+			statementMetadata: StatementMetadata{
+				Tables:   []string{"[public].[users]"},
+				Comments: []string{},
+				Commands: []string{"SELECT"},
+				Size:     22,
+			},
+			lexerOpts: []lexerOption{
+				WithDBMS(DBMSSQLServer),
+			},
+		},
 	}
 
 	obfuscator := NewObfuscator(
