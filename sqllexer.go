@@ -100,7 +100,7 @@ func (s *Lexer) Scan() Token {
 	case isLetter(ch):
 		return s.scanIdentifier()
 	case isDoubleQuote(ch):
-		return s.scanDoubleQuotedIdentifier()
+		return s.scanDoubleQuotedIdentifier('"')
 	case isSingleQuote(ch):
 		return s.scanString()
 	case isSingleLineComment(ch, s.lookAhead(1)):
@@ -141,6 +141,9 @@ func (s *Lexer) Scan() Token {
 	case isOperator(ch):
 		return s.scanOperator()
 	case isPunctuation(ch):
+		if ch == '[' && s.config.DBMS == DBMSSQLServer {
+			return s.scanDoubleQuotedIdentifier('[')
+		}
 		return s.scanPunctuation()
 	case isEOF(ch):
 		return Token{EOF, ""}
@@ -296,15 +299,22 @@ func (s *Lexer) scanIdentifier() Token {
 	return Token{IDENT, s.src[s.start:s.cursor]}
 }
 
-func (s *Lexer) scanDoubleQuotedIdentifier() Token {
+func (s *Lexer) scanDoubleQuotedIdentifier(delimiter rune) Token {
+	closingDelimiter := delimiter
+	if delimiter == '[' {
+		closingDelimiter = ']'
+	}
+
 	s.start = s.cursor
 	ch := s.next() // consume the opening quote
 	for {
 		// encountered the closing quote
 		// BUT if it's followed by .", then we should keep going
 		// e.g. postgre "foo"."bar"
-		if ch == '"' {
-			if s.matchAt([]rune(`"."`)) {
+		// e.g. sqlserver [foo].[bar]
+		if ch == closingDelimiter {
+			specialCase := []rune{closingDelimiter, '.', delimiter}
+			if s.matchAt([]rune(specialCase)) {
 				ch = s.nextBy(3) // consume the "."
 				continue
 			}
