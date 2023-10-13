@@ -747,7 +747,8 @@ func TestGroupObfuscatedValues(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			got := groupObfuscatedValues(test.input)
+			normalizer := NewNormalizer()
+			got, _, _ := normalizer.Normalize(test.input)
 			assert.Equal(t, test.expected, got)
 		})
 	}

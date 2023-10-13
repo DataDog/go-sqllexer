@@ -19,19 +19,15 @@ func ObfuscateAndNormalize(input string, obfuscator *Obfuscator, normalizer *Nor
 	}
 
 	var lastToken Token // The last token that is not whitespace or comment
+	var groupablePlaceholder GroupablePlaceholder
 
 	for _, token := range lexer.ScanAll() {
-		obfuscatedToken := Token{Type: token.Type, Value: obfuscator.ObfuscateTokenValue(token, lexerOpts...)}
-		normalizer.collectMetadata(obfuscatedToken, lastToken, statementMetadata)
-		lastToken = normalizer.normalizeSQL(obfuscatedToken, lastToken, &normalizedSQLBuilder)
+		token.Value = obfuscator.ObfuscateTokenValue(token, lexerOpts...)
+		normalizer.collectMetadata(&token, &lastToken, statementMetadata)
+		normalizer.normalizeSQL(&token, &lastToken, &normalizedSQLBuilder, &groupablePlaceholder)
 	}
 
 	normalizedSQL = normalizedSQLBuilder.String()
-
-	normalizedSQL = groupObfuscatedValues(normalizedSQL)
-	if !normalizer.config.KeepSQLAlias {
-		normalizedSQL = discardSQLAlias(normalizedSQL)
-	}
 
 	// Dedupe collected metadata
 	dedupeStatementMetadata(statementMetadata)

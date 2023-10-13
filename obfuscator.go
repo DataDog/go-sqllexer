@@ -114,7 +114,7 @@ func (o *Obfuscator) ObfuscateTokenValue(token Token, lexerOpts ...lexerOption) 
 		}
 
 		if o.config.ReplaceDigits {
-			return replaceDigits(token.Value, "?")
+			return replaceDigits(token.Value, NumberPlaceholder)
 		} else {
 			return token.Value
 		}
