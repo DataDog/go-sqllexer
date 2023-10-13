@@ -133,15 +133,23 @@ func (n *Normalizer) normalizeSQL(token *Token, lastToken *Token, normalizedSQLB
 		if !n.config.KeepSQLAlias {
 			// discard SQL alias
 			if strings.ToUpper(token.Value) == "AS" {
+				// if current token is AS, then continue to next token
+				// because without seeing the next token, we cannot
+				// determine if the current token is an alias or not
 				*lastToken = *token
 				return
 			}
 
 			if strings.ToUpper(lastToken.Value) == "AS" {
 				if token.Type == IDENT {
+					// if the last token is AS and the current token is IDENT,
+					// then the current token is an alias, so we discard it
 					*lastToken = *token
 					return
 				} else {
+					// if the last token is AS and the current token is not IDENT,
+					// this could be a CTE like WITH ... AS (...),
+					// so we do not discard the current token
 					appendWhitespace(lastToken, token, normalizedSQLBuilder)
 					n.writeToken(lastToken, normalizedSQLBuilder)
 				}
@@ -174,6 +182,9 @@ func (n *Normalizer) writeToken(token *Token, normalizedSQLBuilder *strings.Buil
 func (n *Normalizer) isObfuscatedValueGroupable(token *Token, lastToken *Token, groupablePlaceholder *GroupablePlaceholder) bool {
 	if token.Value == NumberPlaceholder || token.Value == StringPlaceholder {
 		if lastToken.Value == "(" || lastToken.Value == "[" {
+			// if the last token is "(" or "[", and the current token is a placeholder,
+			// we know it's the start of groupable placeholders
+			// we don't return here because we still need to write the first placeholder
 			groupablePlaceholder.groupable = true
 		} else if lastToken.Value == "," && groupablePlaceholder.groupable {
 			return true
@@ -185,6 +196,7 @@ func (n *Normalizer) isObfuscatedValueGroupable(token *Token, lastToken *Token, 
 	}
 
 	if groupablePlaceholder.groupable && (token.Value == ")" || token.Value == "]") {
+		// end of groupable placeholders
 		groupablePlaceholder.groupable = false
 	}
 
