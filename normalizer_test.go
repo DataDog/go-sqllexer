@@ -743,6 +743,14 @@ func TestGroupObfuscatedValues(t *testing.T) {
 			input:    "[ ?,?]",
 			expected: "[ ? ]",
 		},
+		{
+			input:    "ANY(?)",
+			expected: "ANY ( ? )",
+		},
+		{
+			input:    "ANY(?, ?)",
+			expected: "ANY ( ? )",
+		},
 	}
 
 	for _, test := range tests {
