@@ -100,7 +100,11 @@ func (n *Normalizer) Normalize(input string, lexerOpts ...lexerOption) (normaliz
 	var lastToken Token // The last token that is not whitespace or comment
 	var groupablePlaceholder groupablePlaceholder
 
-	for _, token := range lexer.ScanAll() {
+	for {
+		token := lexer.Scan()
+		if token.Type == EOF {
+			break
+		}
 		n.collectMetadata(&token, &lastToken, statementMetadata)
 		n.normalizeSQL(&token, &lastToken, &normalizedSQLBuilder, &groupablePlaceholder)
 	}

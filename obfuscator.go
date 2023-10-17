@@ -74,7 +74,11 @@ func (o *Obfuscator) Obfuscate(input string, lexerOpts ...lexerOption) string {
 		input,
 		lexerOpts...,
 	)
-	for _, token := range lexer.ScanAll() {
+	for {
+		token := lexer.Scan()
+		if token.Type == EOF {
+			break
+		}
 		obfuscatedSQL.WriteString(o.ObfuscateTokenValue(token, lexerOpts...))
 	}
 

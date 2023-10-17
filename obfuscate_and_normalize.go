@@ -21,7 +21,11 @@ func ObfuscateAndNormalize(input string, obfuscator *Obfuscator, normalizer *Nor
 	var lastToken Token // The last token that is not whitespace or comment
 	var groupablePlaceholder groupablePlaceholder
 
-	for _, token := range lexer.ScanAll() {
+	for {
+		token := lexer.Scan()
+		if token.Type == EOF {
+			break
+		}
 		token.Value = obfuscator.ObfuscateTokenValue(token, lexerOpts...)
 		normalizer.collectMetadata(&token, &lastToken, statementMetadata)
 		normalizer.normalizeSQL(&token, &lastToken, &normalizedSQLBuilder, &groupablePlaceholder)
