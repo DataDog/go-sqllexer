@@ -1,7 +1,6 @@
 package sqllexer
 
 import (
-	"regexp"
 	"strings"
 	"unicode"
 )
@@ -19,7 +18,7 @@ const (
 	DBMSOracle DBMSType = "oracle"
 )
 
-var Commands = map[string]bool{
+var commands = map[string]bool{
 	"SELECT":   true,
 	"INSERT":   true,
 	"UPDATE":   true,
@@ -47,11 +46,96 @@ var tableIndicators = map[string]bool{
 	"TABLE":  true,
 }
 
-var keywordsRegex = regexp.MustCompile(`(?i)^(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|GRANT|REVOKE|ADD|ALL|AND|ANY|AS|ASC|BEGIN|BETWEEN|BY|CASE|CHECK|COLUMN|COMMIT|CONSTRAINT|DATABASE|DECLARE|DEFAULT|DESC|DISTINCT|ELSE|END|EXEC|EXISTS|FOREIGN|FROM|GROUP|HAVING|IN|INDEX|INNER|INTO|IS|JOIN|KEY|LEFT|LIKE|LIMIT|NOT|ON|OR|ORDER|OUTER|PRIMARY|PROCEDURE|REPLACE|RETURNS|RIGHT|ROLLBACK|ROWNUM|SET|SOME|TABLE|TOP|TRUNCATE|UNION|UNIQUE|USE|VALUES|VIEW|WHERE|CUBE|ROLLUP|LITERAL|WINDOW|VACCUM|ANALYZE|ILIKE|USING|ASSERTION|DOMAIN|CLUSTER|COPY|EXPLAIN|PLPGSQL|TRIGGER|TEMPORARY|UNLOGGED|RECURSIVE|RETURNING)$`)
-
-var groupableRegex = regexp.MustCompile(`(\()\s*\?(?:\s*,\s*\?\s*)*\s*(\))|(\[)\s*\?(?:\s*,\s*\?\s*)*\s*(\])`)
-
-var sqlAliasRegex = regexp.MustCompile(`(?i)\s+AS\s+[\w?]+`)
+var keywords = map[string]bool{
+	"SELECT":     true,
+	"INSERT":     true,
+	"UPDATE":     true,
+	"DELETE":     true,
+	"CREATE":     true,
+	"ALTER":      true,
+	"DROP":       true,
+	"GRANT":      true,
+	"REVOKE":     true,
+	"ADD":        true,
+	"ALL":        true,
+	"AND":        true,
+	"ANY":        true,
+	"AS":         true,
+	"ASC":        true,
+	"BEGIN":      true,
+	"BETWEEN":    true,
+	"BY":         true,
+	"CASE":       true,
+	"CHECK":      true,
+	"COLUMN":     true,
+	"COMMIT":     true,
+	"CONSTRAINT": true,
+	"DATABASE":   true,
+	"DECLARE":    true,
+	"DEFAULT":    true,
+	"DESC":       true,
+	"DISTINCT":   true,
+	"ELSE":       true,
+	"END":        true,
+	"EXEC":       true,
+	"EXISTS":     true,
+	"FOREIGN":    true,
+	"FROM":       true,
+	"GROUP":      true,
+	"HAVING":     true,
+	"IN":         true,
+	"INDEX":      true,
+	"INNER":      true,
+	"INTO":       true,
+	"IS":         true,
+	"JOIN":       true,
+	"KEY":        true,
+	"LEFT":       true,
+	"LIKE":       true,
+	"LIMIT":      true,
+	"NOT":        true,
+	"ON":         true,
+	"OR":         true,
+	"ORDER":      true,
+	"OUTER":      true,
+	"PRIMARY":    true,
+	"PROCEDURE":  true,
+	"REPLACE":    true,
+	"RETURNS":    true,
+	"RIGHT":      true,
+	"ROLLBACK":   true,
+	"ROWNUM":     true,
+	"SET":        true,
+	"SOME":       true,
+	"TABLE":      true,
+	"TOP":        true,
+	"TRUNCATE":   true,
+	"UNION":      true,
+	"UNIQUE":     true,
+	"USE":        true,
+	"VALUES":     true,
+	"VIEW":       true,
+	"WHERE":      true,
+	"CUBE":       true,
+	"ROLLUP":     true,
+	"LITERAL":    true,
+	"WINDOW":     true,
+	"VACCUM":     true,
+	"ANALYZE":    true,
+	"ILIKE":      true,
+	"USING":      true,
+	"ASSERTION":  true,
+	"DOMAIN":     true,
+	"CLUSTER":    true,
+	"COPY":       true,
+	"EXPLAIN":    true,
+	"PLPGSQL":    true,
+	"TRIGGER":    true,
+	"TEMPORARY":  true,
+	"UNLOGGED":   true,
+	"RECURSIVE":  true,
+	"RETURNING":  true,
+}
 
 func isWhitespace(ch rune) bool {
 	return ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r'
@@ -106,7 +190,7 @@ func isEOF(ch rune) bool {
 }
 
 func isCommand(ident string) bool {
-	_, ok := Commands[ident]
+	_, ok := commands[ident]
 	return ok
 }
 
@@ -115,8 +199,12 @@ func isTableIndicator(ident string) bool {
 	return ok
 }
 
-func isSQLKeyword(token Token) bool {
-	return token.Type == IDENT && keywordsRegex.MatchString(token.Value)
+func isSQLKeyword(token *Token) bool {
+	if token.Type != IDENT {
+		return false
+	}
+	_, ok := keywords[strings.ToUpper(token.Value)]
+	return ok
 }
 
 func isBoolean(ident string) bool {

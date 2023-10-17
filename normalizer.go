@@ -60,6 +60,10 @@ type StatementMetadata struct {
 	Commands []string
 }
 
+type groupablePlaceholder struct {
+	groupable bool
+}
+
 type Normalizer struct {
 	config *normalizerConfig
 }
@@ -75,11 +79,6 @@ func NewNormalizer(opts ...normalizerOption) *Normalizer {
 
 	return &normalizer
 }
-
-const (
-	ArrayPlaceholder   = "( ? )"
-	BracketPlaceholder = "[ ? ]"
-)
 
 // Normalize takes an input SQL string and returns a normalized SQL string, a StatementMetadata struct, and an error.
 // The normalizer collapses input SQL into compact format, groups obfuscated values into single placeholder,
@@ -99,18 +98,14 @@ func (n *Normalizer) Normalize(input string, lexerOpts ...lexerOption) (normaliz
 	}
 
 	var lastToken Token // The last token that is not whitespace or comment
+	var groupablePlaceholder groupablePlaceholder
 
 	for _, token := range lexer.ScanAll() {
-		n.collectMetadata(token, lastToken, statementMetadata)
-		lastToken = n.normalizeSQL(token, lastToken, &normalizedSQLBuilder)
+		n.collectMetadata(&token, &lastToken, statementMetadata)
+		n.normalizeSQL(&token, &lastToken, &normalizedSQLBuilder, &groupablePlaceholder)
 	}
 
 	normalizedSQL = normalizedSQLBuilder.String()
-
-	normalizedSQL = groupObfuscatedValues(normalizedSQL)
-	if !n.config.KeepSQLAlias {
-		normalizedSQL = discardSQLAlias(normalizedSQL)
-	}
 
 	// Dedupe collected metadata
 	dedupeStatementMetadata(statementMetadata)
@@ -118,7 +113,7 @@ func (n *Normalizer) Normalize(input string, lexerOpts ...lexerOption) (normaliz
 	return strings.TrimSpace(normalizedSQL), statementMetadata, nil
 }
 
-func (n *Normalizer) collectMetadata(token Token, lastToken Token, statementMetadata *StatementMetadata) {
+func (n *Normalizer) collectMetadata(token *Token, lastToken *Token, statementMetadata *StatementMetadata) {
 	if n.config.CollectComments && (token.Type == COMMENT || token.Type == MULTILINE_COMMENT) {
 		// Collect comments
 		statementMetadata.Comments = append(statementMetadata.Comments, token.Value)
@@ -133,46 +128,79 @@ func (n *Normalizer) collectMetadata(token Token, lastToken Token, statementMeta
 	}
 }
 
-func (n *Normalizer) normalizeSQL(token Token, lastToken Token, normalizedSQLBuilder *strings.Builder) Token {
+func (n *Normalizer) normalizeSQL(token *Token, lastToken *Token, normalizedSQLBuilder *strings.Builder, groupablePlaceholder *groupablePlaceholder) {
 	if token.Type != WS && token.Type != COMMENT && token.Type != MULTILINE_COMMENT {
+		if !n.config.KeepSQLAlias {
+			// discard SQL alias
+			if strings.ToUpper(token.Value) == "AS" {
+				// if current token is AS, then continue to next token
+				// because without seeing the next token, we cannot
+				// determine if the current token is an alias or not
+				*lastToken = *token
+				return
+			}
+
+			if strings.ToUpper(lastToken.Value) == "AS" {
+				if token.Type == IDENT {
+					// if the last token is AS and the current token is IDENT,
+					// then the current token is an alias, so we discard it
+					*lastToken = *token
+					return
+				} else {
+					// if the last token is AS and the current token is not IDENT,
+					// this could be a CTE like WITH ... AS (...),
+					// so we do not discard the current token
+					appendWhitespace(lastToken, token, normalizedSQLBuilder)
+					n.writeToken(lastToken, normalizedSQLBuilder)
+				}
+			}
+		}
+
+		// group consecutive obfuscated values into single placeholder
+		if n.isObfuscatedValueGroupable(token, lastToken, groupablePlaceholder) {
+			// return the token but not write it to the normalizedSQLBuilder
+			*lastToken = *token
+			return
+		}
+
 		// determine if we should add a whitespace
 		appendWhitespace(lastToken, token, normalizedSQLBuilder)
-		if n.config.UppercaseKeywords && isSQLKeyword(token) {
-			normalizedSQLBuilder.WriteString(strings.ToUpper(token.Value))
-		} else {
-			normalizedSQLBuilder.WriteString(token.Value)
-		}
+		n.writeToken(token, normalizedSQLBuilder)
 
-		lastToken = token
+		*lastToken = *token
+	}
+}
+
+func (n *Normalizer) writeToken(token *Token, normalizedSQLBuilder *strings.Builder) {
+	if n.config.UppercaseKeywords && isSQLKeyword(token) {
+		normalizedSQLBuilder.WriteString(strings.ToUpper(token.Value))
+	} else {
+		normalizedSQLBuilder.WriteString(token.Value)
+	}
+}
+
+func (n *Normalizer) isObfuscatedValueGroupable(token *Token, lastToken *Token, groupablePlaceholder *groupablePlaceholder) bool {
+	if token.Value == NumberPlaceholder || token.Value == StringPlaceholder {
+		if lastToken.Value == "(" || lastToken.Value == "[" {
+			// if the last token is "(" or "[", and the current token is a placeholder,
+			// we know it's the start of groupable placeholders
+			// we don't return here because we still need to write the first placeholder
+			groupablePlaceholder.groupable = true
+		} else if lastToken.Value == "," && groupablePlaceholder.groupable {
+			return true
+		}
 	}
 
-	return lastToken
-}
+	if (lastToken.Value == NumberPlaceholder || lastToken.Value == StringPlaceholder) && token.Value == "," && groupablePlaceholder.groupable {
+		return true
+	}
 
-// groupObfuscatedValues groups consecutive obfuscated values in a SQL query into a single placeholder.
-// It replaces "(?, ?, ...)" and "[?, ?, ...]" with "( ? )" and "[ ? ]", respectively.
-// Returns the modified SQL query as a string.
-func groupObfuscatedValues(input string) string {
-	// We use regex to group consecutive obfuscated values into single placeholder.
-	// This is "less" performant than token by token processing,
-	// but it is much simpler to implement and maintain.
-	// The trade off made here is assuming normalization runs on backend
-	// where performance is not as critical as the agent.
-	grouped := groupableRegex.ReplaceAllStringFunc(input, func(match string) string {
-		if match[0] == '(' {
-			return ArrayPlaceholder
-		}
-		return BracketPlaceholder
-	})
-	return grouped
-}
+	if groupablePlaceholder.groupable && (token.Value == ")" || token.Value == "]") {
+		// end of groupable placeholders
+		groupablePlaceholder.groupable = false
+	}
 
-// discardSQLAlias removes any SQL alias from the input string and returns the modified string.
-// It uses a regular expression to match the alias pattern and replace it with an empty string.
-// The function is case-insensitive and matches the pattern "AS <alias_name>".
-// The input string is not modified in place.
-func discardSQLAlias(input string) string {
-	return sqlAliasRegex.ReplaceAllString(input, "")
+	return false
 }
 
 func dedupeCollectedMetadata(metadata []string) (dedupedMetadata []string, size int) {
@@ -198,7 +226,7 @@ func dedupeStatementMetadata(info *StatementMetadata) {
 	info.Size += tablesSize + commentsSize + commandsSize
 }
 
-func appendWhitespace(lastToken Token, token Token, normalizedSQLBuilder *strings.Builder) {
+func appendWhitespace(lastToken *Token, token *Token, normalizedSQLBuilder *strings.Builder) {
 	switch token.Value {
 	case ",":
 	case "=":
