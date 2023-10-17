@@ -60,7 +60,7 @@ type StatementMetadata struct {
 	Commands []string
 }
 
-type GroupablePlaceholder struct {
+type groupablePlaceholder struct {
 	groupable bool
 }
 
@@ -98,7 +98,7 @@ func (n *Normalizer) Normalize(input string, lexerOpts ...lexerOption) (normaliz
 	}
 
 	var lastToken Token // The last token that is not whitespace or comment
-	var groupablePlaceholder GroupablePlaceholder
+	var groupablePlaceholder groupablePlaceholder
 
 	for _, token := range lexer.ScanAll() {
 		n.collectMetadata(&token, &lastToken, statementMetadata)
@@ -128,7 +128,7 @@ func (n *Normalizer) collectMetadata(token *Token, lastToken *Token, statementMe
 	}
 }
 
-func (n *Normalizer) normalizeSQL(token *Token, lastToken *Token, normalizedSQLBuilder *strings.Builder, groupablePlaceholder *GroupablePlaceholder) {
+func (n *Normalizer) normalizeSQL(token *Token, lastToken *Token, normalizedSQLBuilder *strings.Builder, groupablePlaceholder *groupablePlaceholder) {
 	if token.Type != WS && token.Type != COMMENT && token.Type != MULTILINE_COMMENT {
 		if !n.config.KeepSQLAlias {
 			// discard SQL alias
@@ -179,7 +179,7 @@ func (n *Normalizer) writeToken(token *Token, normalizedSQLBuilder *strings.Buil
 	}
 }
 
-func (n *Normalizer) isObfuscatedValueGroupable(token *Token, lastToken *Token, groupablePlaceholder *GroupablePlaceholder) bool {
+func (n *Normalizer) isObfuscatedValueGroupable(token *Token, lastToken *Token, groupablePlaceholder *groupablePlaceholder) bool {
 	if token.Value == NumberPlaceholder || token.Value == StringPlaceholder {
 		if lastToken.Value == "(" || lastToken.Value == "[" {
 			// if the last token is "(" or "[", and the current token is a placeholder,

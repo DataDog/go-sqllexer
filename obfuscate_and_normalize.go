@@ -19,7 +19,7 @@ func ObfuscateAndNormalize(input string, obfuscator *Obfuscator, normalizer *Nor
 	}
 
 	var lastToken Token // The last token that is not whitespace or comment
-	var groupablePlaceholder GroupablePlaceholder
+	var groupablePlaceholder groupablePlaceholder
 
 	for _, token := range lexer.ScanAll() {
 		token.Value = obfuscator.ObfuscateTokenValue(token, lexerOpts...)
