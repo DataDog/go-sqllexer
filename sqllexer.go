@@ -116,9 +116,9 @@ func (s *Lexer) Scan() Token {
 		if isDigit(nextCh) || nextCh == '.' {
 			return s.scanNumberWithLeadingSign()
 		}
-		return s.scanOperator()
+		return s.scanOperator(ch)
 	case isDigit(ch):
-		return s.scanNumber()
+		return s.scanNumber(ch)
 	case isWildcard(ch):
 		return s.scanWildcard()
 	case ch == '$':
@@ -134,14 +134,14 @@ func (s *Lexer) Scan() Token {
 		if s.config.DBMS == DBMSOracle && isLetter(s.lookAhead(1)) {
 			return s.scanBindParameter()
 		}
-		return s.scanOperator()
+		return s.scanOperator(ch)
 	case ch == '@':
 		if s.config.DBMS == DBMSSQLServer && isLetter(s.lookAhead(1)) {
 			return s.scanBindParameter()
 		}
-		return s.scanOperator()
+		return s.scanOperator(ch)
 	case isOperator(ch):
-		return s.scanOperator()
+		return s.scanOperator(ch)
 	case isPunctuation(ch):
 		if ch == '[' && s.config.DBMS == DBMSSQLServer {
 			return s.scanDoubleQuotedIdentifier('[')
@@ -201,17 +201,17 @@ func (s *Lexer) matchAt(match []rune) bool {
 
 func (s *Lexer) scanNumberWithLeadingSign() Token {
 	s.start = s.cursor
-	s.next() // consume the leading sign
-	return s.scanNumberic()
+	ch := s.next() // consume the leading sign
+	return s.scanNumberic(ch)
 }
 
-func (s *Lexer) scanNumber() Token {
+func (s *Lexer) scanNumber(ch rune) Token {
 	s.start = s.cursor
-	return s.scanNumberic()
+	return s.scanNumberic(ch)
 }
 
-func (s *Lexer) scanNumberic() Token {
-	if s.peek() == '0' {
+func (s *Lexer) scanNumberic(ch rune) Token {
+	if ch == '0' {
 		nextCh := s.lookAhead(1)
 		if nextCh == 'x' || nextCh == 'X' {
 			return s.scanHexNumber()
@@ -343,9 +343,8 @@ func (s *Lexer) scanWhitespace() Token {
 	return Token{WS, s.src[s.start:s.cursor]}
 }
 
-func (s *Lexer) scanOperator() Token {
+func (s *Lexer) scanOperator(lastCh rune) Token {
 	s.start = s.cursor
-	lastCh := s.peek()
 	ch := s.next()
 	for isOperator(ch) && !(lastCh == '=' && ch == '?') {
 		// hack: we don't want to treat "=?" as an single operator
