@@ -536,6 +536,28 @@ func TestLexer(t *testing.T) {
 			},
 			lexerOpts: []lexerOption{WithDBMS(DBMSSQLServer)},
 		},
+		{
+			name:  "MySQL backtick quoted identifier",
+			input: "SELECT `user` FROM `test`.`table` WHERE `id` = 1",
+			expected: []Token{
+				{IDENT, "SELECT"},
+				{WS, " "},
+				{IDENT, "`user`"},
+				{WS, " "},
+				{IDENT, "FROM"},
+				{WS, " "},
+				{IDENT, "`test`.`table`"},
+				{WS, " "},
+				{IDENT, "WHERE"},
+				{WS, " "},
+				{IDENT, "`id`"},
+				{WS, " "},
+				{OPERATOR, "="},
+				{WS, " "},
+				{NUMBER, "1"},
+			},
+			lexerOpts: []lexerOption{WithDBMS(DBMSMySQL)},
+		},
 	}
 
 	for _, tt := range tests {
