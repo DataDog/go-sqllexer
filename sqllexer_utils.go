@@ -207,6 +207,13 @@ func isSQLKeyword(token *Token) bool {
 	return ok
 }
 
+func isProcedure(token *Token) bool {
+	if token.Type != IDENT {
+		return false
+	}
+	return strings.ToUpper(token.Value) == "PROCEDURE" || strings.ToUpper(token.Value) == "PROC"
+}
+
 func isBoolean(ident string) bool {
 	return strings.ToUpper(ident) == "TRUE" || strings.ToUpper(ident) == "FALSE"
 }
