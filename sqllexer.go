@@ -138,6 +138,11 @@ func (s *Lexer) Scan() Token {
 			return s.scanBindParameter()
 		}
 		return s.scanOperator()
+	case ch == '`':
+		if s.config.DBMS == DBMSMySQL {
+			return s.scanDoubleQuotedIdentifier('`')
+		}
+		fallthrough
 	case isOperator(ch):
 		return s.scanOperator()
 	case isPunctuation(ch):
