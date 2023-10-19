@@ -547,6 +547,65 @@ func TestLexer(t *testing.T) {
 	}
 }
 
+func TestLexerUnicode(t *testing.T) {
+	tests := []struct {
+		input     string
+		expected  []Token
+		lexerOpts []lexerOption
+	}{
+		{
+			input: `Descripció_CAT`,
+			expected: []Token{
+				{IDENT, `Descripció_CAT`},
+			},
+		},
+		{
+			input: `世界`,
+			expected: []Token{
+				{IDENT, `世界`},
+			},
+		},
+		{
+			input: `こんにちは`,
+			expected: []Token{
+				{IDENT, `こんにちは`},
+			},
+		},
+		{
+			input: `안녕하세요`,
+			expected: []Token{
+				{IDENT, `안녕하세요`},
+			},
+		},
+		{
+			input: `über`,
+			expected: []Token{
+				{IDENT, `über`},
+			},
+		},
+		{
+			input: `résumé`,
+			expected: []Token{
+				{IDENT, `résumé`},
+			},
+		},
+		{
+			input: `"über"`,
+			expected: []Token{
+				{IDENT, `"über"`},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run("", func(t *testing.T) {
+			lexer := New(tt.input, tt.lexerOpts...)
+			tokens := lexer.ScanAll()
+			assert.Equal(t, tt.expected, tokens)
+		})
+	}
+}
+
 func ExampleLexer() {
 	query := "SELECT * FROM users WHERE id = 1"
 	lexer := New(query)
