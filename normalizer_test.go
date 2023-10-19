@@ -882,6 +882,7 @@ func ExampleNormalizer() {
 		WithCollectComments(true),
 		WithCollectCommands(true),
 		WithCollectTables(true),
+		WithCollectProcedures(true),
 		WithKeepSQLAlias(false),
 	)
 
