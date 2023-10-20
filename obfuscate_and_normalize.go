@@ -13,9 +13,10 @@ func ObfuscateAndNormalize(input string, obfuscator *Obfuscator, normalizer *Nor
 	var normalizedSQLBuilder strings.Builder
 
 	statementMetadata = &StatementMetadata{
-		Tables:   []string{},
-		Comments: []string{},
-		Commands: []string{},
+		Tables:     []string{},
+		Comments:   []string{},
+		Commands:   []string{},
+		Procedures: []string{},
 	}
 
 	var lastToken Token // The last token that is not whitespace or comment

@@ -14,6 +14,9 @@ type normalizerConfig struct {
 	// CollectComments specifies whether the normalizer should extract and return comments as SQL metadata
 	CollectComments bool
 
+	// CollectProcedure specifies whether the normalizer should extract and return procedure name as SQL metadata
+	CollectProcedure bool
+
 	// KeepSQLAlias reports whether SQL aliases ("AS") should be truncated.
 	KeepSQLAlias bool
 
@@ -53,11 +56,18 @@ func WithUppercaseKeywords(uppercaseKeywords bool) normalizerOption {
 	}
 }
 
+func WithCollectProcedures(collectProcedure bool) normalizerOption {
+	return func(c *normalizerConfig) {
+		c.CollectProcedure = collectProcedure
+	}
+}
+
 type StatementMetadata struct {
-	Size     int
-	Tables   []string
-	Comments []string
-	Commands []string
+	Size       int
+	Tables     []string
+	Comments   []string
+	Commands   []string
+	Procedures []string
 }
 
 type groupablePlaceholder struct {
@@ -92,9 +102,10 @@ func (n *Normalizer) Normalize(input string, lexerOpts ...lexerOption) (normaliz
 	var normalizedSQLBuilder strings.Builder
 
 	statementMetadata = &StatementMetadata{
-		Tables:   []string{},
-		Comments: []string{},
-		Commands: []string{},
+		Tables:     []string{},
+		Comments:   []string{},
+		Commands:   []string{},
+		Procedures: []string{},
 	}
 
 	var lastToken Token // The last token that is not whitespace or comment
@@ -128,6 +139,9 @@ func (n *Normalizer) collectMetadata(token *Token, lastToken *Token, statementMe
 		} else if n.config.CollectTables && isTableIndicator(strings.ToUpper(lastToken.Value)) {
 			// Collect table names
 			statementMetadata.Tables = append(statementMetadata.Tables, token.Value)
+		} else if n.config.CollectProcedure && isProcedure(lastToken) {
+			// Collect procedure names
+			statementMetadata.Procedures = append(statementMetadata.Procedures, token.Value)
 		}
 	}
 }
@@ -145,7 +159,7 @@ func (n *Normalizer) normalizeSQL(token *Token, lastToken *Token, normalizedSQLB
 			}
 
 			if strings.ToUpper(lastToken.Value) == "AS" {
-				if token.Type == IDENT {
+				if token.Type == IDENT && !isSQLKeyword(token) {
 					// if the last token is AS and the current token is IDENT,
 					// then the current token is an alias, so we discard it
 					*lastToken = *token
@@ -223,11 +237,12 @@ func dedupeCollectedMetadata(metadata []string) (dedupedMetadata []string, size 
 }
 
 func dedupeStatementMetadata(info *StatementMetadata) {
-	var tablesSize, commentsSize, commandsSize int
+	var tablesSize, commentsSize, commandsSize, procedureSize int
 	info.Tables, tablesSize = dedupeCollectedMetadata(info.Tables)
 	info.Comments, commentsSize = dedupeCollectedMetadata(info.Comments)
 	info.Commands, commandsSize = dedupeCollectedMetadata(info.Commands)
-	info.Size += tablesSize + commentsSize + commandsSize
+	info.Procedures, procedureSize = dedupeCollectedMetadata(info.Procedures)
+	info.Size += tablesSize + commentsSize + commandsSize + procedureSize
 }
 
 func appendWhitespace(lastToken *Token, token *Token, normalizedSQLBuilder *strings.Builder) {
