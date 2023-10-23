@@ -26,9 +26,9 @@ func TestNormalizer(t *testing.T) {
 		},
 		{
 			input: `
-			/*dddbs='orders-mysql',dde='dbm-agent-integration',ddps='orders-app',ddpv='7825a16',traceparent='00-000000000000000068e229d784ee697c-569d1b940c1fb3ac-00'*/
-			/* date='12%2F31',key='val' */
-			SELECT * FROM users WHERE id = ?`,
+					/*dddbs='orders-mysql',dde='dbm-agent-integration',ddps='orders-app',ddpv='7825a16',traceparent='00-000000000000000068e229d784ee697c-569d1b940c1fb3ac-00'*/
+					/* date='12%2F31',key='val' */
+					SELECT * FROM users WHERE id = ?`,
 			expected: "SELECT * FROM users WHERE id = ?",
 			statementMetadata: StatementMetadata{
 				Tables:     []string{"users"},
@@ -51,11 +51,11 @@ func TestNormalizer(t *testing.T) {
 		},
 		{
 			input: `
-			SELECT h.id, h.org_id, h.name, ha.name as alias, h.created 
-			FROM vs?.host h 
-				JOIN vs?.host_alias ha on ha.host_id = h.id 
-			WHERE ha.org_id = ? AND ha.name = ANY ( ?, ? )
-			`,
+					SELECT h.id, h.org_id, h.name, ha.name as alias, h.created
+					FROM vs?.host h
+						JOIN vs?.host_alias ha on ha.host_id = h.id
+					WHERE ha.org_id = ? AND ha.name = ANY ( ?, ? )
+					`,
 			expected: "SELECT h.id, h.org_id, h.name, ha.name, h.created FROM vs?.host h JOIN vs?.host_alias ha on ha.host_id = h.id WHERE ha.org_id = ? AND ha.name = ANY ( ? )",
 			statementMetadata: StatementMetadata{
 				Tables:     []string{"vs?.host", "vs?.host_alias"},
@@ -78,11 +78,11 @@ func TestNormalizer(t *testing.T) {
 		},
 		{
 			input: `
-			/* this is a 
+					/* this is a 
 multiline comment */
-			SELECT * FROM users /* comment comment */ WHERE id = ?
-			-- this is another comment
-			`,
+					SELECT * FROM users /* comment comment */ WHERE id = ?
+					-- this is another comment
+					`,
 			expected: "SELECT * FROM users WHERE id = ?",
 			statementMetadata: StatementMetadata{
 				Tables:     []string{"users"},
@@ -116,20 +116,20 @@ multiline comment */
 		},
 		{
 			input: `
-			INSERT INTO order_status_change ( dbm_order_id, message, price, state ) 
-			VALUES ( ( 
-				SELECT id as dbm_order_id 
-				FROM dbm_order 
-				WHERE id = ? 
-			) ( 
-				-- random comment
-				SELECT ( t.price * t.quantity * d.discount_percent ) AS price 
-				FROM dbm_order o 
-					JOIN order_item t ON o.id = t.dbm_order_id 
-					JOIN discount d ON d.dbm_item_id = t.id 
-				WHERE o.id = ? 
-				LIMIT ? 
-			) )`,
+					INSERT INTO order_status_change ( dbm_order_id, message, price, state )
+					VALUES ( (
+						SELECT id as dbm_order_id
+						FROM dbm_order
+						WHERE id = ?
+					) (
+						-- random comment
+						SELECT ( t.price * t.quantity * d.discount_percent ) AS price
+						FROM dbm_order o
+							JOIN order_item t ON o.id = t.dbm_order_id
+							JOIN discount d ON d.dbm_item_id = t.id
+						WHERE o.id = ?
+						LIMIT ?
+					) )`,
 			expected: "INSERT INTO order_status_change ( dbm_order_id, message, price, state ) VALUES ( ( SELECT id FROM dbm_order WHERE id = ? ) ( SELECT ( t.price * t.quantity * d.discount_percent ) FROM dbm_order o JOIN order_item t ON o.id = t.dbm_order_id JOIN discount d ON d.dbm_item_id = t.id WHERE o.id = ? LIMIT ? ) )",
 			statementMetadata: StatementMetadata{
 				Tables:     []string{"order_status_change", "dbm_order", "order_item", "discount"},
@@ -152,13 +152,13 @@ multiline comment */
 		},
 		{
 			input: `
-			CREATE PROCEDURE test_procedure()
-			BEGIN
-				SELECT * FROM users WHERE id = ?;
-				Update test_users set name = ? WHERE id = ?;
-				Delete FROM user? WHERE id = ?;
-			END
-			`,
+					CREATE PROCEDURE test_procedure()
+					BEGIN
+						SELECT * FROM users WHERE id = ?;
+						Update test_users set name = ? WHERE id = ?;
+						Delete FROM user? WHERE id = ?;
+					END
+					`,
 			expected: "CREATE PROCEDURE test_procedure ( ) BEGIN SELECT * FROM users WHERE id = ? ; Update test_users set name = ? WHERE id = ? ; Delete FROM user? WHERE id = ? ; END",
 			statementMetadata: StatementMetadata{
 				Tables:     []string{"users", "test_users", "user?"},
@@ -170,10 +170,10 @@ multiline comment */
 		},
 		{
 			input: `
-			SELECT org_id, resource_type, meta_key, meta_value 
-			FROM public.schema_meta 
-			WHERE org_id IN ( ? ) AND resource_type IN ( ? ) AND meta_key IN ( ? )
-			`,
+					SELECT org_id, resource_type, meta_key, meta_value
+					FROM public.schema_meta
+					WHERE org_id IN ( ? ) AND resource_type IN ( ? ) AND meta_key IN ( ? )
+					`,
 			expected: "SELECT org_id, resource_type, meta_key, meta_value FROM public.schema_meta WHERE org_id IN ( ? ) AND resource_type IN ( ? ) AND meta_key IN ( ? )",
 			statementMetadata: StatementMetadata{
 				Tables:     []string{"public.schema_meta"},
@@ -209,19 +209,19 @@ multiline comment */
 		},
 		{
 			input: `
-			WITH cte AS (
-				SELECT id, name, age
-				FROM person
-				WHERE age > ?
-			  )
-			UPDATE person
-			SET age = ?
-			WHERE id IN (SELECT id FROM cte);
-			INSERT INTO person (name, age)
-			SELECT name, ?
-			FROM cte
-			WHERE age <= ?;
-			`,
+					WITH cte AS (
+						SELECT id, name, age
+						FROM person
+						WHERE age > ?
+					  )
+					UPDATE person
+					SET age = ?
+					WHERE id IN (SELECT id FROM cte);
+					INSERT INTO person (name, age)
+					SELECT name, ?
+					FROM cte
+					WHERE age <= ?;
+					`,
 			expected: "WITH cte AS ( SELECT id, name, age FROM person WHERE age > ? ) UPDATE person SET age = ? WHERE id IN ( SELECT id FROM cte ) ; INSERT INTO person ( name, age ) SELECT name, ? FROM cte WHERE age <= ? ;",
 			statementMetadata: StatementMetadata{
 				Tables:     []string{"person", "cte"},
@@ -244,8 +244,8 @@ multiline comment */
 		},
 		{
 			input: `
-			/* Multi-line comment */
-			SELECT * FROM clients WHERE (clients.first_name = ?) LIMIT ? BEGIN INSERT INTO owners (created_at, first_name, locked, orders_count, updated_at) VALUES (?, ?, ?, ?, ?) COMMIT`,
+					/* Multi-line comment */
+					SELECT * FROM clients WHERE (clients.first_name = ?) LIMIT ? BEGIN INSERT INTO owners (created_at, first_name, locked, orders_count, updated_at) VALUES (?, ?, ?, ?, ?) COMMIT`,
 			expected: "SELECT * FROM clients WHERE ( clients.first_name = ? ) LIMIT ? BEGIN INSERT INTO owners ( created_at, first_name, locked, orders_count, updated_at ) VALUES ( ? ) COMMIT",
 			statementMetadata: StatementMetadata{
 				Tables:     []string{"clients", "owners"},
@@ -257,9 +257,9 @@ multiline comment */
 		},
 		{
 			input: `-- Single line comment
-			-- Another single line comment
-			-- Another another single line comment
-			GRANT USAGE, DELETE ON SCHEMA datadog TO datadog`,
+					-- Another single line comment
+					-- Another another single line comment
+					GRANT USAGE, DELETE ON SCHEMA datadog TO datadog`,
 			expected: "GRANT USAGE, DELETE ON SCHEMA datadog TO datadog",
 			statementMetadata: StatementMetadata{
 				Tables:     []string{},
@@ -271,7 +271,7 @@ multiline comment */
 		},
 		{
 			input: `-- Testing table value constructor SQL expression
-			SELECT * FROM (VALUES (?, ?)) AS d (id, animal)`,
+					SELECT * FROM (VALUES (?, ?)) AS d (id, animal)`,
 			expected: "SELECT * FROM ( VALUES ( ? ) ) ( id, animal )",
 			statementMetadata: StatementMetadata{
 				Tables:     []string{},
@@ -357,6 +357,28 @@ multiline comment */
 				Commands:   []string{"UPDATE"},
 				Procedures: []string{},
 				Size:       47,
+			},
+		},
+		{
+			input:    "SELECT * FROM users WHERE id IN (?, ?)",
+			expected: `SELECT * FROM users WHERE id IN ( ? )`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"users"},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       11,
+			},
+		},
+		{
+			input:    "SELECT $func$INSERT INTO table VALUES (?,?,?)$func$ FROM users",
+			expected: "SELECT $func$INSERT INTO table VALUES ( ? )$func$ FROM users",
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"users"},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       11,
 			},
 		},
 	}

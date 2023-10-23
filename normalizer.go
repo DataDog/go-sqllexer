@@ -117,7 +117,7 @@ func (n *Normalizer) Normalize(input string, lexerOpts ...lexerOption) (normaliz
 			break
 		}
 		n.collectMetadata(&token, &lastToken, statementMetadata)
-		n.normalizeSQL(&token, &lastToken, &normalizedSQLBuilder, &groupablePlaceholder)
+		n.normalizeSQL(&token, &lastToken, &normalizedSQLBuilder, &groupablePlaceholder, lexerOpts...)
 	}
 
 	normalizedSQL = normalizedSQLBuilder.String()
@@ -146,8 +146,24 @@ func (n *Normalizer) collectMetadata(token *Token, lastToken *Token, statementMe
 	}
 }
 
-func (n *Normalizer) normalizeSQL(token *Token, lastToken *Token, normalizedSQLBuilder *strings.Builder, groupablePlaceholder *groupablePlaceholder) {
+func (n *Normalizer) normalizeSQL(token *Token, lastToken *Token, normalizedSQLBuilder *strings.Builder, groupablePlaceholder *groupablePlaceholder, lexerOpts ...lexerOption) {
 	if token.Type != WS && token.Type != COMMENT && token.Type != MULTILINE_COMMENT {
+		if token.Type == DOLLAR_QUOTED_FUNCTION && token.Value != StringPlaceholder {
+			// if the token is a dollar quoted function and it is not obfuscated,
+			// we need to recusively normalize the content of the dollar quoted function
+			quotedFunc := token.Value[6 : len(token.Value)-6] // remove the $func$ prefix and suffix
+			normalizedQuotedFunc, _, err := n.Normalize(quotedFunc, lexerOpts...)
+			if err == nil {
+				// replace the content of the dollar quoted function with the normalized content
+				// if there is an error, we just keep the original content
+				var normalizedDollarQuotedFunc strings.Builder
+				normalizedDollarQuotedFunc.WriteString("$func$")
+				normalizedDollarQuotedFunc.WriteString(normalizedQuotedFunc)
+				normalizedDollarQuotedFunc.WriteString("$func$")
+				token.Value = normalizedDollarQuotedFunc.String()
+			}
+		}
+
 		if !n.config.KeepSQLAlias {
 			// discard SQL alias
 			if strings.ToUpper(token.Value) == "AS" {

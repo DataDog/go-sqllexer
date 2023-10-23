@@ -206,6 +206,28 @@ multiline comment */
 				Size:       25,
 			},
 		},
+		{
+			input:    "SELECT $func$SELECT * FROM table WHERE ID in ('a', 1, 2)$func$ FROM users",
+			expected: "SELECT $func$SELECT * FROM table WHERE ID in ( ? )$func$ FROM users",
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"users"},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       11,
+			},
+		},
+		{
+			input:    "SELECT $func$INSERT INTO table VALUES ('a', 1, 2)$func$ FROM users",
+			expected: "SELECT $func$INSERT INTO table VALUES ( ? )$func$ FROM users",
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"users"},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       11,
+			},
+		},
 	}
 
 	obfuscator := NewObfuscator(
