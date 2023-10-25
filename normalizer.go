@@ -132,16 +132,21 @@ func (n *Normalizer) collectMetadata(token *Token, lastToken *Token, statementMe
 	if n.config.CollectComments && (token.Type == COMMENT || token.Type == MULTILINE_COMMENT) {
 		// Collect comments
 		statementMetadata.Comments = append(statementMetadata.Comments, token.Value)
-	} else if token.Type == IDENT {
-		if n.config.CollectCommands && isCommand(strings.ToUpper(token.Value)) {
+	} else if token.Type == IDENT || token.Type == QUOTED_IDENT {
+		tokenVal := token.Value
+		if token.Type == QUOTED_IDENT {
+			// remove all open and close quotes
+			tokenVal = trimQuotes(tokenVal, tokenVal[0:1], tokenVal[len(tokenVal)-1:])
+		}
+		if n.config.CollectCommands && isCommand(strings.ToUpper(tokenVal)) {
 			// Collect commands
-			statementMetadata.Commands = append(statementMetadata.Commands, strings.ToUpper(token.Value))
+			statementMetadata.Commands = append(statementMetadata.Commands, strings.ToUpper(tokenVal))
 		} else if n.config.CollectTables && isTableIndicator(strings.ToUpper(lastToken.Value)) {
 			// Collect table names
-			statementMetadata.Tables = append(statementMetadata.Tables, token.Value)
+			statementMetadata.Tables = append(statementMetadata.Tables, tokenVal)
 		} else if n.config.CollectProcedure && isProcedure(lastToken) {
 			// Collect procedure names
-			statementMetadata.Procedures = append(statementMetadata.Procedures, token.Value)
+			statementMetadata.Procedures = append(statementMetadata.Procedures, tokenVal)
 		}
 	}
 }

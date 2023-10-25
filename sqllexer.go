@@ -12,6 +12,7 @@ const (
 	INCOMPLETE_STRING      // incomplete string literal so that we can obfuscate it, e.g. 'abc
 	NUMBER                 // number literal
 	IDENT                  // identifier
+	QUOTED_IDENT           // quoted identifier
 	OPERATOR               // operator
 	WILDCARD               // wildcard *
 	COMMENT                // comment
@@ -335,7 +336,7 @@ func (s *Lexer) scanDoubleQuotedIdentifier(delimiter rune) Token {
 		ch = s.next()
 	}
 	s.next() // consume the closing quote
-	return Token{IDENT, s.src[s.start:s.cursor]}
+	return Token{QUOTED_IDENT, s.src[s.start:s.cursor]}
 }
 
 func (s *Lexer) scanWhitespace() Token {

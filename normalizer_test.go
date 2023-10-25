@@ -188,11 +188,11 @@ multiline comment */
 			input:    `SELECT * FROM "users" WHERE id = ?`,
 			expected: `SELECT * FROM "users" WHERE id = ?`,
 			statementMetadata: StatementMetadata{
-				Tables:     []string{`"users"`},
+				Tables:     []string{`users`},
 				Comments:   []string{},
 				Commands:   []string{"SELECT"},
 				Procedures: []string{},
-				Size:       13,
+				Size:       11,
 			},
 		},
 		{
@@ -200,11 +200,11 @@ multiline comment */
 			input:    `SELECT * FROM "public"."users" WHERE id = ?`,
 			expected: `SELECT * FROM "public"."users" WHERE id = ?`,
 			statementMetadata: StatementMetadata{
-				Tables:     []string{`"public"."users"`},
+				Tables:     []string{`public.users`},
 				Comments:   []string{},
 				Commands:   []string{"SELECT"},
 				Procedures: []string{},
-				Size:       22,
+				Size:       18,
 			},
 		},
 		{
