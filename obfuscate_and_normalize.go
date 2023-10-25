@@ -37,5 +37,5 @@ func ObfuscateAndNormalize(input string, obfuscator *Obfuscator, normalizer *Nor
 	// Dedupe collected metadata
 	dedupeStatementMetadata(statementMetadata)
 
-	return trimNormalizedSQL(normalizedSQL), statementMetadata, nil
+	return strings.TrimSpace(strings.TrimSuffix(normalizedSQL, ";")), statementMetadata, nil
 }

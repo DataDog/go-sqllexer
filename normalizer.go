@@ -125,7 +125,7 @@ func (n *Normalizer) Normalize(input string, lexerOpts ...lexerOption) (normaliz
 	// Dedupe collected metadata
 	dedupeStatementMetadata(statementMetadata)
 
-	return trimNormalizedSQL(normalizedSQL), statementMetadata, nil
+	return strings.TrimSpace(strings.TrimSuffix(normalizedSQL, ";")), statementMetadata, nil
 }
 
 func (n *Normalizer) collectMetadata(token *Token, lastToken *Token, statementMetadata *StatementMetadata) {
@@ -279,14 +279,4 @@ func appendWhitespace(lastToken *Token, token *Token, normalizedSQLBuilder *stri
 	default:
 		normalizedSQLBuilder.WriteString(" ")
 	}
-}
-
-func trimNormalizedSQL(input string) string {
-	// trim trailing semicolon
-	input = strings.TrimRight(input, ";")
-
-	// trim leading and trailing whitespace
-	input = strings.TrimSpace(input)
-
-	return input
 }
