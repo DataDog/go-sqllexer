@@ -173,11 +173,11 @@ multiline comment */
 			input:    `SELECT * FROM "public"."users" WHERE id = 1`,
 			expected: `SELECT * FROM "public"."users" WHERE id = ?`,
 			statementMetadata: StatementMetadata{
-				Tables:     []string{`"public"."users"`},
+				Tables:     []string{"public.users"},
 				Comments:   []string{},
 				Commands:   []string{"SELECT"},
 				Procedures: []string{},
-				Size:       22,
+				Size:       18,
 			},
 		},
 		{
@@ -185,11 +185,11 @@ multiline comment */
 			input:    `SELECT * FROM [public].[users] WHERE id = 1`,
 			expected: `SELECT * FROM [public].[users] WHERE id = ?`,
 			statementMetadata: StatementMetadata{
-				Tables:     []string{"[public].[users]"},
+				Tables:     []string{"public.users"},
 				Comments:   []string{},
 				Commands:   []string{"SELECT"},
 				Procedures: []string{},
-				Size:       22,
+				Size:       18,
 			},
 			lexerOpts: []lexerOption{
 				WithDBMS(DBMSSQLServer),
@@ -226,6 +226,17 @@ multiline comment */
 				Commands:   []string{"SELECT"},
 				Procedures: []string{},
 				Size:       11,
+			},
+		},
+		{
+			input:    `select "user_id" from "public"."users"`,
+			expected: `select "user_id" from "public"."users"`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{`public.users`},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       18,
 			},
 		},
 	}

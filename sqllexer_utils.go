@@ -240,3 +240,8 @@ func replaceDigits(input string, placeholder string) string {
 
 	return builder.String()
 }
+
+func trimQuotes(input string, delim string, closingDelim string) string {
+	replacer := strings.NewReplacer(delim, "", closingDelim, "")
+	return replacer.Replace(input)
+}

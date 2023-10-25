@@ -108,7 +108,7 @@ func TestLexer(t *testing.T) {
 				{WS, " "},
 				{IDENT, "FROM"},
 				{WS, " "},
-				{IDENT, "\"users table\""},
+				{QUOTED_IDENT, "\"users table\""},
 				{WS, " "},
 				{IDENT, "where"},
 				{WS, " "},
@@ -413,7 +413,7 @@ func TestLexer(t *testing.T) {
 				{WS, " "},
 				{IDENT, "FROM"},
 				{WS, " "},
-				{IDENT, `"users table"`},
+				{QUOTED_IDENT, `"users table"`},
 			},
 		},
 		{
@@ -426,7 +426,7 @@ func TestLexer(t *testing.T) {
 				{WS, " "},
 				{IDENT, "FROM"},
 				{WS, " "},
-				{IDENT, `"public"."users table"`},
+				{QUOTED_IDENT, `"public"."users table"`},
 			},
 		},
 		{
@@ -520,15 +520,15 @@ func TestLexer(t *testing.T) {
 			expected: []Token{
 				{IDENT, "SELECT"},
 				{WS, " "},
-				{IDENT, "[user]"},
+				{QUOTED_IDENT, "[user]"},
 				{WS, " "},
 				{IDENT, "FROM"},
 				{WS, " "},
-				{IDENT, "[test].[table]"},
+				{QUOTED_IDENT, "[test].[table]"},
 				{WS, " "},
 				{IDENT, "WHERE"},
 				{WS, " "},
-				{IDENT, "[id]"},
+				{QUOTED_IDENT, "[id]"},
 				{WS, " "},
 				{OPERATOR, "="},
 				{WS, " "},
@@ -542,15 +542,15 @@ func TestLexer(t *testing.T) {
 			expected: []Token{
 				{IDENT, "SELECT"},
 				{WS, " "},
-				{IDENT, "`user`"},
+				{QUOTED_IDENT, "`user`"},
 				{WS, " "},
 				{IDENT, "FROM"},
 				{WS, " "},
-				{IDENT, "`test`.`table`"},
+				{QUOTED_IDENT, "`test`.`table`"},
 				{WS, " "},
 				{IDENT, "WHERE"},
 				{WS, " "},
-				{IDENT, "`id`"},
+				{QUOTED_IDENT, "`id`"},
 				{WS, " "},
 				{OPERATOR, "="},
 				{WS, " "},
@@ -614,7 +614,7 @@ func TestLexerUnicode(t *testing.T) {
 		{
 			input: `"über"`,
 			expected: []Token{
-				{IDENT, `"über"`},
+				{QUOTED_IDENT, `"über"`},
 			},
 		},
 	}
@@ -633,5 +633,5 @@ func ExampleLexer() {
 	lexer := New(query)
 	tokens := lexer.ScanAll()
 	fmt.Println(tokens)
-	// Output: [{6 SELECT} {2  } {8 *} {2  } {6 FROM} {2  } {6 users} {2  } {6 WHERE} {2  } {6 id} {2  } {7 =} {2  } {5 1}]
+	// Output: [{6 SELECT} {2  } {9 *} {2  } {6 FROM} {2  } {6 users} {2  } {6 WHERE} {2  } {6 id} {2  } {8 =} {2  } {5 1}]
 }
