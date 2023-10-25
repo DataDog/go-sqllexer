@@ -159,7 +159,7 @@ multiline comment */
 		},
 		{
 			input:    "begin execute immediate 'alter session set sql_trace=true'; end;",
-			expected: "begin execute immediate ? ; end ;",
+			expected: "begin execute immediate ? ; end",
 			statementMetadata: StatementMetadata{
 				Tables:     []string{},
 				Comments:   []string{},

@@ -157,7 +157,7 @@ multiline comment */
 						SELECT * FROM users WHERE id = ?;
 						Update test_users set name = ? WHERE id = ?;
 						Delete FROM user? WHERE id = ?;
-					END
+					END;
 					`,
 			expected: "CREATE PROCEDURE test_procedure ( ) BEGIN SELECT * FROM users WHERE id = ? ; Update test_users set name = ? WHERE id = ? ; Delete FROM user? WHERE id = ? ; END",
 			statementMetadata: StatementMetadata{
@@ -222,7 +222,7 @@ multiline comment */
 					FROM cte
 					WHERE age <= ?;
 					`,
-			expected: "WITH cte AS ( SELECT id, name, age FROM person WHERE age > ? ) UPDATE person SET age = ? WHERE id IN ( SELECT id FROM cte ) ; INSERT INTO person ( name, age ) SELECT name, ? FROM cte WHERE age <= ? ;",
+			expected: "WITH cte AS ( SELECT id, name, age FROM person WHERE age > ? ) UPDATE person SET age = ? WHERE id IN ( SELECT id FROM cte ) ; INSERT INTO person ( name, age ) SELECT name, ? FROM cte WHERE age <= ?",
 			statementMetadata: StatementMetadata{
 				Tables:     []string{"person", "cte"},
 				Comments:   []string{},
@@ -839,7 +839,7 @@ func TestNormalizerStoredProcedure(t *testing.T) {
 				SELECT * FROM users WHERE id = id;
 			END;
 			`,
-			expected: "CREATE PROCEDURE TestProcedure ( id INT ) BEGIN SELECT * FROM users WHERE id = id ; END ;",
+			expected: "CREATE PROCEDURE TestProcedure ( id INT ) BEGIN SELECT * FROM users WHERE id = id ; END",
 			statementMetadata: StatementMetadata{
 				Tables:     []string{"users"},
 				Comments:   []string{},
@@ -855,7 +855,7 @@ func TestNormalizerStoredProcedure(t *testing.T) {
 				UPDATE users SET name = 'test' WHERE id = id;
 			END;
 			`,
-			expected: "CREATE PROC TestProcedure ( id INT ) BEGIN UPDATE users SET name = 'test' WHERE id = id ; END ;",
+			expected: "CREATE PROC TestProcedure ( id INT ) BEGIN UPDATE users SET name = 'test' WHERE id = id ; END",
 			statementMetadata: StatementMetadata{
 				Tables:     []string{"users"},
 				Comments:   []string{},
@@ -871,7 +871,7 @@ func TestNormalizerStoredProcedure(t *testing.T) {
 				DELETE FROM users WHERE id = id;
 			END;
 			`,
-			expected: "CREATE OR REPLACE PROCEDURE TestProcedure ( id INT ) BEGIN DELETE FROM users WHERE id = id ; END ;",
+			expected: "CREATE OR REPLACE PROCEDURE TestProcedure ( id INT ) BEGIN DELETE FROM users WHERE id = id ; END",
 			statementMetadata: StatementMetadata{
 				Tables:     []string{"users"},
 				Comments:   []string{},
