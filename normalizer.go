@@ -17,11 +17,15 @@ type normalizerConfig struct {
 	// CollectProcedure specifies whether the normalizer should extract and return procedure name as SQL metadata
 	CollectProcedure bool
 
-	// KeepSQLAlias reports whether SQL aliases ("AS") should be truncated.
+	// KeepSQLAlias specifies whether SQL aliases ("AS") should be truncated.
 	KeepSQLAlias bool
 
-	// UppercaseKeywords reports whether SQL keywords should be uppercased.
+	// UppercaseKeywords specifies whether SQL keywords should be uppercased.
 	UppercaseKeywords bool
+
+	// RemoveSpaceBetweenParentheses specifies whether spaces should be kept between parentheses.
+	// Spaces are inserted between parentheses by default. but this can be disabled by setting this to true.
+	RemoveSpaceBetweenParentheses bool
 }
 
 type normalizerOption func(*normalizerConfig)
@@ -59,6 +63,12 @@ func WithUppercaseKeywords(uppercaseKeywords bool) normalizerOption {
 func WithCollectProcedures(collectProcedure bool) normalizerOption {
 	return func(c *normalizerConfig) {
 		c.CollectProcedure = collectProcedure
+	}
+}
+
+func WithRemoveSpaceBetweenParentheses(removeSpaceBetweenParentheses bool) normalizerOption {
+	return func(c *normalizerConfig) {
+		c.RemoveSpaceBetweenParentheses = removeSpaceBetweenParentheses
 	}
 }
 
@@ -189,7 +199,7 @@ func (n *Normalizer) normalizeSQL(token *Token, lastToken *Token, normalizedSQLB
 					// if the last token is AS and the current token is not IDENT,
 					// this could be a CTE like WITH ... AS (...),
 					// so we do not discard the current token
-					appendWhitespace(lastToken, token, normalizedSQLBuilder)
+					n.appendWhitespace(lastToken, token, normalizedSQLBuilder)
 					n.writeToken(lastToken, normalizedSQLBuilder)
 				}
 			}
@@ -203,7 +213,7 @@ func (n *Normalizer) normalizeSQL(token *Token, lastToken *Token, normalizedSQLB
 		}
 
 		// determine if we should add a whitespace
-		appendWhitespace(lastToken, token, normalizedSQLBuilder)
+		n.appendWhitespace(lastToken, token, normalizedSQLBuilder)
 		n.writeToken(token, normalizedSQLBuilder)
 
 		*lastToken = *token
@@ -242,6 +252,30 @@ func (n *Normalizer) isObfuscatedValueGroupable(token *Token, lastToken *Token, 
 	return false
 }
 
+func (n *Normalizer) appendWhitespace(lastToken *Token, token *Token, normalizedSQLBuilder *strings.Builder) {
+	// do not add a space between parentheses if RemoveSpaceBetweenParentheses is true
+	if n.config.RemoveSpaceBetweenParentheses && (lastToken.Value == "(" || lastToken.Value == "[") {
+		return
+	}
+
+	if n.config.RemoveSpaceBetweenParentheses && (token.Value == ")" || token.Value == "]") {
+		return
+	}
+
+	switch token.Value {
+	case ",":
+	case "=":
+		if lastToken.Value == ":" {
+			// do not add a space before an equals if a colon was
+			// present before it.
+			break
+		}
+		fallthrough
+	default:
+		normalizedSQLBuilder.WriteString(" ")
+	}
+}
+
 func dedupeCollectedMetadata(metadata []string) (dedupedMetadata []string, size int) {
 	// Dedupe collected metadata
 	// e.g. [SELECT, JOIN, SELECT, JOIN] -> [SELECT, JOIN]
@@ -264,19 +298,4 @@ func dedupeStatementMetadata(info *StatementMetadata) {
 	info.Commands, commandsSize = dedupeCollectedMetadata(info.Commands)
 	info.Procedures, procedureSize = dedupeCollectedMetadata(info.Procedures)
 	info.Size += tablesSize + commentsSize + commandsSize + procedureSize
-}
-
-func appendWhitespace(lastToken *Token, token *Token, normalizedSQLBuilder *strings.Builder) {
-	switch token.Value {
-	case ",":
-	case "=":
-		if lastToken.Value == ":" {
-			// do not add a space before an equals if a colon was
-			// present before it.
-			break
-		}
-		fallthrough
-	default:
-		normalizedSQLBuilder.WriteString(" ")
-	}
 }

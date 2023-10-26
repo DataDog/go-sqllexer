@@ -760,6 +760,10 @@ func TestGroupObfuscatedValues(t *testing.T) {
 		expected string
 	}{
 		{
+			input:    "(?)",
+			expected: "( ? )",
+		},
+		{
 			input:    "( ? )",
 			expected: "( ? )",
 		},
@@ -769,10 +773,6 @@ func TestGroupObfuscatedValues(t *testing.T) {
 		},
 		{
 			input:    "( ?, ?, ? )",
-			expected: "( ? )",
-		},
-		{
-			input:    "( ? )",
 			expected: "( ? )",
 		},
 		{
@@ -814,6 +814,46 @@ func TestGroupObfuscatedValues(t *testing.T) {
 		{
 			input:    "ANY(?, ?)",
 			expected: "ANY ( ? )",
+		},
+		{
+			input:    "(?)",
+			expected: "( ? )",
+		},
+		{
+			input:    "( ? )",
+			expected: "( ? )",
+		},
+		{
+			input:    "(?, ?)",
+			expected: "( ? )",
+		},
+		{
+			input:    "( ?, ?, ? )",
+			expected: "( ? )",
+		},
+		{
+			input:    "( ?, ? )",
+			expected: "( ? )",
+		},
+		{
+			input:    "( ?,?)",
+			expected: "( ? )",
+		},
+		{
+			input:    "[ ? ]",
+			expected: "[ ? ]",
+		},
+		{
+			input:    "[?, ?]",
+			expected: "[ ? ]",
+		},
+		{
+			input:    "[ ?, ?, ? ]",
+			expected: "[ ? ]",
+		},
+		{
+			input:    "[ ? ]",
+			expected: "[ ? ]",
 		},
 	}
 
@@ -895,6 +935,38 @@ func TestNormalizerStoredProcedure(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, test.expected, got)
 			assert.Equal(t, &test.statementMetadata, statementMetadata)
+		})
+	}
+}
+
+func TestNormalizerWithoutSpaceBetweenParentheses(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{
+			input:    "SELECT count(*) FROM users",
+			expected: "SELECT count (*) FROM users",
+		},
+		{
+			input:    "SELECT * FROM users WHERE id IN(?, ?)",
+			expected: "SELECT * FROM users WHERE id IN (?)",
+		},
+		{
+			input:    "INSERT INTO my_table (numbers) VALUES (array[1,2,3])",
+			expected: "INSERT INTO my_table (numbers) VALUES (array [1, 2, 3])",
+		},
+		{
+			input:    "BEGIN dbms_output.enable (?); END",
+			expected: "BEGIN dbms_output.enable (?) ; END",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			normalizer := NewNormalizer(WithRemoveSpaceBetweenParentheses(true))
+			got, _, _ := normalizer.Normalize(test.input)
+			assert.Equal(t, test.expected, got)
 		})
 	}
 }
