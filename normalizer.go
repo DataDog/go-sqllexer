@@ -125,7 +125,7 @@ func (n *Normalizer) Normalize(input string, lexerOpts ...lexerOption) (normaliz
 	// Dedupe collected metadata
 	dedupeStatementMetadata(statementMetadata)
 
-	return strings.TrimSpace(normalizedSQL), statementMetadata, nil
+	return strings.TrimSpace(strings.TrimSuffix(normalizedSQL, ";")), statementMetadata, nil
 }
 
 func (n *Normalizer) collectMetadata(token *Token, lastToken *Token, statementMetadata *StatementMetadata) {
