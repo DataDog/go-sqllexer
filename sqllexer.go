@@ -302,7 +302,7 @@ func (s *Lexer) scanIdentifier(ch rune) Token {
 	// NOTE: this func does not distinguish between SQL keywords and identifiers
 	s.start = s.cursor
 	ch = s.nextBy(utf8.RuneLen(ch))
-	for isLetter(ch) || isDigit(ch) || ch == '.' || ch == '?' || ch == '$' {
+	for isLetter(ch) || isDigit(ch) || ch == '.' || ch == '?' || ch == '$' || ch == '#' {
 		ch = s.nextBy(utf8.RuneLen(ch))
 	}
 	// return the token as uppercase so that we can do case insensitive matching

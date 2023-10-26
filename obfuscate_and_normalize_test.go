@@ -239,6 +239,20 @@ multiline comment */
 				Size:       18,
 			},
 		},
+		{
+			input:    "SELECT file#, name, bytes, status FROM V$DATAFILE",
+			expected: "SELECT file#, name, bytes, status FROM V$DATAFILE",
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"V$DATAFILE"},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       16,
+			},
+			lexerOpts: []lexerOption{
+				WithDBMS(DBMSOracle),
+			},
+		},
 	}
 
 	obfuscator := NewObfuscator(
