@@ -1,6 +1,6 @@
 [
     {
-        "expected": "SELECT COUNT ( * ) FROM users",
+        "expected": "SELECT jsonb_set ( data, ?, ? ) FROM users",
         "statement_metadata": {
             "size": 11,
             "tables": [
@@ -14,7 +14,10 @@
         }
     },
     {
-        "expected": "SELECT COUNT(*) FROM users",
+        "expected": "SELECT jsonb_set(data, ?, NULL) FROM users",
+        "obfuscator_config": {
+            "replace_null": false
+        },
         "normalizer_config": {
             "remove_space_between_parentheses": true
         }

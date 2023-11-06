@@ -1,0 +1,16 @@
+[
+    {
+        "expected": "SELECT data -> ? ->> ? FROM orders",
+        "statement_metadata": {
+            "size": 12,
+            "tables": [
+                "orders"
+            ],
+            "commands": [
+                "SELECT"
+            ],
+            "comments": [],
+            "procedures": []
+        }
+    }
+]

@@ -1,10 +1,10 @@
 [
     {
-        "expected": "SELECT COUNT ( * ) FROM users",
+        "expected": "SELECT jsonb_pretty ( data ) FROM logs",
         "statement_metadata": {
-            "size": 11,
+            "size": 10,
             "tables": [
-                "users"
+                "logs"
             ],
             "commands": [
                 "SELECT"
@@ -14,7 +14,7 @@
         }
     },
     {
-        "expected": "SELECT COUNT(*) FROM users",
+        "expected": "SELECT jsonb_pretty(data) FROM logs",
         "normalizer_config": {
             "remove_space_between_parentheses": true
         }

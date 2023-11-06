@@ -1,9 +1,10 @@
 [
     {
-        "expected": "SELECT COUNT ( * ) FROM users",
+        "expected": "SELECT name, ( SELECT COUNT ( * ) FROM orders WHERE orders.user_id = users.id ) FROM users",
         "statement_metadata": {
-            "size": 11,
+            "size": 17,
             "tables": [
+                "orders",
                 "users"
             ],
             "commands": [
@@ -11,12 +12,6 @@
             ],
             "comments": [],
             "procedures": []
-        }
-    },
-    {
-        "expected": "SELECT COUNT(*) FROM users",
-        "normalizer_config": {
-            "remove_space_between_parentheses": true
         }
     }
 ]

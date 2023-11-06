@@ -1,0 +1,16 @@
+[
+    {
+        "expected": "SELECT DISTINCT ON ( location ) location, time FROM events ORDER BY location, time DESC",
+        "statement_metadata": {
+            "size": 12,
+            "tables": [
+                "events"
+            ],
+            "commands": [
+                "SELECT"
+            ],
+            "comments": [],
+            "procedures": []
+        }
+    }
+]

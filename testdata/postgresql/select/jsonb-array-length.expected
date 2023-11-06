@@ -1,10 +1,10 @@
 [
     {
-        "expected": "SELECT COUNT ( * ) FROM users",
+        "expected": "SELECT jsonb_array_length ( data -> ? ) FROM products",
         "statement_metadata": {
-            "size": 11,
+            "size": 14,
             "tables": [
-                "users"
+                "products"
             ],
             "commands": [
                 "SELECT"
@@ -14,7 +14,7 @@
         }
     },
     {
-        "expected": "SELECT COUNT(*) FROM users",
+        "expected": "SELECT jsonb_array_length(data -> ?) FROM products",
         "normalizer_config": {
             "remove_space_between_parentheses": true
         }

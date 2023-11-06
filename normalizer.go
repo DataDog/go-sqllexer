@@ -84,11 +84,11 @@ func WithKeepTrailingSemicolon(keepTrailingSemicolon bool) normalizerOption {
 }
 
 type StatementMetadata struct {
-	Size       int
-	Tables     []string
-	Comments   []string
-	Commands   []string
-	Procedures []string
+	Size       int      `json:"size"`
+	Tables     []string `json:"tables"`
+	Comments   []string `json:"comments"`
+	Commands   []string `json:"commands"`
+	Procedures []string `json:"procedures"`
 }
 
 type groupablePlaceholder struct {
@@ -162,7 +162,7 @@ func (n *Normalizer) collectMetadata(token *Token, lastToken *Token, statementMe
 		if n.config.CollectCommands && isCommand(strings.ToUpper(tokenVal)) {
 			// Collect commands
 			statementMetadata.Commands = append(statementMetadata.Commands, strings.ToUpper(tokenVal))
-		} else if n.config.CollectTables && isTableIndicator(strings.ToUpper(lastToken.Value)) {
+		} else if n.config.CollectTables && isTableIndicator(strings.ToUpper(lastToken.Value)) && !isSQLKeyword(token) {
 			// Collect table names
 			statementMetadata.Tables = append(statementMetadata.Tables, tokenVal)
 		} else if n.config.CollectProcedure && isProcedure(lastToken) {

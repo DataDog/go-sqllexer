@@ -1,6 +1,6 @@
 [
     {
-        "expected": "SELECT COUNT ( * ) FROM users",
+        "expected": "SELECT user_data.name FROM ( SELECT name FROM users WHERE active = ? )",
         "statement_metadata": {
             "size": 11,
             "tables": [
@@ -14,9 +14,9 @@
         }
     },
     {
-        "expected": "SELECT COUNT(*) FROM users",
-        "normalizer_config": {
-            "remove_space_between_parentheses": true
+        "expected": "SELECT user_data.name FROM ( SELECT name FROM users WHERE active = true )",
+        "obfuscator_config": {
+            "replace_boolean": false
         }
     }
 ]

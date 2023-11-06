@@ -1,0 +1,16 @@
+[
+    {
+        "expected": "SELECT data - ? FROM user_profiles",
+        "statement_metadata": {
+            "size": 19,
+            "tables": [
+                "user_profiles"
+            ],
+            "commands": [
+                "SELECT"
+            ],
+            "comments": [],
+            "procedures": []
+        }
+    }
+]

@@ -1,6 +1,6 @@
 [
     {
-        "expected": "SELECT COUNT ( * ) FROM users",
+        "expected": "SELECT name, CASE WHEN age < ? THEN ? ELSE ? END FROM users",
         "statement_metadata": {
             "size": 11,
             "tables": [
@@ -11,12 +11,6 @@
             ],
             "comments": [],
             "procedures": []
-        }
-    },
-    {
-        "expected": "SELECT COUNT(*) FROM users",
-        "normalizer_config": {
-            "remove_space_between_parentheses": true
         }
     }
 ]

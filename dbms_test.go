@@ -11,9 +11,10 @@ import (
 )
 
 type output struct {
-	Expected         string            `json:"expected"`
-	ObfuscatorConfig *obfuscatorConfig `json:"obfuscator_config,omitempty"`
-	NormalizerConfig *normalizerConfig `json:"normalizer_config,omitempty"`
+	Expected          string             `json:"expected"`
+	ObfuscatorConfig  *obfuscatorConfig  `json:"obfuscator_config,omitempty"`
+	NormalizerConfig  *normalizerConfig  `json:"normalizer_config,omitempty"`
+	StatementMetadata *StatementMetadata `json:"statement_metadata,omitempty"`
 }
 
 type outputList []*output
@@ -32,6 +33,14 @@ func getSubdirectories(directory string) ([]string, error) {
 	return subdirs, nil
 }
 
+// TestQueriesPerDBMS tests a preset of queries and expected output per DBMS
+// Test folder structure:
+// -- testdata
+//
+//	-- dbms_type
+//	  -- query_type
+//	    -- query_name.sql
+//	    -- query_name.expected
 func TestQueriesPerDBMS(t *testing.T) {
 	tests := []struct {
 		dbms DBMSType
@@ -42,7 +51,9 @@ func TestQueriesPerDBMS(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		// Get all subdirectories of the testdata folder
 		baseDir := filepath.Join("testdata", string(tt.dbms))
+		// Get all subdirectories of the testdata folder
 		queryTypes, err := getSubdirectories(baseDir)
 		if err != nil {
 			t.Fatal(err)
@@ -56,7 +67,10 @@ func TestQueriesPerDBMS(t *testing.T) {
 			}
 
 			for _, file := range files {
+				// the testdata folder contains only .sql and .expected files
+				// so we can safely ignore the other files
 				if strings.HasSuffix(file.Name(), ".sql") {
+					// Remove the .sql extension to get the test name
 					testName := strings.TrimSuffix(file.Name(), ".sql")
 					t.Run(testName, func(t *testing.T) {
 						queryPath := filepath.Join(dirPath, file.Name())
@@ -82,6 +96,8 @@ func TestQueriesPerDBMS(t *testing.T) {
 						var defaultNormalizerConfig *normalizerConfig
 
 						for _, output := range expectedOutputs {
+							// If the test case has a custom obfuscator or normalizer config
+							// use it, otherwise use the default config
 							if output.ObfuscatorConfig != nil {
 								defaultObfuscatorConfig = output.ObfuscatorConfig
 							} else {
@@ -128,13 +144,19 @@ func TestQueriesPerDBMS(t *testing.T) {
 								WithKeepTrailingSemicolon(defaultNormalizerConfig.KeepTrailingSemicolon),
 							)
 
-							got, _, err := ObfuscateAndNormalize(string(input), obfuscator, normalizer, WithDBMS(tt.dbms))
+							got, statementMetadata, err := ObfuscateAndNormalize(string(input), obfuscator, normalizer, WithDBMS(tt.dbms))
 
 							if err != nil {
 								t.Fatal(err)
 							}
 
+							// Compare the expected output with the actual output
 							assert.Equal(t, output.Expected, got)
+
+							// Compare the expected statement metadata with the actual statement metadata
+							if output.StatementMetadata != nil {
+								assert.Equal(t, output.StatementMetadata, statementMetadata)
+							}
 						}
 					})
 				}

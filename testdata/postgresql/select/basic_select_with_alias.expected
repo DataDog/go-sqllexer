@@ -1,6 +1,17 @@
 [
     {
-        "expected": "SELECT u.id, u.name FROM users u"
+        "expected": "SELECT u.id, u.name FROM users u",
+        "statement_metadata": {
+            "size": 11,
+            "tables": [
+                "users"
+            ],
+            "commands": [
+                "SELECT"
+            ],
+            "comments": [],
+            "procedures": []
+        }
     },
     {
         "normalizer_config": {
