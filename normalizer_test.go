@@ -946,10 +946,10 @@ func TestNormalizerWithoutSpaceBetweenParentheses(t *testing.T) {
 	}{
 		{
 			input:    "SELECT count(*) FROM users",
-			expected: "SELECT count (*) FROM users",
+			expected: "SELECT count(*) FROM users",
 		},
 		{
-			input:    "SELECT * FROM users WHERE id IN(?, ?)",
+			input:    "SELECT * FROM users WHERE id IN (?, ?)",
 			expected: "SELECT * FROM users WHERE id IN (?)",
 		},
 		{

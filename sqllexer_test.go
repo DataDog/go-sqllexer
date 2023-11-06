@@ -558,6 +558,22 @@ func TestLexer(t *testing.T) {
 			},
 			lexerOpts: []lexerOption{WithDBMS(DBMSMySQL)},
 		},
+		{
+			name:  "Tokenize function",
+			input: "SELECT count(*) FROM users",
+			expected: []Token{
+				{IDENT, "SELECT"},
+				{WS, " "},
+				{FUNCTION, "count"},
+				{PUNCTUATION, "("},
+				{WILDCARD, "*"},
+				{PUNCTUATION, ")"},
+				{WS, " "},
+				{IDENT, "FROM"},
+				{WS, " "},
+				{IDENT, "users"},
+			},
+		},
 	}
 
 	for _, tt := range tests {
