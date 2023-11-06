@@ -22,6 +22,7 @@ const (
 	DOLLAR_QUOTED_STRING   // dollar quoted string
 	POSITIONAL_PARAMETER   // numbered parameter
 	BIND_PARAMETER         // bind parameter
+	FUNCTION               // function
 	UNKNOWN                // unknown token
 )
 
@@ -305,7 +306,10 @@ func (s *Lexer) scanIdentifier(ch rune) Token {
 	for isLetter(ch) || isDigit(ch) || ch == '.' || ch == '?' || ch == '$' || ch == '#' {
 		ch = s.nextBy(utf8.RuneLen(ch))
 	}
-	// return the token as uppercase so that we can do case insensitive matching
+	if ch == '(' {
+		// if the identifier is followed by a (, then it's a function
+		return Token{FUNCTION, s.src[s.start:s.cursor]}
+	}
 	return Token{IDENT, s.src[s.start:s.cursor]}
 }
 

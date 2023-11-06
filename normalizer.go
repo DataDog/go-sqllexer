@@ -153,7 +153,7 @@ func (n *Normalizer) collectMetadata(token *Token, lastToken *Token, statementMe
 	if n.config.CollectComments && (token.Type == COMMENT || token.Type == MULTILINE_COMMENT) {
 		// Collect comments
 		statementMetadata.Comments = append(statementMetadata.Comments, token.Value)
-	} else if token.Type == IDENT || token.Type == QUOTED_IDENT {
+	} else if token.Type == IDENT || token.Type == QUOTED_IDENT || token.Type == FUNCTION {
 		tokenVal := token.Value
 		if token.Type == QUOTED_IDENT {
 			// remove all open and close quotes
@@ -265,7 +265,7 @@ func (n *Normalizer) isObfuscatedValueGroupable(token *Token, lastToken *Token, 
 
 func (n *Normalizer) appendWhitespace(lastToken *Token, token *Token, normalizedSQLBuilder *strings.Builder) {
 	// do not add a space between parentheses if RemoveSpaceBetweenParentheses is true
-	if n.config.RemoveSpaceBetweenParentheses && (lastToken.Value == "(" || lastToken.Value == "[") {
+	if n.config.RemoveSpaceBetweenParentheses && (lastToken.Type == FUNCTION || lastToken.Value == "(" || lastToken.Value == "[") {
 		return
 	}
 
