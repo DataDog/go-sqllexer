@@ -6,31 +6,31 @@ import (
 
 type normalizerConfig struct {
 	// CollectTables specifies whether the normalizer should also extract the table names that a query addresses
-	CollectTables bool
+	CollectTables bool `json:"collect_tables"`
 
 	// CollectCommands specifies whether the normalizer should extract and return commands as SQL metadata
-	CollectCommands bool
+	CollectCommands bool `json:"collect_commands"`
 
 	// CollectComments specifies whether the normalizer should extract and return comments as SQL metadata
-	CollectComments bool
+	CollectComments bool `json:"collect_comments"`
 
 	// CollectProcedure specifies whether the normalizer should extract and return procedure name as SQL metadata
-	CollectProcedure bool
+	CollectProcedure bool `json:"collect_procedure"`
 
 	// KeepSQLAlias specifies whether SQL aliases ("AS") should be truncated.
-	KeepSQLAlias bool
+	KeepSQLAlias bool `json:"keep_sql_alias"`
 
 	// UppercaseKeywords specifies whether SQL keywords should be uppercased.
-	UppercaseKeywords bool
+	UppercaseKeywords bool `json:"uppercase_keywords"`
 
 	// RemoveSpaceBetweenParentheses specifies whether spaces should be kept between parentheses.
 	// Spaces are inserted between parentheses by default. but this can be disabled by setting this to true.
-	RemoveSpaceBetweenParentheses bool
+	RemoveSpaceBetweenParentheses bool `json:"remove_space_between_parentheses"`
 
 	// KeepTrailingSemicolon specifies whether the normalizer should keep the trailing semicolon.
 	// The trailing semicolon is removed by default, but this can be disabled by setting this to true.
 	// PL/SQL requires a trailing semicolon, so this should be set to true when normalizing PL/SQL.
-	KeepTrailingSemicolon bool
+	KeepTrailingSemicolon bool `json:"keep_trailing_semicolon"`
 }
 
 type normalizerOption func(*normalizerConfig)

@@ -1,0 +1,11 @@
+[
+  {
+    "expected": "SELECT COUNT ( * ) FROM users"
+  },
+  {
+    "expected": "SELECT COUNT(*) FROM users",
+    "normalizer_config": {
+        "remove_space_between_parentheses": true
+    }
+  }
+]
