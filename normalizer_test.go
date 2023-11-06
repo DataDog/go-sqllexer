@@ -159,7 +159,7 @@ multiline comment */
 						Delete FROM user? WHERE id = ?;
 					END;
 					`,
-			expected: "CREATE PROCEDURE test_procedure ( ) BEGIN SELECT * FROM users WHERE id = ? ; Update test_users set name = ? WHERE id = ? ; Delete FROM user? WHERE id = ? ; END",
+			expected: "CREATE PROCEDURE test_procedure ( ) BEGIN SELECT * FROM users WHERE id = ?; Update test_users set name = ? WHERE id = ?; Delete FROM user? WHERE id = ?; END",
 			statementMetadata: StatementMetadata{
 				Tables:     []string{"users", "test_users", "user?"},
 				Comments:   []string{},
@@ -222,7 +222,7 @@ multiline comment */
 					FROM cte
 					WHERE age <= ?;
 					`,
-			expected: "WITH cte AS ( SELECT id, name, age FROM person WHERE age > ? ) UPDATE person SET age = ? WHERE id IN ( SELECT id FROM cte ) ; INSERT INTO person ( name, age ) SELECT name, ? FROM cte WHERE age <= ?",
+			expected: "WITH cte AS ( SELECT id, name, age FROM person WHERE age > ? ) UPDATE person SET age = ? WHERE id IN ( SELECT id FROM cte ); INSERT INTO person ( name, age ) SELECT name, ? FROM cte WHERE age <= ?",
 			statementMetadata: StatementMetadata{
 				Tables:     []string{"person", "cte"},
 				Comments:   []string{},
@@ -879,7 +879,7 @@ func TestNormalizerStoredProcedure(t *testing.T) {
 				SELECT * FROM users WHERE id = id;
 			END;
 			`,
-			expected: "CREATE PROCEDURE TestProcedure ( id INT ) BEGIN SELECT * FROM users WHERE id = id ; END",
+			expected: "CREATE PROCEDURE TestProcedure ( id INT ) BEGIN SELECT * FROM users WHERE id = id; END",
 			statementMetadata: StatementMetadata{
 				Tables:     []string{"users"},
 				Comments:   []string{},
@@ -895,7 +895,7 @@ func TestNormalizerStoredProcedure(t *testing.T) {
 				UPDATE users SET name = 'test' WHERE id = id;
 			END;
 			`,
-			expected: "CREATE PROC TestProcedure ( id INT ) BEGIN UPDATE users SET name = 'test' WHERE id = id ; END",
+			expected: "CREATE PROC TestProcedure ( id INT ) BEGIN UPDATE users SET name = 'test' WHERE id = id; END",
 			statementMetadata: StatementMetadata{
 				Tables:     []string{"users"},
 				Comments:   []string{},
@@ -911,7 +911,7 @@ func TestNormalizerStoredProcedure(t *testing.T) {
 				DELETE FROM users WHERE id = id;
 			END;
 			`,
-			expected: "CREATE OR REPLACE PROCEDURE TestProcedure ( id INT ) BEGIN DELETE FROM users WHERE id = id ; END",
+			expected: "CREATE OR REPLACE PROCEDURE TestProcedure ( id INT ) BEGIN DELETE FROM users WHERE id = id; END",
 			statementMetadata: StatementMetadata{
 				Tables:     []string{"users"},
 				Comments:   []string{},
@@ -958,13 +958,37 @@ func TestNormalizerWithoutSpaceBetweenParentheses(t *testing.T) {
 		},
 		{
 			input:    "BEGIN dbms_output.enable (?); END",
-			expected: "BEGIN dbms_output.enable (?) ; END",
+			expected: "BEGIN dbms_output.enable (?); END",
 		},
 	}
 
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
 			normalizer := NewNormalizer(WithRemoveSpaceBetweenParentheses(true))
+			got, _, _ := normalizer.Normalize(test.input)
+			assert.Equal(t, test.expected, got)
+		})
+	}
+}
+
+func TestNormalizerKeepTrailingSemicolon(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{
+			input:    "SELECT * FROM users;",
+			expected: "SELECT * FROM users;",
+		},
+		{
+			input:    "BEGIN NULL; END;",
+			expected: "BEGIN NULL; END;",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			normalizer := NewNormalizer(WithKeepTrailingSemicolon(true))
 			got, _, _ := normalizer.Normalize(test.input)
 			assert.Equal(t, test.expected, got)
 		})
