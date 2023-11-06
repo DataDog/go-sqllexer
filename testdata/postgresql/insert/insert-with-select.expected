@@ -1,0 +1,18 @@
+[
+    {
+        "expected": "INSERT INTO user_logins ( user_id, login_time ) SELECT id, NOW ( ) FROM users WHERE active",
+        "statement_metadata": {
+            "size": 28,
+            "tables": [
+                "user_logins",
+                "users"
+            ],
+            "commands": [
+                "INSERT",
+                "SELECT"
+            ],
+            "comments": [],
+            "procedures": []
+        }
+    }
+]
