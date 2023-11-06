@@ -26,6 +26,11 @@ type normalizerConfig struct {
 	// RemoveSpaceBetweenParentheses specifies whether spaces should be kept between parentheses.
 	// Spaces are inserted between parentheses by default. but this can be disabled by setting this to true.
 	RemoveSpaceBetweenParentheses bool
+
+	// KeepTrailingSemicolon specifies whether the normalizer should keep the trailing semicolon.
+	// The trailing semicolon is removed by default, but this can be disabled by setting this to true.
+	// PL/SQL requires a trailing semicolon, so this should be set to true when normalizing PL/SQL.
+	KeepTrailingSemicolon bool
 }
 
 type normalizerOption func(*normalizerConfig)
@@ -69,6 +74,12 @@ func WithCollectProcedures(collectProcedure bool) normalizerOption {
 func WithRemoveSpaceBetweenParentheses(removeSpaceBetweenParentheses bool) normalizerOption {
 	return func(c *normalizerConfig) {
 		c.RemoveSpaceBetweenParentheses = removeSpaceBetweenParentheses
+	}
+}
+
+func WithKeepTrailingSemicolon(keepTrailingSemicolon bool) normalizerOption {
+	return func(c *normalizerConfig) {
+		c.KeepTrailingSemicolon = keepTrailingSemicolon
 	}
 }
 
@@ -135,7 +146,7 @@ func (n *Normalizer) Normalize(input string, lexerOpts ...lexerOption) (normaliz
 	// Dedupe collected metadata
 	dedupeStatementMetadata(statementMetadata)
 
-	return strings.TrimSpace(strings.TrimSuffix(normalizedSQL, ";")), statementMetadata, nil
+	return n.trimNormalizedSQL(normalizedSQL), statementMetadata, nil
 }
 
 func (n *Normalizer) collectMetadata(token *Token, lastToken *Token, statementMetadata *StatementMetadata) {
@@ -264,6 +275,7 @@ func (n *Normalizer) appendWhitespace(lastToken *Token, token *Token, normalized
 
 	switch token.Value {
 	case ",":
+	case ";":
 	case "=":
 		if lastToken.Value == ":" {
 			// do not add a space before an equals if a colon was
@@ -274,6 +286,14 @@ func (n *Normalizer) appendWhitespace(lastToken *Token, token *Token, normalized
 	default:
 		normalizedSQLBuilder.WriteString(" ")
 	}
+}
+
+func (n *Normalizer) trimNormalizedSQL(normalizedSQL string) string {
+	if !n.config.KeepTrailingSemicolon {
+		// Remove trailing semicolon
+		normalizedSQL = strings.TrimSuffix(normalizedSQL, ";")
+	}
+	return strings.TrimSpace(normalizedSQL)
 }
 
 func dedupeCollectedMetadata(metadata []string) (dedupedMetadata []string, size int) {
