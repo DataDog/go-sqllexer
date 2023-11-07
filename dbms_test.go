@@ -42,17 +42,13 @@ func getSubdirectories(directory string) ([]string, error) {
 //	    -- query_name.sql
 //	    -- query_name.expected
 func TestQueriesPerDBMS(t *testing.T) {
-	tests := []struct {
-		dbms DBMSType
-	}{
-		{
-			dbms: DBMSPostgres,
-		},
+	dbmsTypes := []DBMSType{
+		DBMSPostgres,
 	}
 
-	for _, tt := range tests {
+	for _, dbms := range dbmsTypes {
 		// Get all subdirectories of the testdata folder
-		baseDir := filepath.Join("testdata", string(tt.dbms))
+		baseDir := filepath.Join("testdata", string(dbms))
 		// Get all subdirectories of the testdata folder
 		queryTypes, err := getSubdirectories(baseDir)
 		if err != nil {
@@ -144,7 +140,7 @@ func TestQueriesPerDBMS(t *testing.T) {
 								WithKeepTrailingSemicolon(defaultNormalizerConfig.KeepTrailingSemicolon),
 							)
 
-							got, statementMetadata, err := ObfuscateAndNormalize(string(input), obfuscator, normalizer, WithDBMS(tt.dbms))
+							got, statementMetadata, err := ObfuscateAndNormalize(string(input), obfuscator, normalizer, WithDBMS(dbms))
 
 							if err != nil {
 								t.Fatal(err)
