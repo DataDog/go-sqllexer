@@ -1,0 +1,18 @@
+[
+    {
+        "expected": "WITH deleted AS ( DELETE FROM users WHERE last_login < NOW ( ) - INTERVAL ? RETURNING * ) SELECT * FROM deleted",
+        "statement_metadata": {
+            "size": 24,
+            "tables": [
+                "users",
+                "deleted"
+            ],
+            "commands": [
+                "DELETE",
+                "SELECT"
+            ],
+            "comments": [],
+            "procedures": []
+        }
+    }
+]

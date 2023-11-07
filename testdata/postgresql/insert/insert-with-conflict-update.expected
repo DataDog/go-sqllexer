@@ -1,0 +1,17 @@
+[
+    {
+        "expected": "INSERT INTO users ( id, name, email ) VALUES ( ? ) ON CONFLICT ( id ) DO UPDATE SET email = EXCLUDED.email",
+        "statement_metadata": {
+            "size": 17,
+            "tables": [
+                "users"
+            ],
+            "commands": [
+                "INSERT",
+                "UPDATE"
+            ],
+            "comments": [],
+            "procedures": []
+        }
+    }
+]

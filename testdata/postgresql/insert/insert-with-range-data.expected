@@ -1,0 +1,16 @@
+[
+    {
+        "expected": "INSERT INTO reservations ( during ) VALUES ( ? )",
+        "statement_metadata": {
+            "size": 18,
+            "tables": [
+                "reservations"
+            ],
+            "commands": [
+                "INSERT"
+            ],
+            "comments": [],
+            "procedures": []
+        }
+    }
+]

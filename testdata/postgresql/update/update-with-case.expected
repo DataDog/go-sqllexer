@@ -1,0 +1,16 @@
+[
+    {
+        "expected": "UPDATE users SET status = CASE WHEN last_login < NOW ( ) - INTERVAL ? THEN ? ELSE status END",
+        "statement_metadata": {
+            "size": 11,
+            "tables": [
+                "users"
+            ],
+            "commands": [
+                "UPDATE"
+            ],
+            "comments": [],
+            "procedures": []
+        }
+    }
+]

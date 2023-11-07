@@ -1,0 +1,1 @@
+DELETE FROM orders WHERE id = 8 RETURNING *;

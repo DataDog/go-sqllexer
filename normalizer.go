@@ -217,7 +217,7 @@ func (n *Normalizer) normalizeSQL(token *Token, lastToken *Token, normalizedSQLB
 		}
 
 		// group consecutive obfuscated values into single placeholder
-		if n.isObfuscatedValueGroupable(token, lastToken, groupablePlaceholder) {
+		if n.isObfuscatedValueGroupable(token, lastToken, groupablePlaceholder, normalizedSQLBuilder) {
 			// return the token but not write it to the normalizedSQLBuilder
 			*lastToken = *token
 			return
@@ -239,7 +239,7 @@ func (n *Normalizer) writeToken(token *Token, normalizedSQLBuilder *strings.Buil
 	}
 }
 
-func (n *Normalizer) isObfuscatedValueGroupable(token *Token, lastToken *Token, groupablePlaceholder *groupablePlaceholder) bool {
+func (n *Normalizer) isObfuscatedValueGroupable(token *Token, lastToken *Token, groupablePlaceholder *groupablePlaceholder, normalizedSQLBuilder *strings.Builder) bool {
 	if token.Value == NumberPlaceholder || token.Value == StringPlaceholder {
 		if lastToken.Value == "(" || lastToken.Value == "[" {
 			// if the last token is "(" or "[", and the current token is a placeholder,
@@ -258,6 +258,15 @@ func (n *Normalizer) isObfuscatedValueGroupable(token *Token, lastToken *Token, 
 	if groupablePlaceholder.groupable && (token.Value == ")" || token.Value == "]") {
 		// end of groupable placeholders
 		groupablePlaceholder.groupable = false
+		return false
+	}
+
+	if groupablePlaceholder.groupable && token.Value != NumberPlaceholder && token.Value != StringPlaceholder && lastToken.Value == "," {
+		// This is a tricky edge case. If we are inside a groupbale block, and the current token is not a placeholder,
+		// we not only want to write the current token to the normalizedSQLBuilder, but also write the last comma that we skipped.
+		// For example, (?, ARRAY[?, ?, ?]) should be normalized as (?, ARRAY[?])
+		normalizedSQLBuilder.WriteString(lastToken.Value)
+		return false
 	}
 
 	return false

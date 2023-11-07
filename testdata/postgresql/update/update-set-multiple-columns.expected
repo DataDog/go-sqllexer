@@ -1,0 +1,16 @@
+[
+    {
+        "expected": "UPDATE users SET name = ?, email = ? WHERE id = ?",
+        "statement_metadata": {
+            "size": 11,
+            "tables": [
+                "users"
+            ],
+            "commands": [
+                "UPDATE"
+            ],
+            "comments": [],
+            "procedures": []
+        }
+    }
+]

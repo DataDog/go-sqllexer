@@ -1,0 +1,16 @@
+[
+    {
+        "expected": "INSERT INTO shipments ( status ) VALUES ( ? :: shipment_status )",
+        "statement_metadata": {
+            "size": 15,
+            "tables": [
+                "shipments"
+            ],
+            "commands": [
+                "INSERT"
+            ],
+            "comments": [],
+            "procedures": []
+        }
+    }
+]
