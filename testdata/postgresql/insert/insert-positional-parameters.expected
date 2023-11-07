@@ -1,0 +1,11 @@
+[
+    {
+        "expected": "INSERT INTO users ( name, email, age ) VALUES ( ? )"
+    },
+    {
+        "obfuscator_config": {
+            "replace_positional_parameter": false
+        },
+        "expected": "INSERT INTO users ( name, email, age ) VALUES ( $1, $2, $3 )"
+    }
+]

@@ -1,0 +1,6 @@
+[
+    {
+      "expected": "SELECT get_user_email ( ? )"
+    }
+  ]
+  

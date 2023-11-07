@@ -1,0 +1,11 @@
+[
+    {
+        "expected": "SELECT * FROM users WHERE id = ?"
+    },
+    {
+        "obfuscator_config": {
+            "replace_positional_parameter": false
+        },
+        "expected": "SELECT * FROM users WHERE id = $1"
+    }
+]

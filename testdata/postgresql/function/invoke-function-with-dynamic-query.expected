@@ -1,0 +1,6 @@
+[
+    {
+      "expected": "SELECT * FROM dynamic_query ( ? ) AS t ( id integer, name text, email text )"
+    }
+  ]
+  
