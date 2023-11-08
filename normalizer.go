@@ -6,31 +6,31 @@ import (
 
 type normalizerConfig struct {
 	// CollectTables specifies whether the normalizer should also extract the table names that a query addresses
-	CollectTables bool `json:"collect_tables"`
+	CollectTables bool
 
 	// CollectCommands specifies whether the normalizer should extract and return commands as SQL metadata
-	CollectCommands bool `json:"collect_commands"`
+	CollectCommands bool
 
 	// CollectComments specifies whether the normalizer should extract and return comments as SQL metadata
-	CollectComments bool `json:"collect_comments"`
+	CollectComments bool
 
 	// CollectProcedure specifies whether the normalizer should extract and return procedure name as SQL metadata
-	CollectProcedure bool `json:"collect_procedure"`
+	CollectProcedure bool
 
 	// KeepSQLAlias specifies whether SQL aliases ("AS") should be truncated.
-	KeepSQLAlias bool `json:"keep_sql_alias"`
+	KeepSQLAlias bool
 
 	// UppercaseKeywords specifies whether SQL keywords should be uppercased.
-	UppercaseKeywords bool `json:"uppercase_keywords"`
+	UppercaseKeywords bool
 
 	// RemoveSpaceBetweenParentheses specifies whether spaces should be kept between parentheses.
 	// Spaces are inserted between parentheses by default. but this can be disabled by setting this to true.
-	RemoveSpaceBetweenParentheses bool `json:"remove_space_between_parentheses"`
+	RemoveSpaceBetweenParentheses bool
 
 	// KeepTrailingSemicolon specifies whether the normalizer should keep the trailing semicolon.
 	// The trailing semicolon is removed by default, but this can be disabled by setting this to true.
 	// PL/SQL requires a trailing semicolon, so this should be set to true when normalizing PL/SQL.
-	KeepTrailingSemicolon bool `json:"keep_trailing_semicolon"`
+	KeepTrailingSemicolon bool
 }
 
 type normalizerOption func(*normalizerConfig)
@@ -84,11 +84,11 @@ func WithKeepTrailingSemicolon(keepTrailingSemicolon bool) normalizerOption {
 }
 
 type StatementMetadata struct {
-	Size       int      `json:"size"`
-	Tables     []string `json:"tables"`
-	Comments   []string `json:"comments"`
-	Commands   []string `json:"commands"`
-	Procedures []string `json:"procedures"`
+	Size       int
+	Tables     []string
+	Comments   []string
+	Commands   []string
+	Procedures []string
 }
 
 type groupablePlaceholder struct {

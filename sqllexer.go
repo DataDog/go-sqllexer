@@ -33,7 +33,7 @@ type Token struct {
 }
 
 type LexerConfig struct {
-	DBMS DBMSType `json:"dbms,omitempty"`
+	DBMS DBMSType
 }
 
 type lexerOption func(*LexerConfig)
