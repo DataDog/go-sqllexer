@@ -1,14 +1,17 @@
 package sqllexer
 
 import (
+	"embed"
 	"encoding/json"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+//go:embed testdata/*
+var testdata embed.FS
 
 type output struct {
 	Expected          string             `json:"expected"`
@@ -18,20 +21,6 @@ type output struct {
 }
 
 type outputList []*output
-
-func getSubdirectories(directory string) ([]string, error) {
-	var subdirs []string
-	entries, err := os.ReadDir(directory)
-	if err != nil {
-		return nil, err
-	}
-	for _, entry := range entries {
-		if entry.IsDir() {
-			subdirs = append(subdirs, entry.Name())
-		}
-	}
-	return subdirs, nil
-}
 
 // TestQueriesPerDBMS tests a preset of queries and expected output per DBMS
 // Test folder structure:
@@ -50,14 +39,14 @@ func TestQueriesPerDBMS(t *testing.T) {
 		// Get all subdirectories of the testdata folder
 		baseDir := filepath.Join("testdata", string(dbms))
 		// Get all subdirectories of the testdata folder
-		queryTypes, err := getSubdirectories(baseDir)
+		queryTypes, err := testdata.ReadDir(baseDir)
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		for _, qt := range queryTypes {
-			dirPath := filepath.Join(baseDir, qt)
-			files, err := os.ReadDir(dirPath)
+			dirPath := filepath.Join(baseDir, qt.Name())
+			files, err := testdata.ReadDir(dirPath)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -72,12 +61,12 @@ func TestQueriesPerDBMS(t *testing.T) {
 						queryPath := filepath.Join(dirPath, file.Name())
 						expectedPath := filepath.Join(dirPath, testName+".expected")
 
-						input, err := os.ReadFile(queryPath)
+						input, err := testdata.ReadFile(queryPath)
 						if err != nil {
 							t.Fatal(err)
 						}
 
-						expectedJson, err := os.ReadFile(expectedPath)
+						expectedJson, err := testdata.ReadFile(expectedPath)
 						if err != nil {
 							t.Fatal(err)
 						}
@@ -159,5 +148,4 @@ func TestQueriesPerDBMS(t *testing.T) {
 			}
 		}
 	}
-
 }
