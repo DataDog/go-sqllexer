@@ -1,6 +1,0 @@
-[
-    {
-      "expected": "SELECT * FROM get_users ( )"
-    }
-  ]
-  
