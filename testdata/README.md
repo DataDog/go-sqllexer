@@ -21,7 +21,7 @@ The test suite is organized per DBMS. Each DBMS has a number of query types. Eac
 
 ## Test File Format
 
-The test files are simple json files where each test case comes with one input SQL statements and an array of expected outputs. 
+The test files are simple json files where each test case comes with one input SQL statements and an array of expected outputs.
 Each expected output can optionally come with a configuration for the obfuscator and normalizer. The configuration is optional, because the default configuration is used if no configuration is provided.
 
 testcase.json:
@@ -50,5 +50,5 @@ testcase.json:
 
 1. Create a new directory for the DBMS, if it does not exist yet. (this step is often not necessary)
 2. Create a new directory for the query type, if it does not exist yet.
-3. Create a new test case `.json` file with the SQL statement and expected output.
+3. Create a new test case `.json` file with the SQL statement and expected output. Refer to the [test file format](#test-file-format) or `testcase struct` in [dbms_test.go](../dbms_test.go) for more details.
 4. Run the test suite to verify that the test case is working as expected.
