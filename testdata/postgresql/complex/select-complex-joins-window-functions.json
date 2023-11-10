@@ -1,0 +1,21 @@
+{
+  "input": "SELECT \n  e1.name AS employee_name,\n  e1.salary,\n  e2.name AS manager_name,\n  AVG(e2.salary) OVER (PARTITION BY e1.manager_id) AS avg_manager_salary,\n  RANK() OVER (ORDER BY e1.salary DESC) AS salary_rank\nFROM \n  employees e1\nLEFT JOIN employees e2 ON e1.manager_id = e2.id\nWHERE \n  e1.department_id IN (SELECT id FROM departments WHERE name LIKE 'IT%')\nAND \n  e1.hire_date > '2020-01-01'\nORDER BY \n  salary_rank, avg_manager_salary DESC;",
+  "outputs": [
+    {
+      "expected": "SELECT e?.name, e?.salary, e?.name, AVG ( e?.salary ) OVER ( PARTITION BY e?.manager_id ), RANK ( ) OVER ( ORDER BY e?.salary DESC ) FROM employees e? LEFT JOIN employees e? ON e?.manager_id = e?.id WHERE e?.department_id IN ( SELECT id FROM departments WHERE name LIKE ? ) AND e?.hire_date > ? ORDER BY salary_rank, avg_manager_salary DESC",
+      "statement_metadata": {
+        "size": 30,
+        "tables": [
+          "employees",
+          "departments"
+        ],
+        "commands": [
+          "SELECT",
+          "JOIN"
+        ],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}

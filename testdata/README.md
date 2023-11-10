@@ -11,11 +11,9 @@ testdata
 ├── README.md
 ├── dbms1
 │   ├── query_type1
-│   │   ├── test1.sql
-│   │   └── test1.expected
+│   │   ├── test1.json
 │   └── query_type2
-│       ├── test1.sql
-│       └── test1.expected
+│       ├── test1.json
 dbms_test.go
 ```
 
@@ -23,30 +21,34 @@ The test suite is organized per DBMS. Each DBMS has a number of query types. Eac
 
 ## Test File Format
 
-The test files are simple text files come in pairs. The first `.sql` file is the SQL statement to be tested. The second `.expected` file is the expected output of the obfuscator/normalizer in json format. Both files have the same name, except for the file extension.
+The test files are simple json files where each test case comes with one input SQL statements and an array of expected outputs. 
+Each expected output can optionally come with a configuration for the obfuscator and normalizer. The configuration is optional, because the default configuration is used if no configuration is provided.
 
-example.sql:
-
-```sql
-SELECT * FROM users WHERE id = 1;
-```
-
-example.expected:
+testcase.json:
 
 ```json
-[
-    {
-        "expected": "SELECT * FROM users WHERE id = ?",
-        "obfuscator_config": {...}, // optional
-        "normalizer_config": {...}  // optional
-    }
-]
+{
+    "input": "SELECT * FROM table1",
+    "outputs": [
+        {
+            // Test case 1
+            "expected": "SELECT * FROM table1",
+            "obfuscator_config": {...}, // optional
+            "normalizer_config": {...}  // optional
+        },
+        {
+            // Test case 2
+            "expected": "SELECT * FROM table1",
+            "obfuscator_config": {...}, // optional
+            "normalizer_config": {...}  // optional
+        }
+    ]
+}
 ```
 
 ## How to write a new test case
 
 1. Create a new directory for the DBMS, if it does not exist yet. (this step is often not necessary)
 2. Create a new directory for the query type, if it does not exist yet.
-3. Create a new `.sql` file with the SQL statement to be tested.
-4. Create a new `.expected` file with the expected output of the obfuscator/normalizer in json format.
-5. Run the test suite to verify that the test case is working as expected.
+3. Create a new test case `.json` file with the SQL statement and expected output.
+4. Run the test suite to verify that the test case is working as expected.
