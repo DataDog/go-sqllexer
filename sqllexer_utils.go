@@ -135,6 +135,8 @@ var keywords = map[string]bool{
 	"UNLOGGED":   true,
 	"RECURSIVE":  true,
 	"RETURNING":  true,
+	"OFFSET":     true,
+	"OF":         true,
 }
 
 func isWhitespace(ch rune) bool {

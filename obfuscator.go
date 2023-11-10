@@ -5,11 +5,11 @@ import (
 )
 
 type obfuscatorConfig struct {
-	DollarQuotedFunc           bool
-	ReplaceDigits              bool
-	ReplacePositionalParameter bool
-	ReplaceBoolean             bool
-	ReplaceNull                bool
+	DollarQuotedFunc           bool `json:"dollar_quoted_func"`
+	ReplaceDigits              bool `json:"replace_digits"`
+	ReplacePositionalParameter bool `json:"replace_positional_parameter"`
+	ReplaceBoolean             bool `json:"replace_boolean"`
+	ReplaceNull                bool `json:"replace_null"`
 }
 
 type obfuscatorOption func(*obfuscatorConfig)

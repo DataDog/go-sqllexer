@@ -6,31 +6,31 @@ import (
 
 type normalizerConfig struct {
 	// CollectTables specifies whether the normalizer should also extract the table names that a query addresses
-	CollectTables bool
+	CollectTables bool `json:"collect_tables"`
 
 	// CollectCommands specifies whether the normalizer should extract and return commands as SQL metadata
-	CollectCommands bool
+	CollectCommands bool `json:"collect_commands"`
 
 	// CollectComments specifies whether the normalizer should extract and return comments as SQL metadata
-	CollectComments bool
+	CollectComments bool `json:"collect_comments"`
 
 	// CollectProcedure specifies whether the normalizer should extract and return procedure name as SQL metadata
-	CollectProcedure bool
+	CollectProcedure bool `json:"collect_procedure"`
 
 	// KeepSQLAlias specifies whether SQL aliases ("AS") should be truncated.
-	KeepSQLAlias bool
+	KeepSQLAlias bool `json:"keep_sql_alias"`
 
 	// UppercaseKeywords specifies whether SQL keywords should be uppercased.
-	UppercaseKeywords bool
+	UppercaseKeywords bool `json:"uppercase_keywords"`
 
 	// RemoveSpaceBetweenParentheses specifies whether spaces should be kept between parentheses.
 	// Spaces are inserted between parentheses by default. but this can be disabled by setting this to true.
-	RemoveSpaceBetweenParentheses bool
+	RemoveSpaceBetweenParentheses bool `json:"remove_space_between_parentheses"`
 
 	// KeepTrailingSemicolon specifies whether the normalizer should keep the trailing semicolon.
 	// The trailing semicolon is removed by default, but this can be disabled by setting this to true.
 	// PL/SQL requires a trailing semicolon, so this should be set to true when normalizing PL/SQL.
-	KeepTrailingSemicolon bool
+	KeepTrailingSemicolon bool `json:"keep_trailing_semicolon"`
 }
 
 type normalizerOption func(*normalizerConfig)
@@ -84,11 +84,11 @@ func WithKeepTrailingSemicolon(keepTrailingSemicolon bool) normalizerOption {
 }
 
 type StatementMetadata struct {
-	Size       int
-	Tables     []string
-	Comments   []string
-	Commands   []string
-	Procedures []string
+	Size       int      `json:"size"`
+	Tables     []string `json:"tables"`
+	Comments   []string `json:"comments"`
+	Commands   []string `json:"commands"`
+	Procedures []string `json:"procedures"`
 }
 
 type groupablePlaceholder struct {
@@ -162,7 +162,7 @@ func (n *Normalizer) collectMetadata(token *Token, lastToken *Token, statementMe
 		if n.config.CollectCommands && isCommand(strings.ToUpper(tokenVal)) {
 			// Collect commands
 			statementMetadata.Commands = append(statementMetadata.Commands, strings.ToUpper(tokenVal))
-		} else if n.config.CollectTables && isTableIndicator(strings.ToUpper(lastToken.Value)) {
+		} else if n.config.CollectTables && isTableIndicator(strings.ToUpper(lastToken.Value)) && !isSQLKeyword(token) {
 			// Collect table names
 			statementMetadata.Tables = append(statementMetadata.Tables, tokenVal)
 		} else if n.config.CollectProcedure && isProcedure(lastToken) {
@@ -217,7 +217,7 @@ func (n *Normalizer) normalizeSQL(token *Token, lastToken *Token, normalizedSQLB
 		}
 
 		// group consecutive obfuscated values into single placeholder
-		if n.isObfuscatedValueGroupable(token, lastToken, groupablePlaceholder) {
+		if n.isObfuscatedValueGroupable(token, lastToken, groupablePlaceholder, normalizedSQLBuilder) {
 			// return the token but not write it to the normalizedSQLBuilder
 			*lastToken = *token
 			return
@@ -239,7 +239,7 @@ func (n *Normalizer) writeToken(token *Token, normalizedSQLBuilder *strings.Buil
 	}
 }
 
-func (n *Normalizer) isObfuscatedValueGroupable(token *Token, lastToken *Token, groupablePlaceholder *groupablePlaceholder) bool {
+func (n *Normalizer) isObfuscatedValueGroupable(token *Token, lastToken *Token, groupablePlaceholder *groupablePlaceholder, normalizedSQLBuilder *strings.Builder) bool {
 	if token.Value == NumberPlaceholder || token.Value == StringPlaceholder {
 		if lastToken.Value == "(" || lastToken.Value == "[" {
 			// if the last token is "(" or "[", and the current token is a placeholder,
@@ -258,6 +258,15 @@ func (n *Normalizer) isObfuscatedValueGroupable(token *Token, lastToken *Token, 
 	if groupablePlaceholder.groupable && (token.Value == ")" || token.Value == "]") {
 		// end of groupable placeholders
 		groupablePlaceholder.groupable = false
+		return false
+	}
+
+	if groupablePlaceholder.groupable && token.Value != NumberPlaceholder && token.Value != StringPlaceholder && lastToken.Value == "," {
+		// This is a tricky edge case. If we are inside a groupbale block, and the current token is not a placeholder,
+		// we not only want to write the current token to the normalizedSQLBuilder, but also write the last comma that we skipped.
+		// For example, (?, ARRAY[?, ?, ?]) should be normalized as (?, ARRAY[?])
+		normalizedSQLBuilder.WriteString(lastToken.Value)
+		return false
 	}
 
 	return false
