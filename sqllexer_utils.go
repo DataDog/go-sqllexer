@@ -137,6 +137,7 @@ var keywords = map[string]bool{
 	"RETURNING":  true,
 	"OFFSET":     true,
 	"OF":         true,
+	"SKIP":       true,
 }
 
 func isWhitespace(ch rune) bool {

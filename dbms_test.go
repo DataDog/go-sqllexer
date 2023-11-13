@@ -35,6 +35,7 @@ type testcase struct {
 func TestQueriesPerDBMS(t *testing.T) {
 	dbmsTypes := []DBMSType{
 		DBMSPostgres,
+		DBMSOracle,
 	}
 
 	for _, dbms := range dbmsTypes {

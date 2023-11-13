@@ -1,0 +1,22 @@
+{
+    "input": "UPDATE employees SET salary = CASE WHEN job_id = 'XX' THEN salary * 1.10 WHEN job_id = 'YY' THEN salary * 1.20 ELSE salary END;",
+    "outputs": [
+      {
+        "expected": "UPDATE employees SET salary = CASE WHEN job_id = ? THEN salary * ? WHEN job_id = ? THEN salary * ? ELSE salary END",
+        "statement_metadata": {
+          "size": 15,
+          "tables": ["employees"],
+          "commands": ["UPDATE"],
+          "comments": [],
+          "procedures": []
+        }
+      },
+      {
+        "expected": "UPDATE employees SET salary = CASE WHEN job_id = ? THEN salary * ? WHEN job_id = ? THEN salary * ? ELSE salary END;",
+        "normalizer_config": {
+            "keep_trailing_semicolon": true
+        }
+      }
+    ]
+  }
+  

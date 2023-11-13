@@ -1,0 +1,22 @@
+{
+    "input": "UPDATE employees SET salary = salary * 1.05 WHERE department_id = 3;",
+    "outputs": [
+      {
+        "expected": "UPDATE employees SET salary = salary * ? WHERE department_id = ?",
+        "statement_metadata": {
+          "size": 15,
+          "tables": ["employees"],
+          "commands": ["UPDATE"],
+          "comments": [],
+          "procedures": []
+        }
+      },
+      {
+        "expected": "UPDATE employees SET salary = salary * ? WHERE department_id = ?;",
+        "normalizer_config": {
+            "keep_trailing_semicolon": true
+        }
+      }
+    ]
+  }
+  
