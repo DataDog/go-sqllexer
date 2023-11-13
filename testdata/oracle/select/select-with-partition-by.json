@@ -1,8 +1,8 @@
 {
-    "input": "SELECT department_id, last_name, salary, AVG(salary) OVER (PARTITION BY department_id) AS avg_dept_salary FROM employees;",
+    "input": "SELECT department_id, last_name, test_amt, AVG(test_amt) OVER (PARTITION BY department_id) AS avg_dept_test_amt FROM employees;",
     "outputs": [
       {
-        "expected": "SELECT department_id, last_name, salary, AVG ( salary ) OVER ( PARTITION BY department_id ) FROM employees",
+        "expected": "SELECT department_id, last_name, test_amt, AVG ( test_amt ) OVER ( PARTITION BY department_id ) FROM employees",
         "statement_metadata": {
           "size": 15,
           "tables": ["employees"],
@@ -12,7 +12,7 @@
         }
       },
       {
-        "expected": "SELECT department_id, last_name, salary, AVG(salary) OVER (PARTITION BY department_id) FROM employees;",
+        "expected": "SELECT department_id, last_name, test_amt, AVG(test_amt) OVER (PARTITION BY department_id) FROM employees;",
         "normalizer_config": {
             "keep_trailing_semicolon": true,
             "remove_space_between_parentheses": true

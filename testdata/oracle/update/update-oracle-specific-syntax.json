@@ -1,8 +1,8 @@
 {
-    "input": "UPDATE (SELECT e.salary, d.budget FROM employees e JOIN departments d ON e.department_id = d.id) t SET t.salary = t.salary * 1.05, t.budget = t.budget - 1000;",
+    "input": "UPDATE (SELECT e.test_amt, d.budget FROM employees e JOIN departments d ON e.department_id = d.id) t SET t.test_amt = t.test_amt * 1.05, t.budget = t.budget - 1000;",
     "outputs": [
       {
-        "expected": "UPDATE ( SELECT e.salary, d.budget FROM employees e JOIN departments d ON e.department_id = d.id ) t SET t.salary = t.salary * ?, t.budget = t.budget - ?",
+        "expected": "UPDATE ( SELECT e.test_amt, d.budget FROM employees e JOIN departments d ON e.department_id = d.id ) t SET t.test_amt = t.test_amt * ?, t.budget = t.budget - ?",
         "statement_metadata": {
           "size": 36,
           "tables": ["employees", "departments"],
@@ -12,7 +12,7 @@
         }
       },
       {
-        "expected": "UPDATE (SELECT e.salary, d.budget FROM employees e JOIN departments d ON e.department_id = d.id) t SET t.salary = t.salary * ?, t.budget = t.budget - ?;",
+        "expected": "UPDATE (SELECT e.test_amt, d.budget FROM employees e JOIN departments d ON e.department_id = d.id) t SET t.test_amt = t.test_amt * ?, t.budget = t.budget - ?;",
         "normalizer_config": {
             "keep_trailing_semicolon": true,
             "remove_space_between_parentheses": true

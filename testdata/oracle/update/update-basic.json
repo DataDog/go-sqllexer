@@ -1,8 +1,8 @@
 {
-    "input": "UPDATE employees SET salary = salary * 1.05 WHERE department_id = 3;",
+    "input": "UPDATE employees SET test_amt = test_amt * 1.05 WHERE department_id = 3;",
     "outputs": [
       {
-        "expected": "UPDATE employees SET salary = salary * ? WHERE department_id = ?",
+        "expected": "UPDATE employees SET test_amt = test_amt * ? WHERE department_id = ?",
         "statement_metadata": {
           "size": 15,
           "tables": ["employees"],
@@ -12,7 +12,7 @@
         }
       },
       {
-        "expected": "UPDATE employees SET salary = salary * ? WHERE department_id = ?;",
+        "expected": "UPDATE employees SET test_amt = test_amt * ? WHERE department_id = ?;",
         "normalizer_config": {
             "keep_trailing_semicolon": true
         }

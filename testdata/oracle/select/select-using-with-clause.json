@@ -1,8 +1,8 @@
 {
-    "input": "WITH dept_costs AS (SELECT department_id, SUM(salary) AS total_sal FROM employees GROUP BY department_id) SELECT * FROM dept_costs WHERE total_sal > (SELECT AVG(total_sal) FROM dept_costs);",
+    "input": "WITH dept_costs AS (SELECT department_id, SUM(test_amt) AS total_sal FROM employees GROUP BY department_id) SELECT * FROM dept_costs WHERE total_sal > (SELECT AVG(total_sal) FROM dept_costs);",
     "outputs": [
       {
-        "expected": "WITH dept_costs AS ( SELECT department_id, SUM ( salary ) FROM employees GROUP BY department_id ) SELECT * FROM dept_costs WHERE total_sal > ( SELECT AVG ( total_sal ) FROM dept_costs )",
+        "expected": "WITH dept_costs AS ( SELECT department_id, SUM ( test_amt ) FROM employees GROUP BY department_id ) SELECT * FROM dept_costs WHERE total_sal > ( SELECT AVG ( total_sal ) FROM dept_costs )",
         "statement_metadata": {
           "size": 25,
           "tables": ["employees", "dept_costs"],
@@ -12,7 +12,7 @@
         }
       },
       {
-        "expected": "WITH dept_costs AS (SELECT department_id, SUM(salary) FROM employees GROUP BY department_id) SELECT * FROM dept_costs WHERE total_sal > (SELECT AVG(total_sal) FROM dept_costs);",
+        "expected": "WITH dept_costs AS (SELECT department_id, SUM(test_amt) FROM employees GROUP BY department_id) SELECT * FROM dept_costs WHERE total_sal > (SELECT AVG(total_sal) FROM dept_costs);",
         "normalizer_config": {
             "keep_trailing_semicolon": true,
             "remove_space_between_parentheses": true
