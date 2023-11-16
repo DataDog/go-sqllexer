@@ -398,6 +398,16 @@ func TestObfuscator(t *testing.T) {
 			expected: "begin execute immediate ?; end;",
 			dbms:     DBMSOracle,
 		},
+		{
+			input:    "SELECT * FROM #users where id = @id and name = @1",
+			expected: "SELECT * FROM #users where id = @id and name = @1",
+			dbms:     DBMSSQLServer,
+		},
+		{
+			input:    "SELECT * FROM users where id = :id and name = :1",
+			expected: "SELECT * FROM users where id = :id and name = :1",
+			dbms:     DBMSOracle,
+		},
 	}
 
 	for _, tt := range tests {

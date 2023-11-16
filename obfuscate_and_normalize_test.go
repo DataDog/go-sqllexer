@@ -253,6 +253,20 @@ multiline comment */
 				WithDBMS(DBMSOracle),
 			},
 		},
+		{
+			input:    `SELECT * FROM users WHERE id = ? # this is a comment`,
+			expected: `SELECT * FROM users WHERE id = ?`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"users"},
+				Comments:   []string{"# this is a comment"},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       30,
+			},
+			lexerOpts: []lexerOption{
+				WithDBMS(DBMSMySQL),
+			},
+		},
 	}
 
 	obfuscator := NewObfuscator(

@@ -133,18 +133,26 @@ func (s *Lexer) Scan() Token {
 		}
 		return s.scanDollarQuotedString()
 	case ch == ':':
-		if s.config.DBMS == DBMSOracle && isLetter(s.lookAhead(1)) {
+		if s.config.DBMS == DBMSOracle && isAlphaNumeric(s.lookAhead(1)) {
 			return s.scanBindParameter()
 		}
 		return s.scanOperator(ch)
 	case ch == '@':
-		if s.config.DBMS == DBMSSQLServer && isLetter(s.lookAhead(1)) {
+		if s.config.DBMS == DBMSSQLServer && isAlphaNumeric(s.lookAhead(1)) {
 			return s.scanBindParameter()
 		}
 		return s.scanOperator(ch)
 	case ch == '`':
 		if s.config.DBMS == DBMSMySQL {
 			return s.scanDoubleQuotedIdentifier('`')
+		}
+		fallthrough
+	case ch == '#':
+		if s.config.DBMS == DBMSSQLServer {
+			return s.scanIdentifier(ch)
+		} else if s.config.DBMS == DBMSMySQL {
+			// MySQL treats # as a comment
+			return s.scanSingleLineComment()
 		}
 		fallthrough
 	case isOperator(ch):
@@ -443,7 +451,7 @@ func (s *Lexer) scanBindParameter() Token {
 	s.start = s.cursor
 	ch := s.nextBy(2) // consume the (colon|at sign) and the char
 	for {
-		if !isLetter(ch) && !isDigit(ch) {
+		if !isAlphaNumeric(ch) {
 			break
 		}
 		ch = s.next()
