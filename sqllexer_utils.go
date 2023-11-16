@@ -160,6 +160,10 @@ func isLetter(ch rune) bool {
 	return unicode.IsLetter(ch) || ch == '_'
 }
 
+func isAlphaNumeric(ch rune) bool {
+	return isLetter(ch) || isDigit(ch)
+}
+
 func isDoubleQuote(ch rune) bool {
 	return ch == '"'
 }
