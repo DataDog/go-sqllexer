@@ -604,6 +604,22 @@ func TestLexer(t *testing.T) {
 			},
 			lexerOpts: []lexerOption{WithDBMS(DBMSSQLServer)},
 		},
+		{
+			name:  "MySQL comment",
+			input: `SELECT * FROM users # comment`,
+			expected: []Token{
+				{IDENT, "SELECT"},
+				{WS, " "},
+				{WILDCARD, "*"},
+				{WS, " "},
+				{IDENT, "FROM"},
+				{WS, " "},
+				{IDENT, "users"},
+				{WS, " "},
+				{COMMENT, "# comment"},
+			},
+			lexerOpts: []lexerOption{WithDBMS(DBMSMySQL)},
+		},
 	}
 
 	for _, tt := range tests {

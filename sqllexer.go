@@ -149,7 +149,10 @@ func (s *Lexer) Scan() Token {
 		fallthrough
 	case ch == '#':
 		if s.config.DBMS == DBMSSQLServer {
-			return s.scanIdentifier('#')
+			return s.scanIdentifier(ch)
+		} else if s.config.DBMS == DBMSMySQL {
+			// MySQL treats # as a comment
+			return s.scanSingleLineComment()
 		}
 		fallthrough
 	case isOperator(ch):
