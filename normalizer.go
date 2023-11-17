@@ -31,6 +31,9 @@ type normalizerConfig struct {
 	// The trailing semicolon is removed by default, but this can be disabled by setting this to true.
 	// PL/SQL requires a trailing semicolon, so this should be set to true when normalizing PL/SQL.
 	KeepTrailingSemicolon bool `json:"keep_trailing_semicolon"`
+
+	// KeepIdentifierQuotation specifies whether the normalizer should keep the quotation of identifiers.
+	KeepIdentifierQuotation bool `json:"keep_identifier_quotation"`
 }
 
 type normalizerOption func(*normalizerConfig)
@@ -80,6 +83,12 @@ func WithRemoveSpaceBetweenParentheses(removeSpaceBetweenParentheses bool) norma
 func WithKeepTrailingSemicolon(keepTrailingSemicolon bool) normalizerOption {
 	return func(c *normalizerConfig) {
 		c.KeepTrailingSemicolon = keepTrailingSemicolon
+	}
+}
+
+func WithKeepIdentifierQuotation(keepIdentifierQuotation bool) normalizerOption {
+	return func(c *normalizerConfig) {
+		c.KeepIdentifierQuotation = keepIdentifierQuotation
 	}
 }
 
@@ -156,8 +165,12 @@ func (n *Normalizer) collectMetadata(token *Token, lastToken *Token, statementMe
 	} else if token.Type == IDENT || token.Type == QUOTED_IDENT || token.Type == FUNCTION {
 		tokenVal := token.Value
 		if token.Type == QUOTED_IDENT {
-			// remove all open and close quotes
+			// We always want to trim the quotes for collected metadata such as table names
+			// This is because the metadata is used as tags, and we don't want them to be normalized as underscores later on
 			tokenVal = trimQuotes(tokenVal, tokenVal[0:1], tokenVal[len(tokenVal)-1:])
+			if !n.config.KeepIdentifierQuotation {
+				token.Value = tokenVal
+			}
 		}
 		if n.config.CollectCommands && isCommand(strings.ToUpper(tokenVal)) {
 			// Collect commands
