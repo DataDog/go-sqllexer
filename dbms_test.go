@@ -101,6 +101,7 @@ func TestQueriesPerDBMS(t *testing.T) {
 								UppercaseKeywords:             false,
 								RemoveSpaceBetweenParentheses: false,
 								KeepTrailingSemicolon:         false,
+								KeepIdentifierQuotation:       false,
 							}
 						}
 
@@ -121,6 +122,7 @@ func TestQueriesPerDBMS(t *testing.T) {
 							WithUppercaseKeywords(defaultNormalizerConfig.UppercaseKeywords),
 							WithRemoveSpaceBetweenParentheses(defaultNormalizerConfig.RemoveSpaceBetweenParentheses),
 							WithKeepTrailingSemicolon(defaultNormalizerConfig.KeepTrailingSemicolon),
+							WithKeepIdentifierQuotation(defaultNormalizerConfig.KeepIdentifierQuotation),
 						)
 
 						got, statementMetadata, err := ObfuscateAndNormalize(string(tt.Input), obfuscator, normalizer, WithDBMS(dbms))

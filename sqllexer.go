@@ -23,6 +23,7 @@ const (
 	POSITIONAL_PARAMETER   // numbered parameter
 	BIND_PARAMETER         // bind parameter
 	FUNCTION               // function
+	SYSTEM_VARIABLE        // system variable
 	UNKNOWN                // unknown token
 )
 
@@ -137,11 +138,6 @@ func (s *Lexer) Scan() Token {
 			return s.scanBindParameter()
 		}
 		return s.scanOperator(ch)
-	case ch == '@':
-		if s.config.DBMS == DBMSSQLServer && isAlphaNumeric(s.lookAhead(1)) {
-			return s.scanBindParameter()
-		}
-		return s.scanOperator(ch)
 	case ch == '`':
 		if s.config.DBMS == DBMSMySQL {
 			return s.scanDoubleQuotedIdentifier('`')
@@ -153,6 +149,13 @@ func (s *Lexer) Scan() Token {
 		} else if s.config.DBMS == DBMSMySQL {
 			// MySQL treats # as a comment
 			return s.scanSingleLineComment()
+		}
+		fallthrough
+	case ch == '@':
+		if isAlphaNumeric(s.lookAhead(1)) {
+			return s.scanBindParameter()
+		} else if s.lookAhead(1) == '@' {
+			return s.scanSystemVariable()
 		}
 		fallthrough
 	case isOperator(ch):
@@ -457,6 +460,18 @@ func (s *Lexer) scanBindParameter() Token {
 		ch = s.next()
 	}
 	return Token{BIND_PARAMETER, s.src[s.start:s.cursor]}
+}
+
+func (s *Lexer) scanSystemVariable() Token {
+	s.start = s.cursor
+	ch := s.nextBy(2) // consume @@
+	for {
+		if !isAlphaNumeric(ch) {
+			break
+		}
+		ch = s.next()
+	}
+	return Token{SYSTEM_VARIABLE, s.src[s.start:s.cursor]}
 }
 
 func (s *Lexer) scanUnknown() Token {

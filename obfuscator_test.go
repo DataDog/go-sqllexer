@@ -404,6 +404,19 @@ func TestObfuscator(t *testing.T) {
 			dbms:     DBMSSQLServer,
 		},
 		{
+			input: `SELECT @@OPTIONS AS OriginalOptionsValue;
+			SET CONCAT_NULL_YIELDS_NULL OFF;
+			SELECT 'abc' + NULL AS ResultWhen_OFF, @@OPTIONS AS OptionsValueWhen_OFF;
+			SET CONCAT_NULL_YIELDS_NULL ON;
+			SELECT 'abc' + NULL AS ResultWhen_ON, @@OPTIONS AS OptionsValueWhen_ON;`,
+			expected: `SELECT @@OPTIONS AS OriginalOptionsValue;
+			SET CONCAT_NULL_YIELDS_NULL OFF;
+			SELECT ? + NULL AS ResultWhen_OFF, @@OPTIONS AS OptionsValueWhen_OFF;
+			SET CONCAT_NULL_YIELDS_NULL ON;
+			SELECT ? + NULL AS ResultWhen_ON, @@OPTIONS AS OptionsValueWhen_ON;`,
+			dbms: DBMSSQLServer,
+		},
+		{
 			input:    "SELECT * FROM users where id = :id and name = :1",
 			expected: "SELECT * FROM users where id = :id and name = :1",
 			dbms:     DBMSOracle,

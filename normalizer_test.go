@@ -184,30 +184,6 @@ multiline comment */
 			},
 		},
 		{
-			// double quoted table name
-			input:    `SELECT * FROM "users" WHERE id = ?`,
-			expected: `SELECT * FROM "users" WHERE id = ?`,
-			statementMetadata: StatementMetadata{
-				Tables:     []string{`users`},
-				Comments:   []string{},
-				Commands:   []string{"SELECT"},
-				Procedures: []string{},
-				Size:       11,
-			},
-		},
-		{
-			// double quoted table name
-			input:    `SELECT * FROM "public"."users" WHERE id = ?`,
-			expected: `SELECT * FROM "public"."users" WHERE id = ?`,
-			statementMetadata: StatementMetadata{
-				Tables:     []string{`public.users`},
-				Comments:   []string{},
-				Commands:   []string{"SELECT"},
-				Procedures: []string{},
-				Size:       18,
-			},
-		},
-		{
 			input: `
 					WITH cte AS (
 						SELECT id, name, age
@@ -609,6 +585,7 @@ func TestNormalizeDeobfuscatedSQL(t *testing.T) {
 		expected            string
 		statementMetadata   StatementMetadata
 		normalizationConfig *normalizerConfig
+		lexerOptions        []lexerOption
 	}{
 		{
 			input:    "SELECT id,name, address FROM users where id = 1",
@@ -736,6 +713,158 @@ func TestNormalizeDeobfuscatedSQL(t *testing.T) {
 				KeepSQLAlias:    true,
 			},
 		},
+		{
+			input:    `SELECT * FROM "users" WHERE id = ?`,
+			expected: `SELECT * FROM users WHERE id = ?`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{`users`},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       11,
+			},
+			normalizationConfig: &normalizerConfig{
+				CollectComments: true,
+				CollectCommands: true,
+				CollectTables:   true,
+				KeepSQLAlias:    true,
+			},
+		},
+		{
+			input:    `SELECT * FROM "users" WHERE id = ?`,
+			expected: `SELECT * FROM "users" WHERE id = ?`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{`users`},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       11,
+			},
+			normalizationConfig: &normalizerConfig{
+				CollectComments:         true,
+				CollectCommands:         true,
+				CollectTables:           true,
+				KeepSQLAlias:            true,
+				KeepIdentifierQuotation: true,
+			},
+		},
+		{
+			input:    `SELECT * FROM "public"."users" WHERE id = ?`,
+			expected: `SELECT * FROM public.users WHERE id = ?`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{`public.users`},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       18,
+			},
+			normalizationConfig: &normalizerConfig{
+				CollectComments: true,
+				CollectCommands: true,
+				CollectTables:   true,
+				KeepSQLAlias:    true,
+			},
+		},
+		{
+			input:    `SELECT * FROM "public"."users" WHERE id = ?`,
+			expected: `SELECT * FROM "public"."users" WHERE id = ?`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{`public.users`},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       18,
+			},
+			normalizationConfig: &normalizerConfig{
+				CollectComments:         true,
+				CollectCommands:         true,
+				CollectTables:           true,
+				KeepSQLAlias:            true,
+				KeepIdentifierQuotation: true,
+			},
+		},
+		{
+			input:    "SELECT * FROM `public`.`users` WHERE id = ?",
+			expected: `SELECT * FROM public.users WHERE id = ?`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{`public.users`},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       18,
+			},
+			normalizationConfig: &normalizerConfig{
+				CollectComments: true,
+				CollectCommands: true,
+				CollectTables:   true,
+				KeepSQLAlias:    true,
+			},
+			lexerOptions: []lexerOption{
+				WithDBMS(DBMSMySQL),
+			},
+		},
+		{
+			input:    "SELECT * FROM `public`.`users` WHERE id = ?",
+			expected: "SELECT * FROM `public`.`users` WHERE id = ?",
+			statementMetadata: StatementMetadata{
+				Tables:     []string{`public.users`},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       18,
+			},
+			normalizationConfig: &normalizerConfig{
+				CollectComments:         true,
+				CollectCommands:         true,
+				CollectTables:           true,
+				KeepSQLAlias:            true,
+				KeepIdentifierQuotation: true,
+			},
+			lexerOptions: []lexerOption{
+				WithDBMS(DBMSMySQL),
+			},
+		},
+		{
+			input:    `SELECT * FROM [public].[users] WHERE id = ?`,
+			expected: `SELECT * FROM public.users WHERE id = ?`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{`public.users`},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       18,
+			},
+			normalizationConfig: &normalizerConfig{
+				CollectComments: true,
+				CollectCommands: true,
+				CollectTables:   true,
+				KeepSQLAlias:    true,
+			},
+			lexerOptions: []lexerOption{
+				WithDBMS(DBMSSQLServer),
+			},
+		},
+		{
+			input:    `SELECT * FROM [public].[users] WHERE id = ?`,
+			expected: `SELECT * FROM [public].[users] WHERE id = ?`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{`public.users`},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       18,
+			},
+			normalizationConfig: &normalizerConfig{
+				CollectComments:         true,
+				CollectCommands:         true,
+				CollectTables:           true,
+				KeepSQLAlias:            true,
+				KeepIdentifierQuotation: true,
+			},
+			lexerOptions: []lexerOption{
+				WithDBMS(DBMSSQLServer),
+			},
+		},
 	}
 
 	for _, test := range tests {
@@ -745,8 +874,9 @@ func TestNormalizeDeobfuscatedSQL(t *testing.T) {
 				WithCollectCommands(test.normalizationConfig.CollectCommands),
 				WithCollectTables(test.normalizationConfig.CollectTables),
 				WithKeepSQLAlias(test.normalizationConfig.KeepSQLAlias),
+				WithKeepIdentifierQuotation(test.normalizationConfig.KeepIdentifierQuotation),
 			)
-			got, statementMetadata, err := normalizer.Normalize(test.input)
+			got, statementMetadata, err := normalizer.Normalize(test.input, test.lexerOptions...)
 			assert.NoError(t, err)
 			assert.Equal(t, test.expected, got)
 			assert.Equal(t, &test.statementMetadata, statementMetadata)

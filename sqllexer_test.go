@@ -528,7 +528,19 @@ func TestLexer(t *testing.T) {
 				{WS, " "},
 				{BIND_PARAMETER, "@1"},
 			},
-			lexerOpts: []lexerOption{WithDBMS(DBMSSQLServer)},
+		},
+		{
+			name:  "select with system variable",
+			input: "SELECT @@VERSION AS SqlServerVersion",
+			expected: []Token{
+				{IDENT, "SELECT"},
+				{WS, " "},
+				{SYSTEM_VARIABLE, "@@VERSION"},
+				{WS, " "},
+				{IDENT, "AS"},
+				{WS, " "},
+				{IDENT, "SqlServerVersion"},
+			},
 		},
 		{
 			name:  "SQL Server quoted identifier",

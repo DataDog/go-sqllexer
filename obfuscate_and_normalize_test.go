@@ -171,7 +171,7 @@ multiline comment */
 		{
 			// double quoted table name
 			input:    `SELECT * FROM "public"."users" WHERE id = 1`,
-			expected: `SELECT * FROM "public"."users" WHERE id = ?`,
+			expected: `SELECT * FROM public.users WHERE id = ?`,
 			statementMetadata: StatementMetadata{
 				Tables:     []string{"public.users"},
 				Comments:   []string{},
@@ -183,7 +183,7 @@ multiline comment */
 		{
 			// [] quoted table name
 			input:    `SELECT * FROM [public].[users] WHERE id = 1`,
-			expected: `SELECT * FROM [public].[users] WHERE id = ?`,
+			expected: `SELECT * FROM public.users WHERE id = ?`,
 			statementMetadata: StatementMetadata{
 				Tables:     []string{"public.users"},
 				Comments:   []string{},
@@ -230,7 +230,7 @@ multiline comment */
 		},
 		{
 			input:    `select "user_id" from "public"."users"`,
-			expected: `select "user_id" from "public"."users"`,
+			expected: `select user_id from public.users`,
 			statementMetadata: StatementMetadata{
 				Tables:     []string{`public.users`},
 				Comments:   []string{},
@@ -254,7 +254,7 @@ multiline comment */
 			},
 		},
 		{
-			input:    `SELECT * FROM users WHERE id = ? # this is a comment`,
+			input:    `SELECT * FROM users WHERE id = 1 # this is a comment`,
 			expected: `SELECT * FROM users WHERE id = ?`,
 			statementMetadata: StatementMetadata{
 				Tables:     []string{"users"},
@@ -265,6 +265,36 @@ multiline comment */
 			},
 			lexerOpts: []lexerOption{
 				WithDBMS(DBMSMySQL),
+			},
+		},
+		{
+			input:    `SELECT * FROM [世界].[测试] WHERE id = 1`,
+			expected: `SELECT * FROM 世界.测试 WHERE id = ?`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"世界.测试"},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       19,
+			},
+			lexerOpts: []lexerOption{
+				WithDBMS(DBMSSQLServer),
+			},
+		},
+		{
+			input: `SET NOCOUNT ON
+			IF @@OPTIONS & 512 > 0
+			RAISERROR ('Current user has SET NOCOUNT turned on.', 1, 1)`,
+			expected: `SET NOCOUNT ON IF @@OPTIONS & ? > ? RAISERROR ( ? )`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{},
+				Comments:   []string{},
+				Commands:   []string{},
+				Procedures: []string{},
+				Size:       0,
+			},
+			lexerOpts: []lexerOption{
+				WithDBMS(DBMSSQLServer),
 			},
 		},
 	}
