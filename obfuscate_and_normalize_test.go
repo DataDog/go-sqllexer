@@ -281,6 +281,22 @@ multiline comment */
 				WithDBMS(DBMSSQLServer),
 			},
 		},
+		{
+			input: `SET NOCOUNT ON
+			IF @@OPTIONS & 512 > 0
+			RAISERROR ('Current user has SET NOCOUNT turned on.', 1, 1)`,
+			expected: `SET NOCOUNT ON IF @@OPTIONS & ? > ? RAISERROR ( ? )`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{},
+				Comments:   []string{},
+				Commands:   []string{},
+				Procedures: []string{},
+				Size:       0,
+			},
+			lexerOpts: []lexerOption{
+				WithDBMS(DBMSSQLServer),
+			},
+		},
 	}
 
 	obfuscator := NewObfuscator(
