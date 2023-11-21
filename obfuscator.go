@@ -109,7 +109,7 @@ func (o *Obfuscator) ObfuscateTokenValue(token Token, lexerOpts ...lexerOption) 
 		} else {
 			return token.Value
 		}
-	case IDENT:
+	case IDENT, QUOTED_IDENT:
 		if o.config.ReplaceBoolean && isBoolean(token.Value) {
 			return StringPlaceholder
 		}
