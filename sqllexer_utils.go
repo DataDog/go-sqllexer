@@ -19,31 +19,33 @@ const (
 )
 
 var commands = map[string]bool{
-	"SELECT":   true,
-	"INSERT":   true,
-	"UPDATE":   true,
-	"DELETE":   true,
-	"CREATE":   true,
-	"ALTER":    true,
-	"DROP":     true,
-	"JOIN":     true,
-	"GRANT":    true,
-	"REVOKE":   true,
-	"COMMIT":   true,
-	"BEGIN":    true,
-	"TRUNCATE": true,
-	"MERGE":    true,
-	"EXECUTE":  true,
-	"EXEC":     true,
-	"EXPLAIN":  true,
+	"SELECT":        true,
+	"INSERT":        true,
+	"UPDATE":        true,
+	"DELETE":        true,
+	"CREATE":        true,
+	"ALTER":         true,
+	"DROP":          true,
+	"JOIN":          true,
+	"GRANT":         true,
+	"REVOKE":        true,
+	"COMMIT":        true,
+	"BEGIN":         true,
+	"TRUNCATE":      true,
+	"MERGE":         true,
+	"EXECUTE":       true,
+	"EXEC":          true,
+	"EXPLAIN":       true,
+	"STRAIGHT_JOIN": true,
 }
 
 var tableIndicators = map[string]bool{
-	"FROM":   true,
-	"JOIN":   true,
-	"INTO":   true,
-	"UPDATE": true,
-	"TABLE":  true,
+	"FROM":          true,
+	"JOIN":          true,
+	"INTO":          true,
+	"UPDATE":        true,
+	"TABLE":         true,
+	"STRAIGHT_JOIN": true, // MySQL
 }
 
 var keywords = map[string]bool{
