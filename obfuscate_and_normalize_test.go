@@ -297,6 +297,109 @@ multiline comment */
 				WithDBMS(DBMSSQLServer),
 			},
 		},
+		{
+			input: `
+			WITH SILENCES AS (
+				SELECT LOWER(BASE_TABLE_NAME), CREATED_DT, SILENCE_UNTIL_DT, REASON
+					,ROW_NUMBER() OVER (PARTITION BY LOWER(BASE_TABLE_NAME) ORDER BY CREATED_DT DESC) AS ROW_NUMBER
+				FROM REPORTING.GENERAL.SOME_TABLE
+				WHERE CONTAINS('us1', LOWER(DATACENTER_LABEL))
+			  )
+			  SELECT * FROM SILENCES WHERE ROW_NUMBER = 1;`,
+			expected: `WITH SILENCES AS ( SELECT LOWER ( BASE_TABLE_NAME ), CREATED_DT, SILENCE_UNTIL_DT, REASON, ROW_NUMBER ( ) OVER ( PARTITION BY LOWER ( BASE_TABLE_NAME ) ORDER BY CREATED_DT DESC ) FROM REPORTING.GENERAL.SOME_TABLE WHERE CONTAINS ( ?, LOWER ( DATACENTER_LABEL ) ) ) SELECT * FROM SILENCES WHERE ROW_NUMBER = ?`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"REPORTING.GENERAL.SOME_TABLE", "SILENCES"},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       42,
+			},
+			lexerOpts: []lexerOption{
+				WithDBMS(DBMSSnowflake),
+			},
+		},
+		{
+			input:    `USE WAREHOUSE "SOME_WAREHOUSE";`,
+			expected: `USE WAREHOUSE SOME_WAREHOUSE`, // double quoted identifier are not replaced
+			statementMetadata: StatementMetadata{
+				Tables:     []string{},
+				Comments:   []string{},
+				Commands:   []string{"USE"},
+				Procedures: []string{},
+				Size:       3,
+			},
+			lexerOpts: []lexerOption{
+				WithDBMS(DBMSSnowflake),
+			},
+		},
+		{
+			input: `SELECT 1 FROM REPORTING.GENERAL.SOME_RANDOM_TABLE
+			WHERE BASE_TABLE_NAME='xxx_ttt_zzz_v1'
+			AND DATACENTER_LABEL='us3'
+			AND CENSUS_ELEMENT_ID='bef52c3f-788f-4fb3-b116-a05a1c4a9792';`,
+			expected: `SELECT ? FROM REPORTING.GENERAL.SOME_RANDOM_TABLE WHERE BASE_TABLE_NAME = ? AND DATACENTER_LABEL = ? AND CENSUS_ELEMENT_ID = ?`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"REPORTING.GENERAL.SOME_RANDOM_TABLE"},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       41,
+			},
+			lexerOpts: []lexerOption{
+				WithDBMS(DBMSSnowflake),
+			},
+		},
+		{
+			input: `COPY INTO  REPORTING.GENERAL.MY_TABLE
+			(FEATURE,DESCRIPTION,COVERAGE,DATE_PARTITION)
+			FROM (SELECT $1,$2,$3,TO_TIMESTAMP('2023-12-14 00:00:00') FROM @REPORTING.GENERAL.SOME_DESCRIPTIONS/external_data/)
+			file_format=(type=CSV SKIP_HEADER=1 FIELD_OPTIONALLY_ENCLOSED_BY='\"' ESCAPE_UNENCLOSED_FIELD='\\' FIELD_DELIMITER=',' )
+			;`,
+			expected: `COPY INTO REPORTING.GENERAL.MY_TABLE ( FEATURE, DESCRIPTION, COVERAGE, DATE_PARTITION ) FROM ( SELECT $1, $2, $3, TO_TIMESTAMP ( ? ) FROM @REPORTING.GENERAL.SOME_DESCRIPTIONS/external_data/ ) file_format = ( type = CSV SKIP_HEADER = ? FIELD_OPTIONALLY_ENCLOSED_BY = ? ESCAPE_UNENCLOSED_FIELD = ? FIELD_DELIMITER = ? )`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"REPORTING.GENERAL.MY_TABLE", "@REPORTING.GENERAL.SOME_DESCRIPTIONS/external_data/"},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       83,
+			},
+			lexerOpts: []lexerOption{
+				WithDBMS(DBMSSnowflake),
+			},
+		},
+		{
+			input: `SELECT EXISTS(
+				SELECT * FROM REPORTING.INFORMATION_SCHEMA.TABLES
+				WHERE table_schema='XXX_YYY'
+				AND table_name='ABC'
+				AND table_type='EXTERNAL TABLE'
+			);`,
+			expected: `SELECT EXISTS ( SELECT * FROM REPORTING.INFORMATION_SCHEMA.TABLES WHERE table_schema = ? AND table_name = ? AND table_type = ? )`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"REPORTING.INFORMATION_SCHEMA.TABLES"},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       41,
+			},
+			lexerOpts: []lexerOption{
+				WithDBMS(DBMSSnowflake),
+			},
+		},
+		{
+			input:    `ALTER EXTERNAL TABLE REPORTING.TEST.MY_TABLE REFRESH '2024_01_15';`,
+			expected: `ALTER EXTERNAL TABLE REPORTING.TEST.MY_TABLE REFRESH ?`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"REPORTING.TEST.MY_TABLE"},
+				Comments:   []string{},
+				Commands:   []string{"ALTER"},
+				Procedures: []string{},
+				Size:       28,
+			},
+			lexerOpts: []lexerOption{
+				WithDBMS(DBMSSnowflake),
+			},
+		},
 	}
 
 	obfuscator := NewObfuscator(
