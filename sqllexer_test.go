@@ -632,6 +632,21 @@ func TestLexer(t *testing.T) {
 			},
 			lexerOpts: []lexerOption{WithDBMS(DBMSMySQL)},
 		},
+		{
+			name:  "drop table if exists",
+			input: `DROP TABLE IF EXISTS users`,
+			expected: []Token{
+				{IDENT, "DROP"},
+				{WS, " "},
+				{IDENT, "TABLE"},
+				{WS, " "},
+				{IDENT, "IF"},
+				{WS, " "},
+				{IDENT, "EXISTS"},
+				{WS, " "},
+				{IDENT, "users"},
+			},
+		},
 	}
 
 	for _, tt := range tests {

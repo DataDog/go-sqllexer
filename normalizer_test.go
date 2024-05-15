@@ -357,6 +357,17 @@ multiline comment */
 				Size:       11,
 			},
 		},
+		{
+			input:    `DROP TABLE IF EXISTS users`,
+			expected: `DROP TABLE IF EXISTS users`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"users"},
+				Comments:   []string{},
+				Commands:   []string{"DROP"},
+				Procedures: []string{},
+				Size:       9,
+			},
+		},
 	}
 
 	normalizer := NewNormalizer(
