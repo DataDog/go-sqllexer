@@ -1,0 +1,20 @@
+{
+  "input": "SELECT * FROM ONLY users, ONLY orders WHERE users.id = orders.user_id;",
+  "outputs": [
+    {
+      "expected": "SELECT * FROM ONLY users, ONLY orders WHERE users.id = orders.user_id",
+      "statement_metadata": {
+        "size": 17,
+        "tables": [
+          "users",
+          "orders"
+        ],
+        "commands": [
+          "SELECT"
+        ],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}

@@ -368,6 +368,17 @@ multiline comment */
 				Size:       9,
 			},
 		},
+		{
+			input:    "SELECT * FROM ONLY users WHERE id = ?",
+			expected: "SELECT * FROM ONLY users WHERE id = ?",
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"users"},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       11,
+			},
+		},
 	}
 
 	normalizer := NewNormalizer(

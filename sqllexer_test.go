@@ -647,6 +647,29 @@ func TestLexer(t *testing.T) {
 				{IDENT, "users"},
 			},
 		},
+		{
+			name:  "select only",
+			input: "SELECT * FROM ONLY tab1 where id = 1",
+			expected: []Token{
+				{IDENT, "SELECT"},
+				{WS, " "},
+				{WILDCARD, "*"},
+				{WS, " "},
+				{IDENT, "FROM"},
+				{WS, " "},
+				{IDENT, "ONLY"},
+				{WS, " "},
+				{IDENT, "tab1"},
+				{WS, " "},
+				{IDENT, "where"},
+				{WS, " "},
+				{IDENT, "id"},
+				{WS, " "},
+				{OPERATOR, "="},
+				{WS, " "},
+				{NUMBER, "1"},
+			},
+		},
 	}
 
 	for _, tt := range tests {
