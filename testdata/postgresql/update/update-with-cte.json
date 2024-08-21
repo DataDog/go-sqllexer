@@ -4,10 +4,9 @@
     {
       "expected": "WITH updated AS ( UPDATE users SET name = ? WHERE id = ? RETURNING * ) SELECT * FROM updated",
       "statement_metadata": {
-        "size": 24,
+        "size": 17,
         "tables": [
-          "users",
-          "updated"
+          "users"
         ],
         "commands": [
           "UPDATE",

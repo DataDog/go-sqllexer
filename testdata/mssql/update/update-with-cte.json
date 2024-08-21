@@ -4,8 +4,8 @@
       {
         "expected": "WITH UpdatedOrders AS ( SELECT id FROM orders WHERE order_date < GETDATE ( ) - ? ) UPDATE o SET o.status = ? FROM orders o JOIN UpdatedOrders uo ON o.id = uo.id",
         "statement_metadata": {
-          "size": 36,
-          "tables": ["orders", "o", "UpdatedOrders"],
+          "size": 23,
+          "tables": ["orders", "o"],
           "commands": ["SELECT", "UPDATE", "JOIN"],
           "comments": [],
           "procedures": []

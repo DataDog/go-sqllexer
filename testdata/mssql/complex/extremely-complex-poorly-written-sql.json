@@ -4,8 +4,8 @@
       {
         "expected": "WITH ComplexCTE AS ( SELECT t?.id, t?.amount, ROW_NUMBER ( ) OVER ( PARTITION BY t?.customer_id ORDER BY t?.amount DESC ) FROM ( SELECT id, customer_id, status FROM orders WHERE YEAR ( order_date ) = YEAR ( GETDATE ( ) ) AND status NOT IN ( ? ) ) t? INNER JOIN ( SELECT order_id, SUM ( amount ) FROM order_details GROUP BY order_id ) t? ON t?.id = t?.order_id WHERE t?.amount > ? ), SecondCTE AS ( SELECT c?. *, c?.name, c?.region FROM ComplexCTE c? INNER JOIN customers c? ON c?.customer_id = c?.id WHERE c?.region IN ( ? ) AND c?.rn < ? ) SELECT s.id, s.name, s.amount, p.product_name, CASE WHEN s.amount > ? THEN ? ELSE ? END FROM SecondCTE s LEFT JOIN ( SELECT DISTINCT p?.order_id, p?.product_name FROM order_products p? INNER JOIN products p? ON p?.product_id = p?.id ) p ON s.id = p.order_id WHERE s.region = ? AND s.status LIKE ? ORDER BY s.amount DESC, s.name",
         "statement_metadata": {
-          "size": 79,
-          "tables": ["orders", "order_details", "ComplexCTE", "customers", "SecondCTE", "order_products", "products"],
+          "size": 69,
+          "tables": ["orders", "order_details", "customers", "SecondCTE", "order_products", "products"],
           "commands": ["SELECT", "JOIN"],
           "comments": [],
           "procedures": []

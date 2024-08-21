@@ -308,11 +308,11 @@ multiline comment */
 			  SELECT * FROM SILENCES WHERE ROW_NUMBER = 1;`,
 			expected: `WITH SILENCES AS ( SELECT LOWER ( BASE_TABLE_NAME ), CREATED_DT, SILENCE_UNTIL_DT, REASON, ROW_NUMBER ( ) OVER ( PARTITION BY LOWER ( BASE_TABLE_NAME ) ORDER BY CREATED_DT DESC ) FROM REPORTING.GENERAL.SOME_TABLE WHERE CONTAINS ( ?, LOWER ( DATACENTER_LABEL ) ) ) SELECT * FROM SILENCES WHERE ROW_NUMBER = ?`,
 			statementMetadata: StatementMetadata{
-				Tables:     []string{"REPORTING.GENERAL.SOME_TABLE", "SILENCES"},
+				Tables:     []string{"REPORTING.GENERAL.SOME_TABLE"},
 				Comments:   []string{},
 				Commands:   []string{"SELECT"},
 				Procedures: []string{},
-				Size:       42,
+				Size:       34,
 			},
 			lexerOpts: []lexerOption{
 				WithDBMS(DBMSSnowflake),
