@@ -4,8 +4,8 @@
       {
         "expected": "WITH dept_costs AS ( SELECT department_id, SUM ( test_amt ) FROM employees GROUP BY department_id ) SELECT * FROM dept_costs WHERE total_sal > ( SELECT AVG ( total_sal ) FROM dept_costs )",
         "statement_metadata": {
-          "size": 25,
-          "tables": ["employees", "dept_costs"],
+          "size": 15,
+          "tables": ["employees"],
           "commands": ["SELECT"],
           "comments": [],
           "procedures": []

@@ -4,8 +4,8 @@
       {
         "expected": "WITH OldOrders AS ( SELECT id FROM orders WHERE order_date < ? ) DELETE FROM orders WHERE id IN ( SELECT id FROM OldOrders )",
         "statement_metadata": {
-          "size": 27,
-          "tables": ["orders", "OldOrders"],
+          "size": 18,
+          "tables": ["orders"],
           "commands": ["SELECT", "DELETE"],
           "comments": [],
           "procedures": []

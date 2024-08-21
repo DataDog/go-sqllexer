@@ -200,22 +200,22 @@ multiline comment */
 					`,
 			expected: "WITH cte AS ( SELECT id, name, age FROM person WHERE age > ? ) UPDATE person SET age = ? WHERE id IN ( SELECT id FROM cte ); INSERT INTO person ( name, age ) SELECT name, ? FROM cte WHERE age <= ?",
 			statementMetadata: StatementMetadata{
-				Tables:     []string{"person", "cte"},
+				Tables:     []string{"person"},
 				Comments:   []string{},
 				Commands:   []string{"SELECT", "UPDATE", "INSERT"},
 				Procedures: []string{},
-				Size:       27,
+				Size:       24,
 			},
 		},
 		{
 			input:    "WITH updates AS ( UPDATE metrics_metadata SET metric_type = ? updated = ? :: timestamp, interval = ? unit_id = ? per_unit_id = ? description = ? orientation = ? integration = ? short_name = ? WHERE metric_key = ? AND org_id = ? RETURNING ? ) INSERT INTO metrics_metadata ( org_id, metric_key, metric_type, interval, unit_id, per_unit_id, description, orientation, integration, short_name ) SELECT ? WHERE NOT EXISTS ( SELECT ? FROM updates )",
 			expected: "WITH updates AS ( UPDATE metrics_metadata SET metric_type = ? updated = ? :: timestamp, interval = ? unit_id = ? per_unit_id = ? description = ? orientation = ? integration = ? short_name = ? WHERE metric_key = ? AND org_id = ? RETURNING ? ) INSERT INTO metrics_metadata ( org_id, metric_key, metric_type, interval, unit_id, per_unit_id, description, orientation, integration, short_name ) SELECT ? WHERE NOT EXISTS ( SELECT ? FROM updates )",
 			statementMetadata: StatementMetadata{
-				Tables:     []string{"metrics_metadata", "updates"},
+				Tables:     []string{"metrics_metadata"},
 				Comments:   []string{},
 				Commands:   []string{"UPDATE", "INSERT", "SELECT"},
 				Procedures: []string{},
-				Size:       41,
+				Size:       34,
 			},
 		},
 		{
@@ -283,11 +283,11 @@ multiline comment */
 			input:    "/* Testing explicit table SQL expression */ WITH T1 AS (SELECT PNO , PNAME , COLOR , WEIGHT , CITY FROM P WHERE CITY = ?), T2 AS (SELECT PNO, PNAME, COLOR, WEIGHT, CITY, ? * WEIGHT AS NEW_WEIGHT, ? AS NEW_CITY FROM T1), T3 AS ( SELECT PNO , PNAME, COLOR, NEW_WEIGHT AS WEIGHT, NEW_CITY AS CITY FROM T2), T4 AS ( TABLE P EXCEPT CORRESPONDING TABLE T1) TABLE T4 UNION CORRESPONDING TABLE T3",
 			expected: "WITH T1 AS ( SELECT PNO, PNAME, COLOR, WEIGHT, CITY FROM P WHERE CITY = ? ), T2 AS ( SELECT PNO, PNAME, COLOR, WEIGHT, CITY, ? * WEIGHT, ? FROM T1 ), T3 AS ( SELECT PNO, PNAME, COLOR, NEW_WEIGHT, NEW_CITY FROM T2 ), T4 AS ( TABLE P EXCEPT CORRESPONDING TABLE T1 ) TABLE T4 UNION CORRESPONDING TABLE T3",
 			statementMetadata: StatementMetadata{
-				Tables:     []string{"P", "T1", "T2", "T4", "T3"},
+				Tables:     []string{"P", "T2", "T4", "T3"},
 				Comments:   []string{"/* Testing explicit table SQL expression */"},
 				Commands:   []string{"SELECT"},
 				Procedures: []string{},
-				Size:       58,
+				Size:       56,
 			},
 		},
 		{
