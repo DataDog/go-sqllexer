@@ -88,6 +88,7 @@ func TestQueriesPerDBMS(t *testing.T) {
 								ReplacePositionalParameter: true,
 								ReplaceBoolean:             true,
 								ReplaceNull:                true,
+								KeepJsonPath:               false,
 							}
 						}
 
@@ -113,6 +114,7 @@ func TestQueriesPerDBMS(t *testing.T) {
 							WithReplacePositionalParameter(defaultObfuscatorConfig.ReplacePositionalParameter),
 							WithReplaceBoolean(defaultObfuscatorConfig.ReplaceBoolean),
 							WithReplaceNull(defaultObfuscatorConfig.ReplaceNull),
+							WithKeepJsonPath(defaultObfuscatorConfig.KeepJsonPath),
 						)
 
 						normalizer := NewNormalizer(

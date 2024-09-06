@@ -400,11 +400,23 @@ multiline comment */
 				WithDBMS(DBMSSnowflake),
 			},
 		},
+		{
+			input:    `SELECT * FROM users where '{"a": 1, "b": 2}'::jsonb <@ '{"a": 1, "b": 2}'::jsonb`,
+			expected: `SELECT * FROM users where ? :: jsonb <@ '{"a": 1, "b": 2}' :: jsonb`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"users"},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       11,
+			},
+		},
 	}
 
 	obfuscator := NewObfuscator(
 		WithReplaceDigits(true),
 		WithDollarQuotedFunc(true),
+		WithKeepJsonPath(true),
 	)
 
 	normalizer := NewNormalizer(
