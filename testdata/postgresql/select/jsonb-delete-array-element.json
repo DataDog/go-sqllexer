@@ -14,6 +14,15 @@
         "comments": [],
         "procedures": []
       }
+    },
+    {
+      "expected": "SELECT data #- '{tags,0}' FROM products",
+      "normalizer_config": {
+        "remove_space_between_parentheses": true
+      },
+      "obfuscator_config": {
+        "keep_json_path": true
+      }
     }
   ]
 }

@@ -16,9 +16,12 @@
       }
     },
     {
-      "expected": "SELECT jsonb_array_length(data -> ?) FROM products",
+      "expected": "SELECT jsonb_array_length(data -> 'tags') FROM products",
       "normalizer_config": {
         "remove_space_between_parentheses": true
+      },
+      "obfuscator_config": {
+        "keep_json_path": true
       }
     }
   ]

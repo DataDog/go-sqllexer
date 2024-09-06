@@ -14,6 +14,12 @@
         "comments": [],
         "procedures": []
       }
+    },
+    {
+      "expected":"SELECT * FROM events WHERE payload <@ '{\"events\": {\"type\": \"user_event\"}}'",
+      "obfuscator_config": {
+        "keep_json_path": true
+      }
     }
   ]
 }

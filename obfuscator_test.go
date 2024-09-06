@@ -16,6 +16,7 @@ func TestObfuscator(t *testing.T) {
 		replaceBoolean             bool
 		replaceNull                bool
 		dollarQuotedFunc           bool
+		keepJsonPath               bool
 		dbms                       DBMSType
 	}{
 		{
@@ -488,6 +489,52 @@ func TestObfuscator(t *testing.T) {
 			expected: `ALTER EXTERNAL TABLE REPORTING.TEST.MY_TABLE REFRESH ?;`,
 			dbms:     DBMSSnowflake,
 		},
+		{
+			input:        `SELECT * FROM users where '{"a": 1, "b": 2}'::jsonb <@ '{"a": 1, "b": 2}'::jsonb`,
+			expected:     `SELECT * FROM users where ?::jsonb <@ '{"a": 1, "b": 2}'::jsonb`,
+			keepJsonPath: true,
+		},
+		{
+			input:        `SELECT * FROM users where '{"a": 1, "b": 2}'::jsonb @> '{"a": 1, "b": 2}'::jsonb`,
+			expected:     `SELECT * FROM users where ?::jsonb @> '{"a": 1, "b": 2}'::jsonb`,
+			keepJsonPath: true,
+		},
+		{
+			input:        `SELECT * FROM users where '{"a": 1, "b": 2}'::jsonb -> 'a'`,
+			expected:     `SELECT * FROM users where ?::jsonb -> 'a'`,
+			keepJsonPath: true,
+		},
+		{
+			input:        `SELECT * FROM users where '{"a": 1, "b": 2}'::jsonb ->> 'a'`,
+			expected:     `SELECT * FROM users where ?::jsonb ->> 'a'`,
+			keepJsonPath: true,
+		},
+		{
+			input:        `SELECT * FROM users where '{"a": 1, "b": 2}'::jsonb #> '{a}'`,
+			expected:     `SELECT * FROM users where ?::jsonb #> '{a}'`,
+			keepJsonPath: true,
+		},
+		{
+			// postgres #>> operator
+			input:        `SELECT * FROM users where '{"a": 1, "b": 2}'::jsonb #>> '{a}'`,
+			expected:     `SELECT * FROM users where ?::jsonb #>> '{a}'`,
+			keepJsonPath: true,
+		},
+		{
+			input:        `SELECT * FROM users where '{"a": 1, "b": 2}'::jsonb ?| '{a}'`,
+			expected:     `SELECT * FROM users where ?::jsonb ?| '{a}'`,
+			keepJsonPath: true,
+		},
+		{
+			input:        `SELECT * FROM users where '{"a": 1, "b": 2}'::jsonb ?& '{a}'`,
+			expected:     `SELECT * FROM users where ?::jsonb ?& '{a}'`,
+			keepJsonPath: true,
+		},
+		{
+			input:        `SELECT * FROM users where data::jsonb ->> 1`,
+			expected:     `SELECT * FROM users where data::jsonb ->> 1`,
+			keepJsonPath: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -498,6 +545,7 @@ func TestObfuscator(t *testing.T) {
 				WithReplaceBoolean(tt.replaceBoolean),
 				WithReplaceNull(tt.replaceNull),
 				WithDollarQuotedFunc(tt.dollarQuotedFunc),
+				WithKeepJsonPath(tt.keepJsonPath),
 			)
 			got := obfuscator.Obfuscate(tt.input, WithDBMS(tt.dbms))
 			assert.Equal(t, tt.expected, got)
