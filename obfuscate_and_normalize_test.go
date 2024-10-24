@@ -411,6 +411,20 @@ multiline comment */
 				Size:       11,
 			},
 		},
+		{
+			input:    `DELETE FROM [discount]  WHERE [description]=@1`,
+			expected: `DELETE FROM discount WHERE description = @1`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"discount"},
+				Comments:   []string{},
+				Commands:   []string{"DELETE"},
+				Procedures: []string{},
+				Size:       14,
+			},
+			lexerOpts: []lexerOption{
+				WithDBMS(DBMSSQLServer),
+			},
+		},
 	}
 
 	obfuscator := NewObfuscator(

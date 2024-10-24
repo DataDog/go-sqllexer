@@ -370,7 +370,7 @@ func (s *Lexer) scanWhitespace() Token {
 func (s *Lexer) scanOperator(lastCh rune) Token {
 	s.start = s.cursor
 	ch := s.next()
-	for isOperator(ch) && !(lastCh == '=' && ch == '?') {
+	for isOperator(ch) && !(lastCh == '=' && (ch == '?' || ch == '@')) {
 		// hack: we don't want to treat "=?" as an single operator
 		lastCh = ch
 		ch = s.next()
