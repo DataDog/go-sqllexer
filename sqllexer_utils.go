@@ -247,10 +247,20 @@ func isProcedure(token *Token) bool {
 }
 
 func isBoolean(ident string) bool {
+	// allocation free fast path for common cases
+	if ident == "true" || ident == "false" || ident == "TRUE" || ident == "FALSE" {
+		return true
+	}
+
 	return strings.ToUpper(ident) == "TRUE" || strings.ToUpper(ident) == "FALSE"
 }
 
 func isNull(ident string) bool {
+	// allocation free fast path for common cases
+	if ident == "null" || ident == "NULL" {
+		return true
+	}
+
 	return strings.ToUpper(ident) == "NULL"
 }
 
