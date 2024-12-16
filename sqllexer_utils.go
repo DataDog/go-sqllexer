@@ -186,7 +186,7 @@ func isLetter(ch rune) bool {
 }
 
 func isAlphaNumeric(ch rune) bool {
-	return isLetter(ch) || isDigit(ch) || ch == '_'
+	return isLetter(ch) || isDigit(ch)
 }
 
 func isDoubleQuote(ch rune) bool {
