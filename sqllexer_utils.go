@@ -256,45 +256,25 @@ func isProcedure(token *Token) bool {
 	if token.Type != IDENT {
 		return false
 	}
-	if token.Value == "PROCEDURE" || token.Value == "procedure" || token.Value == "Procedure" || token.Value == "PROC" || token.Value == "proc" || token.Value == "Proc" {
-		return true
-	}
-
-	return false
+	return token.Value == "PROCEDURE" || token.Value == "procedure" || token.Value == "Procedure" || token.Value == "PROC" || token.Value == "proc" || token.Value == "Proc"
 }
 
 func isBoolean(ident string) bool {
 	// allocation free fast path for common cases
-	if ident == "true" || ident == "false" || ident == "TRUE" || ident == "FALSE" || ident == "True" || ident == "False" {
-		return true
-	}
-
-	return false
+	return ident == "true" || ident == "false" || ident == "TRUE" || ident == "FALSE" || ident == "True" || ident == "False"
 }
 
 func isNull(ident string) bool {
 	// allocation free fast path for common cases
-	if ident == "null" || ident == "NULL" || ident == "Null" {
-		return true
-	}
-
-	return false
+	return ident == "null" || ident == "NULL" || ident == "Null"
 }
 
 func isWith(ident string) bool {
-	if ident == "WITH" || ident == "with" || ident == "With" {
-		return true
-	}
-
-	return false
+	return ident == "WITH" || ident == "with" || ident == "With"
 }
 
 func isAs(ident string) bool {
-	if ident == "AS" || ident == "as" || ident == "As" {
-		return true
-	}
-
-	return false
+	return ident == "AS" || ident == "as" || ident == "As"
 }
 
 func isJsonOperator(token *Token) bool {
