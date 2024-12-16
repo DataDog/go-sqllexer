@@ -174,13 +174,13 @@ func (n *Normalizer) collectMetadata(token *Token, lastToken *Token, statementMe
 				token.Value = tokenVal
 			}
 		}
-		if n.config.CollectCommands && isCommand(strings.ToUpper(tokenVal)) {
+		if n.config.CollectCommands && isCommand(tokenVal) {
 			// Collect commands
-			statementMetadata.Commands = append(statementMetadata.Commands, strings.ToUpper(tokenVal))
-		} else if strings.ToUpper(lastToken.Value) == "WITH" && token.Type == IDENT {
+			statementMetadata.Commands = append(statementMetadata.Commands, tokenVal)
+		} else if isWith(lastToken.Value) && token.Type == IDENT {
 			// Collect CTEs so we can skip them later in table collection
 			ctes[tokenVal] = true
-		} else if n.config.CollectTables && isTableIndicator(strings.ToUpper(lastToken.Value)) && !isSQLKeyword(token) {
+		} else if n.config.CollectTables && isTableIndicator(lastToken.Value) && !isSQLKeyword(tokenVal) {
 			// Collect table names the token is not a CTE
 			if _, ok := ctes[tokenVal]; !ok {
 				statementMetadata.Tables = append(statementMetadata.Tables, tokenVal)
@@ -212,7 +212,7 @@ func (n *Normalizer) normalizeSQL(token *Token, lastToken *Token, normalizedSQLB
 
 		if !n.config.KeepSQLAlias {
 			// discard SQL alias
-			if strings.ToUpper(token.Value) == "AS" {
+			if isAs(token.Value) {
 				// if current token is AS, then continue to next token
 				// because without seeing the next token, we cannot
 				// determine if the current token is an alias or not
@@ -220,8 +220,8 @@ func (n *Normalizer) normalizeSQL(token *Token, lastToken *Token, normalizedSQLB
 				return
 			}
 
-			if strings.ToUpper(lastToken.Value) == "AS" {
-				if token.Type == IDENT && !isSQLKeyword(token) {
+			if isAs(lastToken.Value) {
+				if token.Type == IDENT && !isSQLKeyword(token.Value) {
 					// if the last token is AS and the current token is IDENT,
 					// then the current token is an alias, so we discard it
 					*lastToken = *token
@@ -252,7 +252,7 @@ func (n *Normalizer) normalizeSQL(token *Token, lastToken *Token, normalizedSQLB
 }
 
 func (n *Normalizer) writeToken(token *Token, normalizedSQLBuilder *strings.Builder) {
-	if n.config.UppercaseKeywords && isSQLKeyword(token) {
+	if token.Type == IDENT && n.config.UppercaseKeywords && isSQLKeyword(token.Value) {
 		normalizedSQLBuilder.WriteString(strings.ToUpper(token.Value))
 	} else {
 		normalizedSQLBuilder.WriteString(token.Value)

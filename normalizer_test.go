@@ -163,7 +163,7 @@ multiline comment */
 			statementMetadata: StatementMetadata{
 				Tables:     []string{"users", "test_users", "user?"},
 				Comments:   []string{},
-				Commands:   []string{"CREATE", "BEGIN", "SELECT", "UPDATE", "DELETE"},
+				Commands:   []string{"CREATE", "BEGIN", "SELECT", "Update", "Delete"},
 				Procedures: []string{},
 				Size:       49,
 			},
