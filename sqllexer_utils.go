@@ -198,11 +198,17 @@ func isLeadingSign(ch rune) bool {
 }
 
 func isLetter(ch rune) bool {
-	return unicode.IsLetter(ch) || ch == '_'
+	// Fast path: ASCII letters and underscore
+	if ch <= 127 {
+		return (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || ch == '_'
+	}
+	// Fallback to Unicode
+	return unicode.IsLetter(ch)
 }
 
 func isAlphaNumeric(ch rune) bool {
-	return isLetter(ch) || isDigit(ch)
+	// Check if it's a digit first, then letter (faster for numbers)
+	return isDigit(ch) || isLetter(ch)
 }
 
 func isDoubleQuote(ch rune) bool {
