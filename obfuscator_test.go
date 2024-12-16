@@ -17,6 +17,7 @@ func TestObfuscator(t *testing.T) {
 		replaceNull                bool
 		dollarQuotedFunc           bool
 		keepJsonPath               bool
+		replaceBindParameter       bool
 		dbms                       DBMSType
 	}{
 		{
@@ -535,6 +536,16 @@ func TestObfuscator(t *testing.T) {
 			expected:     `SELECT * FROM users where data::jsonb ->> 1`,
 			keepJsonPath: true,
 		},
+		{
+			input:                `SELECT * FROM users where id = @_My_id`,
+			expected:             `SELECT * FROM users where id = @_My_id`,
+			replaceBindParameter: false,
+		},
+		{
+			input:                `SELECT * FROM users where id = @_My_id`,
+			expected:             `SELECT * FROM users where id = ?`,
+			replaceBindParameter: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -546,6 +557,7 @@ func TestObfuscator(t *testing.T) {
 				WithReplaceNull(tt.replaceNull),
 				WithDollarQuotedFunc(tt.dollarQuotedFunc),
 				WithKeepJsonPath(tt.keepJsonPath),
+				WithReplaceBindParameter(tt.replaceBindParameter),
 			)
 			got := obfuscator.Obfuscate(tt.input, WithDBMS(tt.dbms))
 			assert.Equal(t, tt.expected, got)
