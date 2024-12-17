@@ -127,7 +127,7 @@ multiline comment */
 			statementMetadata: StatementMetadata{
 				Tables:     []string{"v$sql"},
 				Comments:   []string{},
-				Commands:   []string{"select"},
+				Commands:   []string{"SELECT"},
 				Procedures: []string{},
 				Size:       11,
 			},
@@ -163,7 +163,7 @@ multiline comment */
 			statementMetadata: StatementMetadata{
 				Tables:     []string{},
 				Comments:   []string{},
-				Commands:   []string{"begin", "execute"},
+				Commands:   []string{"BEGIN", "EXECUTE"},
 				Procedures: []string{},
 				Size:       12,
 			},
@@ -234,7 +234,7 @@ multiline comment */
 			statementMetadata: StatementMetadata{
 				Tables:     []string{`public.users`},
 				Comments:   []string{},
-				Commands:   []string{"select"},
+				Commands:   []string{"SELECT"},
 				Procedures: []string{},
 				Size:       18,
 			},

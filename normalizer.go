@@ -176,7 +176,7 @@ func (n *Normalizer) collectMetadata(token *Token, lastToken *Token, statementMe
 		}
 		if n.config.CollectCommands && isCommand(tokenVal) {
 			// Collect commands
-			statementMetadata.Commands = append(statementMetadata.Commands, tokenVal)
+			statementMetadata.Commands = append(statementMetadata.Commands, strings.ToUpper(tokenVal))
 		} else if isWith(lastToken.Value) && token.Type == IDENT {
 			// Collect CTEs so we can skip them later in table collection
 			ctes[tokenVal] = true
