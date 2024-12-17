@@ -11,6 +11,7 @@ type obfuscatorConfig struct {
 	ReplaceBoolean             bool `json:"replace_boolean"`
 	ReplaceNull                bool `json:"replace_null"`
 	KeepJsonPath               bool `json:"keep_json_path"` // by default, we replace json path with placeholder
+	ReplaceBindParameter       bool `json:"replace_bind_parameter"`
 }
 
 type obfuscatorOption func(*obfuscatorConfig)
@@ -48,6 +49,12 @@ func WithDollarQuotedFunc(dollarQuotedFunc bool) obfuscatorOption {
 func WithKeepJsonPath(keepJsonPath bool) obfuscatorOption {
 	return func(c *obfuscatorConfig) {
 		c.KeepJsonPath = keepJsonPath
+	}
+}
+
+func WithReplaceBindParameter(replaceBindParameter bool) obfuscatorOption {
+	return func(c *obfuscatorConfig) {
+		c.ReplaceBindParameter = replaceBindParameter
 	}
 }
 
@@ -124,6 +131,12 @@ func (o *Obfuscator) ObfuscateTokenValue(token Token, lastToken Token, lexerOpts
 		return StringPlaceholder
 	case POSITIONAL_PARAMETER:
 		if o.config.ReplacePositionalParameter {
+			return StringPlaceholder
+		} else {
+			return token.Value
+		}
+	case BIND_PARAMETER:
+		if o.config.ReplaceBindParameter {
 			return StringPlaceholder
 		} else {
 			return token.Value

@@ -1,0 +1,17 @@
+{
+    "input": "SELECT[u].[USER_SETTINGS_ID], [u].[CREATED], [u].[CREATED_BY], [u].[FK_APPLICATION_SCOPE_ID], [u].[MODIFIED], [u].[MODIFIED_BY], [u].[PREFERRED_LANGUAGE], [u].[SETTINGS], [u].[USER_NAME], [u].[USER_SECRET], [u].[USER_SECRET_TMP] FROM [USER_SETTING] WHERE [u].[USER_NAME] = @__userName_0;",
+    "outputs": [
+      {
+        "expected": "SELECT [u].[USER_SETTINGS_ID], [u].[CREATED], [u].[CREATED_BY], [u].[FK_APPLICATION_SCOPE_ID], [u].[MODIFIED], [u].[MODIFIED_BY], [u].[PREFERRED_LANGUAGE], [u].[SETTINGS], [u].[USER_NAME], [u].[USER_SECRET], [u].[USER_SECRET_TMP] FROM [USER_SETTING] WHERE [u].[USER_NAME] = @__userName_0",
+        "obfuscator_config": {
+            "replace_positional_parameter": false
+        },
+        "normalizer_config": {
+            "keep_sql_alias": true,
+            "remove_space_between_parentheses": true,
+            "keep_identifier_quotation": true
+        }
+      }
+    ]
+  }
+  

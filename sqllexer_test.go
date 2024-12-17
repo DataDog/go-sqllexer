@@ -530,6 +530,27 @@ func TestLexer(t *testing.T) {
 			},
 		},
 		{
+			name:  "select with bind parameter using underscore",
+			input: "SELECT * FROM users where id = @__my_id",
+			expected: []Token{
+				{IDENT, "SELECT"},
+				{WS, " "},
+				{WILDCARD, "*"},
+				{WS, " "},
+				{IDENT, "FROM"},
+				{WS, " "},
+				{IDENT, "users"},
+				{WS, " "},
+				{IDENT, "where"},
+				{WS, " "},
+				{IDENT, "id"},
+				{WS, " "},
+				{OPERATOR, "="},
+				{WS, " "},
+				{BIND_PARAMETER, "@__my_id"},
+			},
+		},
+		{
 			name:  "select with system variable",
 			input: "SELECT @@VERSION AS SqlServerVersion",
 			expected: []Token{
