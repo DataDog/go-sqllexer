@@ -167,10 +167,8 @@ func (n *Normalizer) collectMetadata(token *Token, lastToken *Token, statementMe
 	} else if token.Type == IDENT || token.Type == QUOTED_IDENT || token.Type == FUNCTION {
 		tokenVal := token.Value
 		if token.Type == QUOTED_IDENT {
-			// We always want to trim the quotes for collected metadata such as table names
-			// This is because the metadata is used as tags, and we don't want them to be normalized as underscores later on
-			tokenVal = trimQuotes(tokenVal, tokenVal[0:1], tokenVal[len(tokenVal)-1:])
 			if !n.config.KeepIdentifierQuotation {
+				tokenVal = trimQuotes(tokenVal, tokenVal[0:1], tokenVal[len(tokenVal)-1:])
 				token.Value = tokenVal
 			}
 		}
