@@ -75,6 +75,48 @@ GROUP BY sales.product_key;
 
 	var superLargeQuery = "select top ? percent IdTrebEmpresa, CodCli, NOMEMP, Baixa, CASE WHEN IdCentreTreball IS ? THEN ? ELSE CONVERT ( VARCHAR ( ? ) IdCentreTreball ) END, CASE WHEN NOMESTAB IS ? THEN ? ELSE NOMESTAB END, TIPUS, CASE WHEN IdLloc IS ? THEN ? ELSE CONVERT ( VARCHAR ( ? ) IdLloc ) END, CASE WHEN NomLlocComplert IS ? THEN ? ELSE NomLlocComplert END, CASE WHEN DesLloc IS ? THEN ? ELSE DesLloc END, IdLlocTreballUnic From ( SELECT ?, dbo.Treb_Empresa.IdTrebEmpresa, dbo.Treb_Empresa.IdTreballador, dbo.Treb_Empresa.CodCli, dbo.Clients.NOMEMP, dbo.Treb_Empresa.Baixa, dbo.Treb_Empresa.IdCentreTreball, dbo.Cli_Establiments.NOMESTAB, ?, ?, dbo.Treb_Empresa.DataInici, dbo.Treb_Empresa.DataFi, CASE WHEN dbo.Treb_Empresa.DesLloc IS ? THEN ? ELSE dbo.Treb_Empresa.DesLloc END DesLloc, dbo.Treb_Empresa.IdLlocTreballUnic FROM dbo.Clients WITH ( NOLOCK ) INNER JOIN dbo.Treb_Empresa WITH ( NOLOCK ) ON dbo.Clients.CODCLI = dbo.Treb_Empresa.CodCli LEFT OUTER JOIN dbo.Cli_Establiments WITH ( NOLOCK ) ON dbo.Cli_Establiments.Id_ESTAB_CLI = dbo.Treb_Empresa.IdCentreTreball AND dbo.Cli_Establiments.CODCLI = dbo.Treb_Empresa.CodCli WHERE dbo.Treb_Empresa.IdTreballador = ? AND Treb_Empresa.IdTecEIRLLlocTreball IS ? AND IdMedEIRLLlocTreball IS ? AND IdLlocTreballTemporal IS ? UNION ALL SELECT ?, dbo.Treb_Empresa.IdTrebEmpresa, dbo.Treb_Empresa.IdTreballador, dbo.Treb_Empresa.CodCli, dbo.Clients.NOMEMP, dbo.Treb_Empresa.Baixa, dbo.Treb_Empresa.IdCentreTreball, dbo.Cli_Establiments.NOMESTAB, dbo.Treb_Empresa.IdTecEIRLLlocTreball, dbo.fn_NomLlocComposat ( dbo.Treb_Empresa.IdTecEIRLLlocTreball ), dbo.Treb_Empresa.DataInici, dbo.Treb_Empresa.DataFi, CASE WHEN dbo.Treb_Empresa.DesLloc IS ? THEN ? ELSE dbo.Treb_Empresa.DesLloc END DesLloc, dbo.Treb_Empresa.IdLlocTreballUnic FROM dbo.Clients WITH ( NOLOCK ) INNER JOIN dbo.Treb_Empresa WITH ( NOLOCK ) ON dbo.Clients.CODCLI = dbo.Treb_Empresa.CodCli LEFT OUTER JOIN dbo.Cli_Establiments WITH ( NOLOCK ) ON dbo.Cli_Establiments.Id_ESTAB_CLI = dbo.Treb_Empresa.IdCentreTreball AND dbo.Cli_Establiments.CODCLI = dbo.Treb_Empresa.CodCli WHERE ( dbo.Treb_Empresa.IdTreballador = ? ) AND ( NOT ( dbo.Treb_Empresa.IdTecEIRLLlocTreball IS ? ) ) UNION ALL SELECT ?, dbo.Treb_Empresa.IdTrebEmpresa, dbo.Treb_Empresa.IdTreballador, dbo.Treb_Empresa.CodCli, dbo.Clients.NOMEMP, dbo.Treb_Empresa.Baixa, dbo.Treb_Empresa.IdCentreTreball, dbo.Cli_Establiments.NOMESTAB, dbo.Treb_Empresa.IdMedEIRLLlocTreball, dbo.fn_NomMedEIRLLlocComposat ( dbo.Treb_Empresa.IdMedEIRLLlocTreball ), dbo.Treb_Empresa.DataInici, dbo.Treb_Empresa.DataFi, CASE WHEN dbo.Treb_Empresa.DesLloc IS ? THEN ? ELSE dbo.Treb_Empresa.DesLloc END DesLloc, dbo.Treb_Empresa.IdLlocTreballUnic FROM dbo.Clients WITH ( NOLOCK ) INNER JOIN dbo.Treb_Empresa WITH ( NOLOCK ) ON dbo.Clients.CODCLI = dbo.Treb_Empresa.CodCli LEFT OUTER JOIN dbo.Cli_Establiments WITH ( NOLOCK ) ON dbo.Cli_Establiments.Id_ESTAB_CLI = dbo.Treb_Empresa.IdCentreTreball AND dbo.Cli_Establiments.CODCLI = dbo.Treb_Empresa.CodCli WHERE ( dbo.Treb_Empresa.IdTreballador = ? ) AND ( Treb_Empresa.IdTecEIRLLlocTreball IS ? ) AND ( NOT ( dbo.Treb_Empresa.IdMedEIRLLlocTreball IS ? ) ) UNION ALL SELECT ?, dbo.Treb_Empresa.IdTrebEmpresa, dbo.Treb_Empresa.IdTreballador, dbo.Treb_Empresa.CodCli, dbo.Clients.NOMEMP, dbo.Treb_Empresa.Baixa, dbo.Treb_Empresa.IdCentreTreball, dbo.Cli_Establiments.NOMESTAB, dbo.Treb_Empresa.IdLlocTreballTemporal, dbo.Lloc_Treball_Temporal.NomLlocTreball, dbo.Treb_Empresa.DataInici, dbo.Treb_Empresa.DataFi, CASE WHEN dbo.Treb_Empresa.DesLloc IS ? THEN ? ELSE dbo.Treb_Empresa.DesLloc END DesLloc, dbo.Treb_Empresa.IdLlocTreballUnic FROM dbo.Clients WITH ( NOLOCK ) INNER JOIN dbo.Treb_Empresa WITH ( NOLOCK ) ON dbo.Clients.CODCLI = dbo.Treb_Empresa.CodCli INNER JOIN dbo.Lloc_Treball_Temporal WITH ( NOLOCK ) ON dbo.Treb_Empresa.IdLlocTreballTemporal = dbo.Lloc_Treball_Temporal.IdLlocTreballTemporal LEFT OUTER JOIN dbo.Cli_Establiments WITH ( NOLOCK ) ON dbo.Cli_Establiments.Id_ESTAB_CLI = dbo.Treb_Empresa.IdCentreTreball AND dbo.Cli_Establiments.CODCLI = dbo.Treb_Empresa.CodCli WHERE dbo.Treb_Empresa.IdTreballador = ? AND Treb_Empresa.IdTecEIRLLlocTreball IS ? AND IdMedEIRLLlocTreball IS ? ) Where ? = %d"
 
+	var bracketQuotedQuery = `
+	SELECT 
+    [orders].[OrderID],
+    [customers].[CustomerName],
+    [products].[ProductName],
+    [order_details].[Quantity],
+    [order_details].[UnitPrice],
+    ([order_details].[Quantity] * [order_details].[UnitPrice]) AS [TotalPrice],
+    [orders].[OrderDate],
+    [orders].[ShippedDate],
+    CASE 
+        WHEN [orders].[ShippedDate] IS NULL THEN 'Pending'
+        ELSE 'Shipped'
+    END AS [OrderStatus]
+FROM 
+    [orders]
+INNER JOIN 
+    [customers] ON [orders].[CustomerID] = [customers].[CustomerID]
+INNER JOIN 
+    [order_details] ON [orders].[OrderID] = [order_details].[OrderID]
+INNER JOIN 
+    [products] ON [order_details].[ProductID] = [products].[ProductID]
+WHERE 
+    [orders].[OrderDate] >= '2024-01-01' 
+    AND [orders].[OrderDate] <= '2024-12-31'
+    AND [customers].[Region] = 'North America'
+GROUP BY 
+    [orders].[OrderID],
+    [customers].[CustomerName],
+    [products].[ProductName],
+    [order_details].[Quantity],
+    [order_details].[UnitPrice],
+    [orders].[OrderDate],
+    [orders].[ShippedDate]
+HAVING 
+    SUM([order_details].[Quantity]) > 10
+ORDER BY 
+    [orders].[OrderDate] DESC;
+`
+
+	var backtickQuotedQuery = "SELECT `orders`.`OrderID`, `customers`.`CustomerName`, `products`.`ProductName`, `order_details`.`Quantity`, `order_details`.`UnitPrice`, (`order_details`.`Quantity` * `order_details`.`UnitPrice`) AS `TotalPrice`, `orders`.`OrderDate`, `orders`.`ShippedDate`, CASE WHEN `orders`.`ShippedDate` IS NULL THEN 'Pending' ELSE 'Shipped' END AS `OrderStatus` FROM `orders` INNER JOIN `customers` ON `orders`.`CustomerID` = `customers`.`CustomerID` INNER JOIN `order_details` ON `orders`.`OrderID` = `order_details`.`OrderID` INNER JOIN `products` ON `order_details`.`ProductID` = `products`.`ProductID` WHERE `orders`.`OrderDate` >= '2024-01-01' AND `orders`.`OrderDate` <= '2024-12-31' AND `customers`.`Region` = 'North America' GROUP BY `orders`.`OrderID`, `customers`.`CustomerName`, `products`.`ProductName`, `order_details`.`Quantity`, `order_details`.`UnitPrice`, `orders`.`OrderDate`, `orders`.`ShippedDate` HAVING SUM(`order_details`.`Quantity`) > 10 ORDER BY `orders`.`OrderDate` DESC;"
+
 	benchmarks := []struct {
 		name  string
 		query string
@@ -84,6 +126,8 @@ GROUP BY sales.product_key;
 		{"Large", LargeQuery},
 		{"Complex", ComplexQuery},
 		{"SuperLarge", fmt.Sprintf(superLargeQuery, 1)},
+		{"BracketQuoted", bracketQuotedQuery},
+		{"BacktickQuoted", backtickQuotedQuery},
 	}
 	obfuscator := NewObfuscator(
 		WithReplaceDigits(true),
@@ -95,6 +139,8 @@ GROUP BY sales.product_key;
 		WithCollectCommands(true),
 		WithCollectTables(true),
 		WithKeepSQLAlias(false),
+		WithUppercaseKeywords(true),
+		WithRemoveSpaceBetweenParentheses(true),
 	)
 
 	for _, bm := range benchmarks {
