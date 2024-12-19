@@ -165,29 +165,31 @@ func (n *Normalizer) collectMetadata(token *Token, lastToken *Token, statementMe
 		// Collect comments
 		statementMetadata.Comments = append(statementMetadata.Comments, token.Value)
 	} else if token.Type == IDENT || token.Type == QUOTED_IDENT || token.Type == FUNCTION {
-		tokenVal := token.Value
 		if token.Type == QUOTED_IDENT {
-			// We always want to trim the quotes for collected metadata such as table names
-			// This is because the metadata is used as tags, and we don't want them to be normalized as underscores later on
-			tokenVal = trimQuotes(tokenVal, tokenVal[0:1], tokenVal[len(tokenVal)-1:])
 			if !n.config.KeepIdentifierQuotation {
-				token.Value = tokenVal
+				token.Value = trimQuotes(token.Value, token.Value[0:1], token.Value[len(token.Value)-1:])
 			}
 		}
-		if n.config.CollectCommands && isCommand(tokenVal) {
+		if n.config.CollectCommands && isCommand(token.Value) {
 			// Collect commands
-			statementMetadata.Commands = append(statementMetadata.Commands, strings.ToUpper(tokenVal))
+			statementMetadata.Commands = append(statementMetadata.Commands, strings.ToUpper(token.Value))
 		} else if isWith(lastToken.Value) && token.Type == IDENT {
 			// Collect CTEs so we can skip them later in table collection
-			ctes[tokenVal] = true
-		} else if n.config.CollectTables && isTableIndicator(lastToken.Value) && !isSQLKeyword(tokenVal) {
+			ctes[token.Value] = true
+		} else if n.config.CollectTables && isTableIndicator(lastToken.Value) && !isSQLKeyword(token.Value) {
 			// Collect table names the token is not a CTE
-			if _, ok := ctes[tokenVal]; !ok {
-				statementMetadata.Tables = append(statementMetadata.Tables, tokenVal)
+			if _, ok := ctes[token.Value]; !ok {
+				table := token.Value
+				// Remove quotes from table name if KeepIdentifierQuotation is false
+				// Quotes need to be removed from the table name because the table names are used as tags
+				if token.Type == QUOTED_IDENT && n.config.KeepIdentifierQuotation {
+					table = trimQuotes(token.Value, token.Value[0:1], token.Value[len(token.Value)-1:])
+				}
+				statementMetadata.Tables = append(statementMetadata.Tables, table)
 			}
 		} else if n.config.CollectProcedure && isProcedure(lastToken) {
 			// Collect procedure names
-			statementMetadata.Procedures = append(statementMetadata.Procedures, tokenVal)
+			statementMetadata.Procedures = append(statementMetadata.Procedures, token.Value)
 		}
 	}
 }

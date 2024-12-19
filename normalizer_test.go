@@ -829,7 +829,7 @@ func TestNormalizeDeobfuscatedSQL(t *testing.T) {
 			input:    "SELECT * FROM `public`.`users` WHERE id = ?",
 			expected: "SELECT * FROM `public`.`users` WHERE id = ?",
 			statementMetadata: StatementMetadata{
-				Tables:     []string{`public.users`},
+				Tables:     []string{"public.users"},
 				Comments:   []string{},
 				Commands:   []string{"SELECT"},
 				Procedures: []string{},
@@ -875,6 +875,27 @@ func TestNormalizeDeobfuscatedSQL(t *testing.T) {
 				Commands:   []string{"SELECT"},
 				Procedures: []string{},
 				Size:       18,
+			},
+			normalizationConfig: &normalizerConfig{
+				CollectComments:         true,
+				CollectCommands:         true,
+				CollectTables:           true,
+				KeepSQLAlias:            true,
+				KeepIdentifierQuotation: true,
+			},
+			lexerOptions: []lexerOption{
+				WithDBMS(DBMSSQLServer),
+			},
+		},
+		{
+			input:    `SELECT * FROM [public].[my users] WHERE id = ?`,
+			expected: `SELECT * FROM [public].[my users] WHERE id = ?`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{`public.my users`},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       21,
 			},
 			normalizationConfig: &normalizerConfig{
 				CollectComments:         true,

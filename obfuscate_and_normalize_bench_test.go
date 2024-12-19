@@ -118,16 +118,17 @@ ORDER BY
 	var backtickQuotedQuery = "SELECT `orders`.`OrderID`, `customers`.`CustomerName`, `products`.`ProductName`, `order_details`.`Quantity`, `order_details`.`UnitPrice`, (`order_details`.`Quantity` * `order_details`.`UnitPrice`) AS `TotalPrice`, `orders`.`OrderDate`, `orders`.`ShippedDate`, CASE WHEN `orders`.`ShippedDate` IS NULL THEN 'Pending' ELSE 'Shipped' END AS `OrderStatus` FROM `orders` INNER JOIN `customers` ON `orders`.`CustomerID` = `customers`.`CustomerID` INNER JOIN `order_details` ON `orders`.`OrderID` = `order_details`.`OrderID` INNER JOIN `products` ON `order_details`.`ProductID` = `products`.`ProductID` WHERE `orders`.`OrderDate` >= '2024-01-01' AND `orders`.`OrderDate` <= '2024-12-31' AND `customers`.`Region` = 'North America' GROUP BY `orders`.`OrderID`, `customers`.`CustomerName`, `products`.`ProductName`, `order_details`.`Quantity`, `order_details`.`UnitPrice`, `orders`.`OrderDate`, `orders`.`ShippedDate` HAVING SUM(`order_details`.`Quantity`) > 10 ORDER BY `orders`.`OrderDate` DESC;"
 
 	benchmarks := []struct {
-		name  string
-		query string
+		name         string
+		query        string
+		lexerOptions []lexerOption
 	}{
-		{"Escaping", `INSERT INTO delayed_jobs (attempts, created_at, failed_at, handler, last_error, locked_at, locked_by, priority, queue, run_at, updated_at) VALUES (0, '2016-12-04 17:09:59', NULL, '--- !ruby/object:Delayed::PerformableMethod\nobject: !ruby/object:Item\n  store:\n  - a simple string\n  - an \'escaped \' string\n  - another \'escaped\' string\n  - 42\n  string: a string with many \\\\\'escapes\\\\\'\nmethod_name: :show_store\nargs: []\n', NULL, NULL, NULL, 0, NULL, '2016-12-04 17:09:59', '2016-12-04 17:09:59')`},
-		{"Grouping", `INSERT INTO delayed_jobs (created_at, failed_at, handler) VALUES (0, '2016-12-04 17:09:59', NULL), (0, '2016-12-04 17:09:59', NULL), (0, '2016-12-04 17:09:59', NULL), (0, '2016-12-04 17:09:59', NULL)`},
-		{"Large", LargeQuery},
-		{"Complex", ComplexQuery},
-		{"SuperLarge", fmt.Sprintf(superLargeQuery, 1)},
-		{"BracketQuoted", bracketQuotedQuery},
-		{"BacktickQuoted", backtickQuotedQuery},
+		{"Escaping", `INSERT INTO delayed_jobs (attempts, created_at, failed_at, handler, last_error, locked_at, locked_by, priority, queue, run_at, updated_at) VALUES (0, '2016-12-04 17:09:59', NULL, '--- !ruby/object:Delayed::PerformableMethod\nobject: !ruby/object:Item\n  store:\n  - a simple string\n  - an \'escaped \' string\n  - another \'escaped\' string\n  - 42\n  string: a string with many \\\\\'escapes\\\\\'\nmethod_name: :show_store\nargs: []\n', NULL, NULL, NULL, 0, NULL, '2016-12-04 17:09:59', '2016-12-04 17:09:59')`, nil},
+		{"Grouping", `INSERT INTO delayed_jobs (created_at, failed_at, handler) VALUES (0, '2016-12-04 17:09:59', NULL), (0, '2016-12-04 17:09:59', NULL), (0, '2016-12-04 17:09:59', NULL), (0, '2016-12-04 17:09:59', NULL)`, nil},
+		{"Large", LargeQuery, nil},
+		{"Complex", ComplexQuery, nil},
+		{"SuperLarge", fmt.Sprintf(superLargeQuery, 1), nil},
+		{"BracketQuoted", bracketQuotedQuery, []lexerOption{WithDBMS(DBMSSQLServer)}},
+		{"BacktickQuoted", backtickQuotedQuery, []lexerOption{WithDBMS(DBMSMySQL)}},
 	}
 	obfuscator := NewObfuscator(
 		WithReplaceDigits(true),
@@ -141,6 +142,7 @@ ORDER BY
 		WithKeepSQLAlias(false),
 		WithUppercaseKeywords(true),
 		WithRemoveSpaceBetweenParentheses(true),
+		WithKeepIdentifierQuotation(true),
 	)
 
 	for _, bm := range benchmarks {
@@ -148,7 +150,7 @@ ORDER BY
 			b.ResetTimer()
 			b.ReportAllocs()
 			for i := 0; i < b.N; i++ {
-				_, _, err := ObfuscateAndNormalize(bm.query, obfuscator, normalizer)
+				_, _, err := ObfuscateAndNormalize(bm.query, obfuscator, normalizer, bm.lexerOptions...)
 				if err != nil {
 					b.Fatal(err)
 				}
