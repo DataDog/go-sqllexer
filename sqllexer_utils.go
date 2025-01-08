@@ -29,152 +29,136 @@ func getDBMSFromAlias(alias DBMSType) DBMSType {
 	return alias
 }
 
-func PrecomputeCaseInsensitiveKeys[T any](input map[string]T) map[string]T {
-	result := make(map[string]T, len(input)*3)
-	for key, value := range input {
-		result[key] = value
-		result[strings.ToLower(key)] = value
-		result[strings.ToUpper(key)] = value
-	}
-	return result
-}
-
 var commands = map[string]bool{
-	"Select":        true,
-	"Insert":        true,
-	"Update":        true,
-	"Delete":        true,
-	"Create":        true,
-	"Alter":         true,
-	"Drop":          true,
-	"Join":          true,
-	"Grant":         true,
-	"Revoke":        true,
-	"Commit":        true,
-	"Begin":         true,
-	"Truncate":      true,
-	"Merge":         true,
-	"Execute":       true,
-	"Exec":          true,
-	"Explain":       true,
-	"Straight_Join": true,
-	"Use":           true,
-	"Clone":         true,
+	"SELECT":        true,
+	"INSERT":        true,
+	"UPDATE":        true,
+	"DELETE":        true,
+	"CREATE":        true,
+	"ALTER":         true,
+	"DROP":          true,
+	"JOIN":          true,
+	"GRANT":         true,
+	"REVOKE":        true,
+	"COMMIT":        true,
+	"BEGIN":         true,
+	"TRUNCATE":      true,
+	"MERGE":         true,
+	"EXECUTE":       true,
+	"EXEC":          true,
+	"EXPLAIN":       true,
+	"STRAIGHT_JOIN": true,
+	"USE":           true,
+	"CLONE":         true,
 }
-
-var commandsMap = PrecomputeCaseInsensitiveKeys(commands)
 
 var tableIndicators = map[string]bool{
-	"From":          true,
-	"Join":          true,
-	"Into":          true,
-	"Update":        true,
-	"Table":         true,
-	"Exists":        true, // Drop Table If Exists
-	"Straight_Join": true, // MySQL
-	"Clone":         true, // Snowflake
-	"Only":          true, // PostgreSQL
+	"FROM":          true,
+	"JOIN":          true,
+	"INTO":          true,
+	"UPDATE":        true,
+	"TABLE":         true,
+	"EXISTS":        true, // Drop Table If Exists
+	"STRAIGHT_JOIN": true, // MySQL
+	"CLONE":         true, // Snowflake
+	"ONLY":          true, // PostgreSQL
 }
-
-var tableIndicatorsMap = PrecomputeCaseInsensitiveKeys(tableIndicators)
 
 var keywords = map[string]bool{
-	"Select":     true,
-	"Insert":     true,
-	"Update":     true,
-	"Delete":     true,
-	"Create":     true,
-	"Alter":      true,
-	"Drop":       true,
-	"Grant":      true,
-	"Revoke":     true,
-	"Add":        true,
-	"All":        true,
-	"And":        true,
-	"Any":        true,
-	"As":         true,
-	"Asc":        true,
-	"Begin":      true,
-	"Between":    true,
-	"By":         true,
-	"Case":       true,
-	"Check":      true,
-	"Column":     true,
-	"Commit":     true,
-	"Constraint": true,
-	"Database":   true,
-	"Declare":    true,
-	"Default":    true,
-	"Desc":       true,
-	"Distinct":   true,
-	"Else":       true,
-	"End":        true,
-	"Exec":       true,
-	"Exists":     true,
-	"Foreign":    true,
-	"From":       true,
-	"Group":      true,
-	"Having":     true,
-	"In":         true,
-	"Index":      true,
-	"Inner":      true,
-	"Into":       true,
-	"Is":         true,
-	"Join":       true,
-	"Key":        true,
-	"Left":       true,
-	"Like":       true,
-	"Limit":      true,
-	"Not":        true,
-	"On":         true,
-	"Or":         true,
-	"Order":      true,
-	"Outer":      true,
-	"Primary":    true,
-	"Procedure":  true,
-	"Replace":    true,
-	"Returns":    true,
-	"Right":      true,
-	"Rollback":   true,
-	"Rownum":     true,
-	"Set":        true,
-	"Some":       true,
-	"Table":      true,
-	"Top":        true,
-	"Truncate":   true,
-	"Union":      true,
-	"Unique":     true,
-	"Use":        true,
-	"Values":     true,
-	"View":       true,
-	"Where":      true,
-	"Cube":       true,
-	"Rollup":     true,
-	"Literal":    true,
-	"Window":     true,
-	"Vaccum":     true,
-	"Analyze":    true,
-	"Ilike":      true,
-	"Using":      true,
-	"Assertion":  true,
-	"Domain":     true,
-	"Cluster":    true,
-	"Copy":       true,
-	"Explain":    true,
-	"Plpgsql":    true,
-	"Trigger":    true,
-	"Temporary":  true,
-	"Unlogged":   true,
-	"Recursive":  true,
-	"Returning":  true,
-	"Offset":     true,
-	"Of":         true,
-	"Skip":       true,
-	"If":         true,
-	"Only":       true,
+	"SELECT":     true,
+	"INSERT":     true,
+	"UPDATE":     true,
+	"DELETE":     true,
+	"CREATE":     true,
+	"ALTER":      true,
+	"DROP":       true,
+	"GRANT":      true,
+	"REVOKE":     true,
+	"ADD":        true,
+	"ALL":        true,
+	"AND":        true,
+	"ANY":        true,
+	"AS":         true,
+	"ASC":        true,
+	"BEGIN":      true,
+	"BETWEEN":    true,
+	"BY":         true,
+	"CASE":       true,
+	"CHECK":      true,
+	"COLUMN":     true,
+	"COMMIT":     true,
+	"CONSTRAINT": true,
+	"DATABASE":   true,
+	"DECLARE":    true,
+	"DEFAULT":    true,
+	"DESC":       true,
+	"DISTINCT":   true,
+	"ELSE":       true,
+	"END":        true,
+	"EXEC":       true,
+	"EXISTS":     true,
+	"FOREIGN":    true,
+	"FROM":       true,
+	"GROUP":      true,
+	"HAVING":     true,
+	"IN":         true,
+	"INDEX":      true,
+	"INNER":      true,
+	"INTO":       true,
+	"IS":         true,
+	"JOIN":       true,
+	"KEY":        true,
+	"LEFT":       true,
+	"LIKE":       true,
+	"LIMIT":      true,
+	"NOT":        true,
+	"ON":         true,
+	"OR":         true,
+	"ORDER":      true,
+	"OUTER":      true,
+	"PRIMARY":    true,
+	"PROCEDURE":  true,
+	"REPLACE":    true,
+	"RETURNS":    true,
+	"RIGHT":      true,
+	"ROLLBACK":   true,
+	"ROWNUM":     true,
+	"SET":        true,
+	"SOME":       true,
+	"TABLE":      true,
+	"TOP":        true,
+	"TRUNCATE":   true,
+	"UNION":      true,
+	"UNIQUE":     true,
+	"USE":        true,
+	"VALUES":     true,
+	"VIEW":       true,
+	"WHERE":      true,
+	"CUBE":       true,
+	"ROLLUP":     true,
+	"LITERAL":    true,
+	"WINDOW":     true,
+	"VACCUM":     true,
+	"ANALYZE":    true,
+	"ILIKE":      true,
+	"USING":      true,
+	"ASSERTION":  true,
+	"DOMAIN":     true,
+	"CLUSTER":    true,
+	"COPY":       true,
+	"EXPLAIN":    true,
+	"PLPGSQL":    true,
+	"TRIGGER":    true,
+	"TEMPORARY":  true,
+	"UNLOGGED":   true,
+	"RECURSIVE":  true,
+	"RETURNING":  true,
+	"OFFSET":     true,
+	"OF":         true,
+	"SKIP":       true,
+	"IF":         true,
+	"ONLY":       true,
 }
-
-var keywordsMap = PrecomputeCaseInsensitiveKeys(keywords)
 
 var jsonOperators = map[string]bool{
 	"->":  true,
@@ -207,17 +191,11 @@ func isLeadingSign(ch rune) bool {
 }
 
 func isLetter(ch rune) bool {
-	// Fast path: ASCII letters and underscore
-	if ch <= 127 {
-		return (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || ch == '_'
-	}
-	// Fallback to Unicode
-	return unicode.IsLetter(ch)
+	return unicode.IsLetter(ch) || ch == '_'
 }
 
 func isAlphaNumeric(ch rune) bool {
-	// Check if it's a digit first, then letter (faster for numbers)
-	return isDigit(ch) || isLetter(ch)
+	return isLetter(ch) || isDigit(ch)
 }
 
 func isDoubleQuote(ch rune) bool {
@@ -253,17 +231,20 @@ func isEOF(ch rune) bool {
 }
 
 func isCommand(ident string) bool {
-	_, ok := commandsMap[ident]
+	_, ok := commands[ident]
 	return ok
 }
 
 func isTableIndicator(ident string) bool {
-	_, ok := tableIndicatorsMap[ident]
+	_, ok := tableIndicators[ident]
 	return ok
 }
 
-func isSQLKeyword(ident string) bool {
-	_, ok := keywordsMap[ident]
+func isSQLKeyword(token *Token) bool {
+	if token.Type != IDENT {
+		return false
+	}
+	_, ok := keywords[strings.ToUpper(token.Value)]
 	return ok
 }
 
@@ -271,25 +252,25 @@ func isProcedure(token *Token) bool {
 	if token.Type != IDENT {
 		return false
 	}
-	return token.Value == "PROCEDURE" || token.Value == "procedure" || token.Value == "Procedure" || token.Value == "PROC" || token.Value == "proc" || token.Value == "Proc"
+	return strings.ToUpper(token.Value) == "PROCEDURE" || strings.ToUpper(token.Value) == "PROC"
 }
 
 func isBoolean(ident string) bool {
 	// allocation free fast path for common cases
-	return ident == "true" || ident == "false" || ident == "TRUE" || ident == "FALSE" || ident == "True" || ident == "False"
+	if ident == "true" || ident == "false" || ident == "TRUE" || ident == "FALSE" {
+		return true
+	}
+
+	return strings.ToUpper(ident) == "TRUE" || strings.ToUpper(ident) == "FALSE"
 }
 
 func isNull(ident string) bool {
 	// allocation free fast path for common cases
-	return ident == "null" || ident == "NULL" || ident == "Null"
-}
+	if ident == "null" || ident == "NULL" {
+		return true
+	}
 
-func isWith(ident string) bool {
-	return ident == "WITH" || ident == "with" || ident == "With"
-}
-
-func isAs(ident string) bool {
-	return ident == "AS" || ident == "as" || ident == "As"
+	return strings.ToUpper(ident) == "NULL"
 }
 
 func isJsonOperator(token *Token) bool {
@@ -302,27 +283,17 @@ func isJsonOperator(token *Token) bool {
 
 func replaceDigits(input string, placeholder string) string {
 	var builder strings.Builder
-	n := len(input)
+
 	i := 0
-
-	for i < n {
-		// Skip over non-digit characters
-		start := i
-		for i < n && !isDigit(rune(input[i])) {
-			i++
-		}
-		// Write non-digit substring (if any)
-		if start < i {
-			builder.WriteString(input[start:i])
-		}
-
-		// Replace consecutive digits with the placeholder
-		if i < n && isDigit(rune(input[i])) {
+	for i < len(input) {
+		if isDigit(rune(input[i])) {
 			builder.WriteString(placeholder)
-			// Skip over all consecutive digits
-			for i < n && isDigit(rune(input[i])) {
+			for i < len(input) && isDigit(rune(input[i])) {
 				i++
 			}
+		} else {
+			builder.WriteByte(input[i])
+			i++
 		}
 	}
 
