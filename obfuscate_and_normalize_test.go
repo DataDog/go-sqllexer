@@ -196,6 +196,21 @@ multiline comment */
 			},
 		},
 		{
+			// [] quoted table name
+			input:    `SELECT * FROM [public].[users] WHERE id = 1`,
+			expected: `SELECT * FROM public.users WHERE id = ?`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"public.users"},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       18,
+			},
+			lexerOpts: []lexerOption{
+				WithDBMS(DBMSSQLServerAlias1),
+			},
+		},
+		{
 			input:    `CREATE PROCEDURE TestProc AS SELECT * FROM users`,
 			expected: `CREATE PROCEDURE TestProc AS SELECT * FROM users`,
 			statementMetadata: StatementMetadata{

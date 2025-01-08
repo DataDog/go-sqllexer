@@ -9,7 +9,8 @@ type DBMSType string
 
 const (
 	// DBMSSQLServer is a MS SQL
-	DBMSSQLServer DBMSType = "mssql"
+	DBMSSQLServer       DBMSType = "mssql"
+	DBMSSQLServerAlias1 DBMSType = "sql-server"
 	// DBMSPostgres is a PostgreSQL Server
 	DBMSPostgres DBMSType = "postgresql"
 	// DBMSMySQL is a MySQL Server
@@ -19,6 +20,14 @@ const (
 	// DBMSSnowflake is a Snowflake Server
 	DBMSSnowflake DBMSType = "snowflake"
 )
+
+func getDBMSFromAlias(alias DBMSType) DBMSType {
+	switch alias {
+	case DBMSSQLServerAlias1:
+		return DBMSSQLServer
+	}
+	return alias
+}
 
 func PrecomputeCaseInsensitiveKeys[T any](input map[string]T) map[string]T {
 	result := make(map[string]T, len(input)*3)

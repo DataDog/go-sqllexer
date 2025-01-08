@@ -40,6 +40,7 @@ type LexerConfig struct {
 type lexerOption func(*LexerConfig)
 
 func WithDBMS(dbms DBMSType) lexerOption {
+	dbms = getDBMSFromAlias(dbms)
 	return func(c *LexerConfig) {
 		c.DBMS = dbms
 	}
