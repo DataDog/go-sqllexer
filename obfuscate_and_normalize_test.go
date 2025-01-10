@@ -195,6 +195,7 @@ multiline comment */
 				WithDBMS(DBMSSQLServer),
 			},
 		},
+		// test for .Net tracer
 		{
 			// [] quoted table name
 			input:    `SELECT * FROM [public].[users] WHERE id = 1`,
@@ -210,6 +211,7 @@ multiline comment */
 				WithDBMS(DBMSSQLServerAlias1),
 			},
 		},
+		// test for Java tracer
 		{
 			// [] quoted table name
 			input:    `SELECT * FROM [public].[users] WHERE id = 1`,
