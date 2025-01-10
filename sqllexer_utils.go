@@ -10,7 +10,8 @@ type DBMSType string
 const (
 	// DBMSSQLServer is a MS SQL
 	DBMSSQLServer       DBMSType = "mssql"
-	DBMSSQLServerAlias1 DBMSType = "sql-server"
+	DBMSSQLServerAlias1 DBMSType = "sql-server" // .Net tracer
+	DBMSSQLServerAlias2 DBMSType = "sqlserver"  // Java tracer
 	// DBMSPostgres is a PostgreSQL Server
 	DBMSPostgres DBMSType = "postgresql"
 	// DBMSMySQL is a MySQL Server
@@ -24,6 +25,8 @@ const (
 func getDBMSFromAlias(alias DBMSType) DBMSType {
 	switch alias {
 	case DBMSSQLServerAlias1:
+		return DBMSSQLServer
+	case DBMSSQLServerAlias2:
 		return DBMSSQLServer
 	}
 	return alias
