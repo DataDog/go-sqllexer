@@ -195,6 +195,7 @@ multiline comment */
 				WithDBMS(DBMSSQLServer),
 			},
 		},
+		// test for .Net tracer
 		{
 			// [] quoted table name
 			input:    `SELECT * FROM [public].[users] WHERE id = 1`,
@@ -208,6 +209,22 @@ multiline comment */
 			},
 			lexerOpts: []lexerOption{
 				WithDBMS(DBMSSQLServerAlias1),
+			},
+		},
+		// test for Java tracer
+		{
+			// [] quoted table name
+			input:    `SELECT * FROM [public].[users] WHERE id = 1`,
+			expected: `SELECT * FROM public.users WHERE id = ?`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"public.users"},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       18,
+			},
+			lexerOpts: []lexerOption{
+				WithDBMS(DBMSSQLServerAlias2),
 			},
 		},
 		{
