@@ -13,7 +13,8 @@ const (
 	DBMSSQLServerAlias1 DBMSType = "sql-server" // .Net tracer
 	DBMSSQLServerAlias2 DBMSType = "sqlserver"  // Java tracer
 	// DBMSPostgres is a PostgreSQL Server
-	DBMSPostgres DBMSType = "postgresql"
+	DBMSPostgres       DBMSType = "postgresql"
+	DBMSPostgresAlias1 DBMSType = "postgres" // Ruby, JavaScript tracers
 	// DBMSMySQL is a MySQL Server
 	DBMSMySQL DBMSType = "mysql"
 	// DBMSOracle is a Oracle Server
@@ -28,6 +29,8 @@ func getDBMSFromAlias(alias DBMSType) DBMSType {
 		return DBMSSQLServer
 	case DBMSSQLServerAlias2:
 		return DBMSSQLServer
+	case DBMSPostgresAlias1:
+		return DBMSPostgres
 	}
 	return alias
 }

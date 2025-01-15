@@ -457,6 +457,20 @@ multiline comment */
 				WithDBMS(DBMSSQLServer),
 			},
 		},
+		{
+			input:    `SELECT pk, updatedAt, createdAt, name, description, isAutoCreated, autoCreatedFeaturePk FROM FeatureStrategyGroup WHERE FeatureStrategyGroup.autoCreatedFeaturePk IN ( ? )`,
+			expected: `SELECT pk, updatedAt, createdAt, name, description, isAutoCreated, autoCreatedFeaturePk FROM FeatureStrategyGroup WHERE FeatureStrategyGroup.autoCreatedFeaturePk IN ( ? )`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"FeatureStrategyGroup"},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       26,
+			},
+			lexerOpts: []lexerOption{
+				WithDBMS("postgres"),
+			},
+		},
 	}
 
 	obfuscator := NewObfuscator(
