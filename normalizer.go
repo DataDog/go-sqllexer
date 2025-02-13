@@ -1,8 +1,11 @@
 package sqllexer
 
 import (
+	"regexp"
 	"strings"
 )
+
+var leadingBracketsRegex = regexp.MustCompile(`^\s*\(.*?\)\s*(\S+)`)
 
 type normalizerConfig struct {
 	// CollectTables specifies whether the normalizer should also extract the table names that a query addresses
@@ -322,6 +325,7 @@ func (n *Normalizer) trimNormalizedSQL(normalizedSQL string) string {
 		// Remove trailing semicolon
 		normalizedSQL = strings.TrimSuffix(normalizedSQL, ";")
 	}
+	normalizedSQL = leadingBracketsRegex.ReplaceAllString(normalizedSQL, "$1")
 	return strings.TrimSpace(normalizedSQL)
 }
 

@@ -887,6 +887,27 @@ func TestNormalizeDeobfuscatedSQL(t *testing.T) {
 				WithDBMS(DBMSSQLServer),
 			},
 		},
+		{
+			input:    `( @p1 bigint ) SELECT * from dbm_user as prepared_user WHERE id = @p1`,
+			expected: `SELECT * from dbm_user as prepared_user WHERE id = @p1`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{`dbm_user`},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       14,
+			},
+			normalizationConfig: &normalizerConfig{
+				CollectComments:         true,
+				CollectCommands:         true,
+				CollectTables:           true,
+				KeepSQLAlias:            true,
+				KeepIdentifierQuotation: true,
+			},
+			lexerOptions: []lexerOption{
+				WithDBMS(DBMSSQLServer),
+			},
+		},
 	}
 
 	for _, test := range tests {
