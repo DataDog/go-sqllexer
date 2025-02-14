@@ -1,11 +1,8 @@
 package sqllexer
 
 import (
-	"regexp"
 	"strings"
 )
-
-var leadingBracketsRegex = regexp.MustCompile(`^\s*\(.*?\)\s*(\S+)`)
 
 type normalizerConfig struct {
 	// CollectTables specifies whether the normalizer should also extract the table names that a query addresses
@@ -107,6 +104,14 @@ type groupablePlaceholder struct {
 	groupable bool
 }
 
+type headState struct {
+	readFirstNonWSNonComment            bool
+	inLeadingParenthesesExpression      bool
+	foundLeadingExpressionInParentheses bool
+	standaloneExpressionInParentheses   bool
+	expressionInParentheses             strings.Builder
+}
+
 type Normalizer struct {
 	config *normalizerConfig
 }
@@ -143,16 +148,17 @@ func (n *Normalizer) Normalize(input string, lexerOpts ...lexerOption) (normaliz
 
 	var lastToken Token // The last token that is not whitespace or comment
 	var groupablePlaceholder groupablePlaceholder
+	var headState headState
 
 	ctes := make(map[string]bool) // Holds the CTEs that are currently being processed
 
 	for {
 		token := lexer.Scan()
+		n.collectMetadata(&token, &lastToken, statementMetadata, ctes)
+		n.normalizeSQL(&token, &lastToken, &normalizedSQLBuilder, &groupablePlaceholder, &headState, lexerOpts...)
 		if token.Type == EOF {
 			break
 		}
-		n.collectMetadata(&token, &lastToken, statementMetadata, ctes)
-		n.normalizeSQL(&token, &lastToken, &normalizedSQLBuilder, &groupablePlaceholder, lexerOpts...)
 	}
 
 	normalizedSQL = normalizedSQLBuilder.String()
@@ -195,8 +201,26 @@ func (n *Normalizer) collectMetadata(token *Token, lastToken *Token, statementMe
 	}
 }
 
-func (n *Normalizer) normalizeSQL(token *Token, lastToken *Token, normalizedSQLBuilder *strings.Builder, groupablePlaceholder *groupablePlaceholder, lexerOpts ...lexerOption) {
+func (n *Normalizer) normalizeSQL(token *Token, lastToken *Token, normalizedSQLBuilder *strings.Builder, groupablePlaceholder *groupablePlaceholder, headState *headState, lexerOpts ...lexerOption) {
 	if token.Type != WS && token.Type != COMMENT && token.Type != MULTILINE_COMMENT {
+
+		// handle leading expression in parentheses
+		if !headState.readFirstNonWSNonComment {
+			headState.readFirstNonWSNonComment = true
+			if token.Type == PUNCTUATION && token.Value == "(" {
+				headState.inLeadingParenthesesExpression = true
+				headState.standaloneExpressionInParentheses = true
+			}
+		}
+		if token.Type == EOF {
+			if headState.standaloneExpressionInParentheses {
+				normalizedSQLBuilder.WriteString(headState.expressionInParentheses.String())
+			}
+			return
+		} else if headState.foundLeadingExpressionInParentheses {
+			headState.standaloneExpressionInParentheses = false
+		}
+
 		if token.Type == DOLLAR_QUOTED_FUNCTION && token.Value != StringPlaceholder {
 			// if the token is a dollar quoted function and it is not obfuscated,
 			// we need to recusively normalize the content of the dollar quoted function
@@ -246,9 +270,17 @@ func (n *Normalizer) normalizeSQL(token *Token, lastToken *Token, normalizedSQLB
 			return
 		}
 
-		// determine if we should add a whitespace
-		n.appendWhitespace(lastToken, token, normalizedSQLBuilder)
-		n.writeToken(token, normalizedSQLBuilder)
+		if headState.inLeadingParenthesesExpression {
+			n.appendWhitespace(lastToken, token, &headState.expressionInParentheses)
+			n.writeToken(token, &headState.expressionInParentheses)
+			if token.Type == PUNCTUATION && token.Value == ")" {
+				headState.inLeadingParenthesesExpression = false
+				headState.foundLeadingExpressionInParentheses = true
+			}
+		} else {
+			n.appendWhitespace(lastToken, token, normalizedSQLBuilder)
+			n.writeToken(token, normalizedSQLBuilder)
+		}
 
 		*lastToken = *token
 	}
@@ -325,7 +357,6 @@ func (n *Normalizer) trimNormalizedSQL(normalizedSQL string) string {
 		// Remove trailing semicolon
 		normalizedSQL = strings.TrimSuffix(normalizedSQL, ";")
 	}
-	normalizedSQL = leadingBracketsRegex.ReplaceAllString(normalizedSQL, "$1")
 	return strings.TrimSpace(normalizedSQL)
 }
 
