@@ -458,6 +458,20 @@ multiline comment */
 			},
 		},
 		{
+			input:    `/*dddbs='mydb',ddpv='1.2.3'*/ ( @p1 bigint ) SELECT * from dbm_user WHERE id = @p1`,
+			expected: `SELECT * from dbm_user WHERE id = @p1`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"dbm_user"},
+				Comments:   []string{"/*dddbs='mydb',ddpv='1.2.3'*/"},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       43,
+			},
+			lexerOpts: []lexerOption{
+				WithDBMS(DBMSSQLServer),
+			},
+		},
+		{
 			input:    `SELECT pk, updatedAt, createdAt, name, description, isAutoCreated, autoCreatedFeaturePk FROM FeatureStrategyGroup WHERE FeatureStrategyGroup.autoCreatedFeaturePk IN ( ? )`,
 			expected: `SELECT pk, updatedAt, createdAt, name, description, isAutoCreated, autoCreatedFeaturePk FROM FeatureStrategyGroup WHERE FeatureStrategyGroup.autoCreatedFeaturePk IN ( ? )`,
 			statementMetadata: StatementMetadata{
