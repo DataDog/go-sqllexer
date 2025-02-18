@@ -82,79 +82,69 @@ const (
 // Obfuscate takes an input SQL string and returns an obfuscated SQL string.
 // The obfuscator replaces all literal values with a single placeholder
 func (o *Obfuscator) Obfuscate(input string, lexerOpts ...lexerOption) string {
-	var obfuscatedSQL strings.Builder
+	var obfuscatedSQL = new(strings.Builder)
+	obfuscatedSQL.Grow(len(input))
 
 	lexer := New(
 		input,
 		lexerOpts...,
 	)
 
-	var lastToken Token // The last token that is not whitespace or comment
-
 	for {
 		token := lexer.Scan()
 		if token.Type == EOF {
 			break
 		}
-		obfuscatedSQL.WriteString(o.ObfuscateTokenValue(token, lastToken, lexerOpts...))
-		if token.Type != WS {
-			lastToken = token
-		}
+		o.ObfuscateTokenValue(token, lexerOpts...)
+		obfuscatedSQL.WriteString(token.String())
 	}
 
 	return strings.TrimSpace(obfuscatedSQL.String())
 }
 
-func (o *Obfuscator) ObfuscateTokenValue(token Token, lastToken Token, lexerOpts ...lexerOption) string {
+func (o *Obfuscator) ObfuscateTokenValue(token *Token, lexerOpts ...lexerOption) {
 	switch token.Type {
 	case NUMBER:
-		if o.config.KeepJsonPath && isJsonOperator(&lastToken) {
-			return token.Value
+		if o.config.KeepJsonPath && token.PreviousValueToken.Type == JSON_OP {
+			break
 		}
-		return NumberPlaceholder
+		token.OutputValue = NumberPlaceholder
 	case DOLLAR_QUOTED_FUNCTION:
 		if o.config.DollarQuotedFunc {
 			// obfuscate the content of dollar quoted function
-			quotedFunc := token.Value[6 : len(token.Value)-6] // remove the $func$ prefix and suffix
+			quotedFunc := (*token.Source)[token.Start+6 : token.End-6] // remove the $func$ prefix and suffix
 			var obfuscatedDollarQuotedFunc strings.Builder
 			obfuscatedDollarQuotedFunc.WriteString("$func$")
 			obfuscatedDollarQuotedFunc.WriteString(o.Obfuscate(quotedFunc, lexerOpts...))
 			obfuscatedDollarQuotedFunc.WriteString("$func$")
-			return obfuscatedDollarQuotedFunc.String()
-		} else {
-			return StringPlaceholder
+			token.OutputValue = obfuscatedDollarQuotedFunc.String()
+			break
 		}
+		token.OutputValue = StringPlaceholder
 	case STRING, INCOMPLETE_STRING, DOLLAR_QUOTED_STRING:
-		if o.config.KeepJsonPath && isJsonOperator(&lastToken) {
-			return token.Value
+		if o.config.KeepJsonPath && token.PreviousValueToken.Type == JSON_OP {
+			break
 		}
-		return StringPlaceholder
+		token.OutputValue = StringPlaceholder
 	case POSITIONAL_PARAMETER:
 		if o.config.ReplacePositionalParameter {
-			return StringPlaceholder
-		} else {
-			return token.Value
+			token.OutputValue = StringPlaceholder
 		}
 	case BIND_PARAMETER:
 		if o.config.ReplaceBindParameter {
-			return StringPlaceholder
-		} else {
-			return token.Value
+			token.OutputValue = StringPlaceholder
+		}
+	case BOOLEAN:
+		if o.config.ReplaceBoolean {
+			token.OutputValue = StringPlaceholder
+		}
+	case NULL:
+		if o.config.ReplaceNull {
+			token.OutputValue = StringPlaceholder
 		}
 	case IDENT, QUOTED_IDENT:
-		if o.config.ReplaceBoolean && isBoolean(token.Value) {
-			return StringPlaceholder
-		}
-		if o.config.ReplaceNull && isNull(token.Value) {
-			return StringPlaceholder
-		}
-
 		if o.config.ReplaceDigits {
-			return replaceDigits(token.Value, NumberPlaceholder)
-		} else {
-			return token.Value
+			token.OutputValue = replaceDigits(token, NumberPlaceholder)
 		}
-	default:
-		return token.Value
 	}
 }

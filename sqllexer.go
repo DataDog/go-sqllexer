@@ -1,6 +1,8 @@
 package sqllexer
 
-import "unicode/utf8"
+import (
+	"unicode/utf8"
+)
 
 type TokenType int
 
@@ -25,12 +27,39 @@ const (
 	FUNCTION               // function
 	SYSTEM_VARIABLE        // system variable
 	UNKNOWN                // unknown token
+	COMMAND                // SQL commands like SELECT, INSERT
+	KEYWORD                // Other SQL keywords
+	JSON_OP                // JSON operators
+	BOOLEAN                // boolean literal
+	NULL                   // null literal
+	PROC_INDICATOR         // procedure indicator
+	CTE_INDICATOR          // CTE indicator
+	ALIAS_INDICATOR        // alias indicator
 )
 
 // Token represents a SQL token with its type and value.
 type Token struct {
-	Type  TokenType
-	Value string
+	Type               TokenType
+	IsTableIndicator   bool    // true if the token is a table indicator
+	Start              int     // Start position in source
+	End                int     // End position in source
+	Source             *string // Pointer to original input
+	PreviousValueToken *Token  // Link to previous value token (not whitespace or comment)
+	Digits             []int   // Indexes of digits in the token
+	Quotes             []int   // Indexes of quotes in the token
+	OutputValue        string  // Output value of the token
+}
+
+// Add method to get value when needed
+func (t *Token) Value() string {
+	return (*t.Source)[t.Start:t.End]
+}
+
+func (t *Token) String() string {
+	if t.OutputValue != "" {
+		return t.OutputValue
+	}
+	return t.Value()
 }
 
 type LexerConfig struct {
@@ -46,16 +75,30 @@ func WithDBMS(dbms DBMSType) lexerOption {
 	}
 }
 
+type trieNode struct {
+	children         map[rune]*trieNode
+	isEnd            bool
+	tokenType        TokenType
+	isTableIndicator bool
+}
+
 // SQL Lexer inspired from Rob Pike's talk on Lexical Scanning in Go
 type Lexer struct {
-	src    string // the input src string
-	cursor int    // the current position of the cursor
-	start  int    // the start position of the current token
-	config *LexerConfig
+	src              string // the input src string
+	cursor           int    // the current position of the cursor
+	start            int    // the start position of the current token
+	config           *LexerConfig
+	lastValueToken   *Token // Track last non-whitespace token
+	digits           []int  // Indexes of digits in the token
+	quotes           []int  // Indexes of quotes in the token
+	isTableIndicator bool   // true if the token is a table indicator
 }
 
 func New(input string, opts ...lexerOption) *Lexer {
-	lexer := &Lexer{src: input, config: &LexerConfig{}}
+	lexer := &Lexer{
+		src:    input,
+		config: &LexerConfig{},
+	}
 	for _, opt := range opts {
 		opt(lexer.config)
 	}
@@ -63,11 +106,12 @@ func New(input string, opts ...lexerOption) *Lexer {
 }
 
 // ScanAll scans the entire input string and returns a slice of tokens.
-func (s *Lexer) ScanAll() []Token {
-	var tokens []Token
+func (s *Lexer) ScanAll() []*Token {
+	// Pre-allocate tokens slice - estimate 1 token per 4 characters
+	tokens := make([]*Token, 0, len(s.src)/4)
 	for {
 		token := s.Scan()
-		if token.Type == EOF {
+		if token == nil || token.Type == EOF {
 			// don't include EOF token in the result
 			break
 		}
@@ -78,15 +122,15 @@ func (s *Lexer) ScanAll() []Token {
 
 // ScanAllTokens scans the entire input string and returns a channel of tokens.
 // Use this if you want to process the tokens as they are scanned.
-func (s *Lexer) ScanAllTokens() <-chan Token {
-	tokenCh := make(chan Token)
+func (s *Lexer) ScanAllTokens() <-chan *Token {
+	tokenCh := make(chan *Token)
 
 	go func() {
 		defer close(tokenCh)
 
 		for {
 			token := s.Scan()
-			if token.Type == EOF {
+			if token == nil || token.Type == EOF {
 				// don't include EOF token in the result
 				break
 			}
@@ -98,7 +142,7 @@ func (s *Lexer) ScanAllTokens() <-chan Token {
 }
 
 // Scan scans the next token and returns it.
-func (s *Lexer) Scan() Token {
+func (s *Lexer) Scan() *Token {
 	ch := s.peek()
 	switch {
 	case isWhitespace(ch):
@@ -151,15 +195,26 @@ func (s *Lexer) Scan() Token {
 			// MySQL treats # as a comment
 			return s.scanSingleLineComment()
 		}
-		fallthrough
+		return s.scanOperator(ch)
 	case ch == '@':
+		if s.lookAhead(1) == '@' {
+			if isAlphaNumeric(s.lookAhead(2)) {
+				return s.scanSystemVariable()
+			}
+			s.start = s.cursor
+			s.nextBy(2) // consume @@
+			return s.emit(JSON_OP)
+		}
 		if isAlphaNumeric(s.lookAhead(1)) {
 			if s.config.DBMS == DBMSSnowflake {
 				return s.scanIdentifier(ch)
 			}
 			return s.scanBindParameter()
-		} else if s.lookAhead(1) == '@' {
-			return s.scanSystemVariable()
+		}
+		if s.lookAhead(1) == '?' || s.lookAhead(1) == '>' {
+			s.start = s.cursor
+			s.nextBy(2) // consume @? or @>
+			return s.emit(JSON_OP)
 		}
 		fallthrough
 	case isOperator(ch):
@@ -170,9 +225,9 @@ func (s *Lexer) Scan() Token {
 		}
 		return s.scanPunctuation()
 	case isEOF(ch):
-		return Token{EOF, ""}
+		return s.emit(EOF)
 	default:
-		return s.scanUnknown()
+		return s.emit(UNKNOWN)
 	}
 }
 
@@ -221,18 +276,19 @@ func (s *Lexer) matchAt(match []rune) bool {
 	return true
 }
 
-func (s *Lexer) scanNumberWithLeadingSign() Token {
+func (s *Lexer) scanNumberWithLeadingSign() *Token {
 	s.start = s.cursor
-	ch := s.next() // consume the leading sign
+	s.next() // consume the leading sign
+	return s.scanDecimalNumber()
+}
+
+func (s *Lexer) scanNumber(ch rune) *Token {
+	s.start = s.cursor
 	return s.scanNumberic(ch)
 }
 
-func (s *Lexer) scanNumber(ch rune) Token {
+func (s *Lexer) scanNumberic(ch rune) *Token {
 	s.start = s.cursor
-	return s.scanNumberic(ch)
-}
-
-func (s *Lexer) scanNumberic(ch rune) Token {
 	if ch == '0' {
 		nextCh := s.lookAhead(1)
 		if nextCh == 'x' || nextCh == 'X' {
@@ -242,159 +298,245 @@ func (s *Lexer) scanNumberic(ch rune) Token {
 		}
 	}
 
+	s.next() // consume first digit
 	return s.scanDecimalNumber()
 }
 
-func (s *Lexer) scanDecimalNumber() Token {
-	ch := s.next()
+func (s *Lexer) scanDecimalNumber() *Token {
+	ch := s.peek()
 
 	// scan digits
 	for isDigit(ch) || ch == '.' || isExpontent(ch) {
 		if isExpontent(ch) {
 			ch = s.next()
 			if isLeadingSign(ch) {
-				ch = s.next()
+				s.next()
 			}
 		} else {
-			ch = s.next()
+			s.next()
 		}
+		ch = s.peek()
 	}
-	return Token{NUMBER, s.src[s.start:s.cursor]}
+	return s.emit(NUMBER)
 }
 
-func (s *Lexer) scanHexNumber() Token {
-	ch := s.nextBy(2) // consume the leading 0x
+func (s *Lexer) scanHexNumber() *Token {
+	ch := s.nextBy(2) // consume 0x or 0X
 
 	for isDigit(ch) || ('a' <= ch && ch <= 'f') || ('A' <= ch && ch <= 'F') {
 		ch = s.next()
 	}
-	return Token{NUMBER, s.src[s.start:s.cursor]}
+	return s.emit(NUMBER)
 }
 
-func (s *Lexer) scanOctalNumber() Token {
+func (s *Lexer) scanOctalNumber() *Token {
 	ch := s.nextBy(2) // consume the leading 0 and number
 
 	for '0' <= ch && ch <= '7' {
 		ch = s.next()
 	}
-	return Token{NUMBER, s.src[s.start:s.cursor]}
+	return s.emit(NUMBER)
 }
 
-func (s *Lexer) scanString() Token {
+func (s *Lexer) scanString() *Token {
 	s.start = s.cursor
-	ch := s.next() // consume the opening quote
 	escaped := false
 
-	for {
+	for ch := s.next(); !isEOF(ch); ch = s.next() {
 		if escaped {
 			// encountered an escape character
 			// reset the escaped flag and continue
 			escaped = false
-			ch = s.next()
 			continue
 		}
 
 		if ch == '\\' {
 			escaped = true
-			ch = s.next()
 			continue
 		}
 
 		if ch == '\'' {
 			s.next() // consume the closing quote
-			return Token{STRING, s.src[s.start:s.cursor]}
+			return s.emit(STRING)
 		}
-
-		if isEOF(ch) {
-			// encountered EOF before closing quote
-			// this usually happens when the string is truncated
-			return Token{INCOMPLETE_STRING, s.src[s.start:s.cursor]}
-		}
-		ch = s.next()
 	}
+	// If we get here, we hit EOF before finding closing quote
+	return s.emit(INCOMPLETE_STRING)
 }
 
-func (s *Lexer) scanIdentifier(ch rune) Token {
-	// NOTE: this func does not distinguish between SQL keywords and identifiers
+func (s *Lexer) scanIdentifier(ch rune) *Token {
 	s.start = s.cursor
-	ch = s.nextBy(utf8.RuneLen(ch))
-	for isLetter(ch) || isDigit(ch) || ch == '.' || ch == '?' || ch == '$' || ch == '#' || ch == '/' {
+	node := keywordRoot
+	pos := s.cursor
+
+	// If first character is Unicode, skip trie lookup
+	if ch > 127 {
+		for isIdentifier(ch) {
+			if isDigit(ch) {
+				s.digits = append(s.digits, s.cursor)
+			}
+			ch = s.nextBy(utf8.RuneLen(ch))
+		}
+		return s.emit(IDENT)
+	}
+
+	// ASCII characters - try keyword matching
+	for isAsciiLetter(ch) || ch == '_' {
+		// Convert to uppercase for case-insensitive matching
+		upperCh := ch
+		if ch >= 'a' && ch <= 'z' {
+			upperCh -= 32
+		}
+
+		// Try to follow trie path
+		if next, exists := node.children[upperCh]; exists {
+			node = next
+			pos = s.cursor
+			ch = s.next()
+		} else {
+			// No more matches possible in trie
+			// Reset node for next potential keyword
+			// and continue scanning identifier
+			node = keywordRoot
+			ch = s.next()
+			break
+		}
+	}
+
+	// If we found a complete keyword and next char is whitespace
+	if node.isEnd && (isPunctuation(s.peek()) || isWhitespace(s.peek()) || isEOF(s.peek())) {
+		s.cursor = pos + 1 // Include the last matched character
+		s.isTableIndicator = node.isTableIndicator
+		return s.emit(node.tokenType)
+	}
+
+	// Continue scanning identifier if no keyword match
+	for isIdentifier(ch) {
+		if isDigit(ch) {
+			s.digits = append(s.digits, s.cursor)
+		}
 		ch = s.nextBy(utf8.RuneLen(ch))
 	}
+
 	if ch == '(' {
-		// if the identifier is followed by a (, then it's a function
-		return Token{FUNCTION, s.src[s.start:s.cursor]}
+		return s.emit(FUNCTION)
 	}
-	return Token{IDENT, s.src[s.start:s.cursor]}
+	return s.emit(IDENT)
 }
 
-func (s *Lexer) scanDoubleQuotedIdentifier(delimiter rune) Token {
+func (s *Lexer) scanDoubleQuotedIdentifier(delimiter rune) *Token {
 	closingDelimiter := delimiter
 	if delimiter == '[' {
 		closingDelimiter = ']'
 	}
 
 	s.start = s.cursor
-	ch := s.next() // consume the opening quote
+	s.quotes = append(s.quotes, s.cursor) // store the opening quote position
+	ch := s.next()                        // consume the opening quote
 	for {
 		// encountered the closing quote
 		// BUT if it's followed by .", then we should keep going
 		// e.g. postgre "foo"."bar"
 		// e.g. sqlserver [foo].[bar]
 		if ch == closingDelimiter {
+			s.quotes = append(s.quotes, s.cursor)
 			specialCase := []rune{closingDelimiter, '.', delimiter}
 			if s.matchAt([]rune(specialCase)) {
+				s.quotes = append(s.quotes, s.cursor+2)
 				ch = s.nextBy(3) // consume the "."
 				continue
 			}
 			break
 		}
 		if isEOF(ch) {
-			return Token{ERROR, s.src[s.start:s.cursor]}
+			return s.emit(ERROR)
+		}
+		if isDigit(ch) {
+			s.digits = append(s.digits, s.cursor)
 		}
 		ch = s.next()
 	}
 	s.next() // consume the closing quote
-	return Token{QUOTED_IDENT, s.src[s.start:s.cursor]}
+	return s.emit(QUOTED_IDENT)
 }
 
-func (s *Lexer) scanWhitespace() Token {
+func (s *Lexer) scanWhitespace() *Token {
 	// scan whitespace, tab, newline, carriage return
 	s.start = s.cursor
 	ch := s.next()
 	for isWhitespace(ch) {
 		ch = s.next()
 	}
-	return Token{WS, s.src[s.start:s.cursor]}
+	return s.emit(WS)
 }
 
-func (s *Lexer) scanOperator(lastCh rune) Token {
+func (s *Lexer) scanOperator(lastCh rune) *Token {
 	s.start = s.cursor
-	ch := s.next()
+	ch := s.next() // consume the first character
+
+	// Check for json operators
+	switch lastCh {
+	case '-':
+		if ch == '>' {
+			ch = s.next()
+			if ch == '>' {
+				s.next()
+				return s.emit(JSON_OP) // ->>
+			}
+			return s.emit(JSON_OP) // ->
+		}
+	case '#':
+		if ch == '>' {
+			ch = s.next()
+			if ch == '>' {
+				s.next()
+				return s.emit(JSON_OP) // #>>
+			}
+			return s.emit(JSON_OP) // #>
+		} else if ch == '-' {
+			s.next()
+			return s.emit(JSON_OP) // #-
+		}
+	case '?':
+		if ch == '|' {
+			s.next()
+			return s.emit(JSON_OP) // ?|
+		} else if ch == '&' {
+			s.next()
+			return s.emit(JSON_OP) // ?&
+		}
+	case '<':
+		if ch == '@' {
+			s.next()
+			return s.emit(JSON_OP) // <@
+		}
+	}
+
 	for isOperator(ch) && !(lastCh == '=' && (ch == '?' || ch == '@')) {
 		// hack: we don't want to treat "=?" as an single operator
 		lastCh = ch
 		ch = s.next()
 	}
-	return Token{OPERATOR, s.src[s.start:s.cursor]}
+
+	return s.emit(OPERATOR)
 }
 
-func (s *Lexer) scanWildcard() Token {
+func (s *Lexer) scanWildcard() *Token {
 	s.start = s.cursor
 	s.next()
-	return Token{WILDCARD, s.src[s.start:s.cursor]}
+	return s.emit(WILDCARD)
 }
 
-func (s *Lexer) scanSingleLineComment() Token {
+func (s *Lexer) scanSingleLineComment() *Token {
 	s.start = s.cursor
 	ch := s.nextBy(2) // consume the opening dashes
 	for ch != '\n' && !isEOF(ch) {
 		ch = s.next()
 	}
-	return Token{COMMENT, s.src[s.start:s.cursor]}
+	return s.emit(COMMENT)
 }
 
-func (s *Lexer) scanMultiLineComment() Token {
+func (s *Lexer) scanMultiLineComment() *Token {
 	s.start = s.cursor
 	ch := s.nextBy(2) // consume the opening slash and asterisk
 	for {
@@ -405,20 +547,20 @@ func (s *Lexer) scanMultiLineComment() Token {
 		if isEOF(ch) {
 			// encountered EOF before closing comment
 			// this usually happens when the comment is truncated
-			return Token{ERROR, s.src[s.start:s.cursor]}
+			return s.emit(ERROR)
 		}
 		ch = s.next()
 	}
-	return Token{MULTILINE_COMMENT, s.src[s.start:s.cursor]}
+	return s.emit(MULTILINE_COMMENT)
 }
 
-func (s *Lexer) scanPunctuation() Token {
+func (s *Lexer) scanPunctuation() *Token {
 	s.start = s.cursor
 	s.next()
-	return Token{PUNCTUATION, s.src[s.start:s.cursor]}
+	return s.emit(PUNCTUATION)
 }
 
-func (s *Lexer) scanDollarQuotedString() Token {
+func (s *Lexer) scanDollarQuotedString() *Token {
 	s.start = s.cursor
 	ch := s.next() // consume the dollar sign
 	tagStart := s.cursor
@@ -433,16 +575,16 @@ func (s *Lexer) scanDollarQuotedString() Token {
 		if s.matchAt([]rune(tag)) {
 			s.nextBy(len(tag)) // consume the closing tag
 			if tag == "$func$" {
-				return Token{DOLLAR_QUOTED_FUNCTION, s.src[s.start:s.cursor]}
+				return s.emit(DOLLAR_QUOTED_FUNCTION)
 			}
-			return Token{DOLLAR_QUOTED_STRING, s.src[s.start:s.cursor]}
+			return s.emit(DOLLAR_QUOTED_STRING)
 		}
 		s.next()
 	}
-	return Token{ERROR, s.src[s.start:s.cursor]}
+	return s.emit(ERROR)
 }
 
-func (s *Lexer) scanPositionalParameter() Token {
+func (s *Lexer) scanPositionalParameter() *Token {
 	s.start = s.cursor
 	ch := s.nextBy(2) // consume the dollar sign and the number
 	for {
@@ -451,10 +593,10 @@ func (s *Lexer) scanPositionalParameter() Token {
 		}
 		ch = s.next()
 	}
-	return Token{POSITIONAL_PARAMETER, s.src[s.start:s.cursor]}
+	return s.emit(POSITIONAL_PARAMETER)
 }
 
-func (s *Lexer) scanBindParameter() Token {
+func (s *Lexer) scanBindParameter() *Token {
 	s.start = s.cursor
 	ch := s.nextBy(2) // consume the (colon|at sign) and the char
 	for {
@@ -463,28 +605,42 @@ func (s *Lexer) scanBindParameter() Token {
 		}
 		ch = s.next()
 	}
-	return Token{BIND_PARAMETER, s.src[s.start:s.cursor]}
+	return s.emit(BIND_PARAMETER)
 }
 
-func (s *Lexer) scanSystemVariable() Token {
+func (s *Lexer) scanSystemVariable() *Token {
 	s.start = s.cursor
 	ch := s.nextBy(2) // consume @@
-	for {
-		if !isAlphaNumeric(ch) {
-			break
-		}
+	// Must be followed by at least one alphanumeric character
+	if !isAlphaNumeric(ch) {
+		return s.emit(ERROR)
+	}
+	for isAlphaNumeric(ch) {
 		ch = s.next()
 	}
-	if s.cursor-s.start == 2 {
-		// if the system variable is just @@, then it's a jsonpath operator
-		return Token{OPERATOR, s.src[s.start:s.cursor]}
-	}
-	return Token{SYSTEM_VARIABLE, s.src[s.start:s.cursor]}
+	return s.emit(SYSTEM_VARIABLE)
 }
 
-func (s *Lexer) scanUnknown() Token {
-	// When we see an unknown token, we advance the cursor until we see something that looks like a token boundary.
+// Modify emit function to use positions and maintain links
+func (s *Lexer) emit(t TokenType) *Token {
+	tok := &Token{
+		Type:               t,
+		Start:              s.start,
+		End:                s.cursor,
+		Source:             &s.src,
+		PreviousValueToken: s.lastValueToken,
+		Digits:             s.digits,
+		Quotes:             s.quotes,
+		IsTableIndicator:   s.isTableIndicator,
+	}
+
+	if t != WS && t != COMMENT && t != MULTILINE_COMMENT {
+		s.lastValueToken = tok
+	}
+
 	s.start = s.cursor
-	s.next()
-	return Token{UNKNOWN, s.src[s.start:s.cursor]}
+	s.digits = nil             // reset digits for the next token
+	s.quotes = nil             // reset quotes for the next token
+	s.isTableIndicator = false // reset table indicator for the next token
+	return tok
 }

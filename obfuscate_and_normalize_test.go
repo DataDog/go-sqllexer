@@ -13,6 +13,18 @@ func TestObfuscationAndNormalization(t *testing.T) {
 		statementMetadata StatementMetadata
 		lexerOpts         []lexerOption
 	}{
+		// {
+		// 	// boolean and null
+		// 	input:    `SELECT * FROM (SELECT customer_id, product_id, amount FROM order_details) AS SourceTable PIVOT (SUM(amount) FOR product_id IN ([1], [2], [3])) AS PivotTable;`,
+		// 	expected: `SELECT * FROM ( SELECT customer_id, product_id, amount FROM order_details ) PIVOT ( SUM ( amount ) FOR product_id IN ( ? ) )`,
+		// 	statementMetadata: StatementMetadata{
+		// 		Tables:     []string{"users"},
+		// 		Comments:   []string{},
+		// 		Commands:   []string{"SELECT"},
+		// 		Procedures: []string{},
+		// 		Size:       11,
+		// 	},
+		// },
 		{
 			input:    "SELECT 1",
 			expected: "SELECT ?",
@@ -51,9 +63,9 @@ func TestObfuscationAndNormalization(t *testing.T) {
 		},
 		{
 			input: `
-			SELECT h.id, h.org_id, h.name, ha.name as alias, h.created 
-			FROM vs?.host h 
-				JOIN vs?.host_alias ha on ha.host_id = h.id 
+			SELECT h.id, h.org_id, h.name, ha.name as alias, h.created
+			FROM vs?.host h
+				JOIN vs?.host_alias ha on ha.host_id = h.id
 			WHERE ha.org_id = 1 AND ha.name = ANY ('3', '4')
 			`,
 			expected: "SELECT h.id, h.org_id, h.name, ha.name, h.created FROM vs?.host h JOIN vs?.host_alias ha on ha.host_id = h.id WHERE ha.org_id = ? AND ha.name = ANY ( ? )",
@@ -105,7 +117,7 @@ multiline comment */
 		},
 		{
 			input:    "SELECT TRUNC(SYSDATE@!) from dual",
-			expected: "SELECT TRUNC ( SYSDATE @! ) from dual",
+			expected: "SELECT TRUNC ( SYSDATE@! ) from dual",
 			statementMetadata: StatementMetadata{
 				Tables:     []string{"dual"},
 				Comments:   []string{},
@@ -269,6 +281,18 @@ multiline comment */
 				Commands:   []string{"SELECT"},
 				Procedures: []string{},
 				Size:       18,
+			},
+		},
+		{
+			// boolean and null
+			input:    `SELECT * FROM users where active = true and deleted is FALSE and age is not null and test is NULL`,
+			expected: `SELECT * FROM users where active = ? and deleted is ? and age is not ? and test is ?`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"users"},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       11,
 			},
 		},
 		{
@@ -489,6 +513,8 @@ multiline comment */
 
 	obfuscator := NewObfuscator(
 		WithReplaceDigits(true),
+		WithReplaceBoolean(true),
+		WithReplaceNull(true),
 		WithDollarQuotedFunc(true),
 		WithKeepJsonPath(true),
 	)
