@@ -137,7 +137,8 @@ func (n *Normalizer) Normalize(input string, lexerOpts ...lexerOption) (normaliz
 		lexerOpts...,
 	)
 
-	var normalizedSQLBuilder strings.Builder
+	normalizedSQLBuilder := new(strings.Builder)
+	normalizedSQLBuilder.Grow(len(input))
 
 	statementMetadata = &StatementMetadata{
 		Tables:     []string{},
@@ -154,7 +155,7 @@ func (n *Normalizer) Normalize(input string, lexerOpts ...lexerOption) (normaliz
 	for {
 		token := lexer.Scan()
 		n.collectMetadata(token, statementMetadata, ctes)
-		n.normalizeSQL(token, &normalizedSQLBuilder, &groupablePlaceholder, &headState, lexerOpts...)
+		n.normalizeSQL(token, normalizedSQLBuilder, &groupablePlaceholder, &headState, lexerOpts...)
 		if token.Type == EOF {
 			break
 		}

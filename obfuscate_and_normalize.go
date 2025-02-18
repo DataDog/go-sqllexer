@@ -10,7 +10,8 @@ func ObfuscateAndNormalize(input string, obfuscator *Obfuscator, normalizer *Nor
 		lexerOpts...,
 	)
 
-	var normalizedSQLBuilder strings.Builder
+	normalizedSQLBuilder := new(strings.Builder)
+	normalizedSQLBuilder.Grow(len(input))
 
 	statementMetadata = &StatementMetadata{
 		Tables:     []string{},
@@ -28,7 +29,7 @@ func ObfuscateAndNormalize(input string, obfuscator *Obfuscator, normalizer *Nor
 		token := lexer.Scan()
 		obfuscator.ObfuscateTokenValue(token, lexerOpts...)
 		normalizer.collectMetadata(token, statementMetadata, ctes)
-		normalizer.normalizeSQL(token, &normalizedSQLBuilder, &groupablePlaceholder, &headState, lexerOpts...)
+		normalizer.normalizeSQL(token, normalizedSQLBuilder, &groupablePlaceholder, &headState, lexerOpts...)
 		if token.Type == EOF {
 			break
 		}
