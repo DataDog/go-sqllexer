@@ -2,6 +2,7 @@ package sqllexer
 
 import (
 	"strings"
+	"sync"
 )
 
 type normalizerConfig struct {
@@ -130,6 +131,37 @@ type Normalizer struct {
 	config *normalizerConfig
 }
 
+// Add a pool for StatementMetadata reuse
+var statementMetadataPool = sync.Pool{
+	New: func() interface{} {
+		return &StatementMetadata{
+			Tables:        make([]string, 0, 4),
+			Comments:      make([]string, 0, 2),
+			Commands:      make([]string, 0, 4),
+			Procedures:    make([]string, 0),
+			tablesSet:     make(map[string]struct{}, 4),
+			commentsSet:   make(map[string]struct{}, 2),
+			commandsSet:   make(map[string]struct{}, 4),
+			proceduresSet: make(map[string]struct{}),
+		}
+	},
+}
+
+// Reset StatementMetadata for reuse
+func (sm *StatementMetadata) reset() {
+	sm.Size = 0
+	sm.Tables = sm.Tables[:0]
+	sm.Comments = sm.Comments[:0]
+	sm.Commands = sm.Commands[:0]
+	sm.Procedures = sm.Procedures[:0]
+
+	// Just create new maps instead of clearing old ones
+	sm.tablesSet = make(map[string]struct{}, 4)
+	sm.commentsSet = make(map[string]struct{}, 2)
+	sm.commandsSet = make(map[string]struct{}, 4)
+	sm.proceduresSet = make(map[string]struct{})
+}
+
 func NewNormalizer(opts ...normalizerOption) *Normalizer {
 	normalizer := Normalizer{
 		config: &normalizerConfig{},
@@ -140,19 +172,6 @@ func NewNormalizer(opts ...normalizerOption) *Normalizer {
 	}
 
 	return &normalizer
-}
-
-func NewStatementMetadata() *StatementMetadata {
-	return &StatementMetadata{
-		Tables:        make([]string, 0, 4),
-		Comments:      make([]string, 0, 2),
-		Commands:      make([]string, 0, 4),
-		Procedures:    make([]string, 0),
-		tablesSet:     make(map[string]struct{}, 4),
-		commentsSet:   make(map[string]struct{}, 2),
-		commandsSet:   make(map[string]struct{}, 4),
-		proceduresSet: make(map[string]struct{}),
-	}
 }
 
 // Normalize takes an input SQL string and returns a normalized SQL string, a StatementMetadata struct, and an error.
@@ -167,18 +186,26 @@ func (n *Normalizer) Normalize(input string, lexerOpts ...lexerOption) (normaliz
 	normalizedSQLBuilder := new(strings.Builder)
 	normalizedSQLBuilder.Grow(len(input))
 
-	statementMetadata = NewStatementMetadata()
+	statementMetadata = statementMetadataPool.Get().(*StatementMetadata)
+	statementMetadata.reset()
+	defer statementMetadataPool.Put(statementMetadata)
 
 	var groupablePlaceholder groupablePlaceholder
 	var headState headState
+	var ctes map[string]bool
 
-	ctes := make(map[string]bool, 2)
+	// Only allocate CTEs map if collecting tables
+	if n.config.CollectTables {
+		ctes = make(map[string]bool, 2)
+	}
 
 	var lastValueToken *LastValueToken
 
 	for {
 		token := lexer.Scan()
-		n.collectMetadata(token, lastValueToken, statementMetadata, ctes)
+		if n.shouldCollectMetadata() {
+			n.collectMetadata(token, lastValueToken, statementMetadata, ctes)
+		}
 		n.normalizeSQL(token, lastValueToken, normalizedSQLBuilder, &groupablePlaceholder, &headState, lexerOpts...)
 		if token.Type == EOF {
 			break
@@ -189,8 +216,11 @@ func (n *Normalizer) Normalize(input string, lexerOpts ...lexerOption) (normaliz
 	}
 
 	normalizedSQL = normalizedSQLBuilder.String()
-
 	return n.trimNormalizedSQL(normalizedSQL), statementMetadata, nil
+}
+
+func (n *Normalizer) shouldCollectMetadata() bool {
+	return n.config.CollectTables || n.config.CollectCommands || n.config.CollectComments || n.config.CollectProcedure
 }
 
 func (n *Normalizer) collectMetadata(token *Token, lastValueToken *LastValueToken, statementMetadata *StatementMetadata, ctes map[string]bool) {
@@ -207,7 +237,9 @@ func (n *Normalizer) collectMetadata(token *Token, lastValueToken *LastValueToke
 		if token.Type == QUOTED_IDENT {
 			tokenVal = trimQuotes(token)
 			if !n.config.KeepIdentifierQuotation {
+				// trim quotes and set the token type to IDENT
 				token.Value = tokenVal
+				token.Type = IDENT
 			}
 		}
 		if lastValueToken != nil && lastValueToken.Type == CTE_INDICATOR {
@@ -224,6 +256,9 @@ func (n *Normalizer) collectMetadata(token *Token, lastValueToken *LastValueToke
 
 func (n *Normalizer) normalizeSQL(token *Token, lastValueToken *LastValueToken, normalizedSQLBuilder *strings.Builder, groupablePlaceholder *groupablePlaceholder, headState *headState, lexerOpts ...lexerOption) {
 	if token.Type != SPACE && token.Type != COMMENT && token.Type != MULTILINE_COMMENT {
+		if token.Type == QUOTED_IDENT && !n.config.KeepIdentifierQuotation {
+			token.Value = trimQuotes(token)
+		}
 
 		// handle leading expression in parentheses
 		if !headState.readFirstNonSpaceNonComment {
