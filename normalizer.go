@@ -98,6 +98,20 @@ type StatementMetadata struct {
 	Comments   []string `json:"comments"`
 	Commands   []string `json:"commands"`
 	Procedures []string `json:"procedures"`
+	// Internal maps for deduping during collection - exclude from JSON
+	tablesSet     map[string]struct{} `json:"-"`
+	commentsSet   map[string]struct{} `json:"-"`
+	commandsSet   map[string]struct{} `json:"-"`
+	proceduresSet map[string]struct{} `json:"-"`
+}
+
+// addMetadata adds a value to a metadata slice if it doesn't exist in the set
+func (sm *StatementMetadata) addMetadata(value string, set map[string]struct{}, slice *[]string) {
+	if _, exists := set[value]; !exists {
+		set[value] = struct{}{}
+		*slice = append(*slice, value)
+		sm.Size += len(value)
+	}
 }
 
 type groupablePlaceholder struct {
@@ -128,6 +142,19 @@ func NewNormalizer(opts ...normalizerOption) *Normalizer {
 	return &normalizer
 }
 
+func NewStatementMetadata() *StatementMetadata {
+	return &StatementMetadata{
+		Tables:        make([]string, 0, 4),
+		Comments:      make([]string, 0, 2),
+		Commands:      make([]string, 0, 4),
+		Procedures:    make([]string, 0),
+		tablesSet:     make(map[string]struct{}, 4),
+		commentsSet:   make(map[string]struct{}, 2),
+		commandsSet:   make(map[string]struct{}, 4),
+		proceduresSet: make(map[string]struct{}, 0),
+	}
+}
+
 // Normalize takes an input SQL string and returns a normalized SQL string, a StatementMetadata struct, and an error.
 // The normalizer collapses input SQL into compact format, groups obfuscated values into single placeholder,
 // and collects metadata such as table names, comments, and commands.
@@ -140,17 +167,12 @@ func (n *Normalizer) Normalize(input string, lexerOpts ...lexerOption) (normaliz
 	normalizedSQLBuilder := new(strings.Builder)
 	normalizedSQLBuilder.Grow(len(input))
 
-	statementMetadata = &StatementMetadata{
-		Tables:     []string{},
-		Comments:   []string{},
-		Commands:   []string{},
-		Procedures: []string{},
-	}
+	statementMetadata = NewStatementMetadata()
 
 	var groupablePlaceholder groupablePlaceholder
 	var headState headState
 
-	ctes := make(map[string]bool) // Holds the CTEs that are currently being processed
+	ctes := make(map[string]bool, 2)
 
 	var lastValueToken *LastValueToken
 
@@ -168,20 +190,17 @@ func (n *Normalizer) Normalize(input string, lexerOpts ...lexerOption) (normaliz
 
 	normalizedSQL = normalizedSQLBuilder.String()
 
-	// Dedupe collected metadata
-	dedupeStatementMetadata(statementMetadata)
-
 	return n.trimNormalizedSQL(normalizedSQL), statementMetadata, nil
 }
 
 func (n *Normalizer) collectMetadata(source *string, token *Token, lastValueToken *LastValueToken, statementMetadata *StatementMetadata, ctes map[string]bool) {
 	if n.config.CollectComments && (token.Type == COMMENT || token.Type == MULTILINE_COMMENT) {
-		// Collect comments
-		statementMetadata.Comments = append(statementMetadata.Comments, token.String(source))
+		comment := token.String(source)
+		statementMetadata.addMetadata(comment, statementMetadata.commentsSet, &statementMetadata.Comments)
 	} else if token.Type == COMMAND {
-		if n.config.CollectCommands && token.Type == COMMAND {
-			// Collect commands
-			statementMetadata.Commands = append(statementMetadata.Commands, strings.ToUpper(token.String(source)))
+		if n.config.CollectCommands {
+			command := strings.ToUpper(token.String(source))
+			statementMetadata.addMetadata(command, statementMetadata.commandsSet, &statementMetadata.Commands)
 		}
 	} else if token.Type == IDENT || token.Type == QUOTED_IDENT || token.Type == FUNCTION {
 		tokenVal := token.String(source)
@@ -192,16 +211,13 @@ func (n *Normalizer) collectMetadata(source *string, token *Token, lastValueToke
 			}
 		}
 		if lastValueToken != nil && lastValueToken.Type == CTE_INDICATOR {
-			// Collect CTEs so we can skip them later in table collection
 			ctes[tokenVal] = true
 		} else if n.config.CollectTables && lastValueToken != nil && lastValueToken.IsTableIndicator {
-			// Collect table names the token is not a CTE
 			if _, ok := ctes[tokenVal]; !ok {
-				statementMetadata.Tables = append(statementMetadata.Tables, tokenVal)
+				statementMetadata.addMetadata(tokenVal, statementMetadata.tablesSet, &statementMetadata.Tables)
 			}
 		} else if n.config.CollectProcedure && lastValueToken != nil && lastValueToken.Type == PROC_INDICATOR {
-			// Collect procedure names
-			statementMetadata.Procedures = append(statementMetadata.Procedures, tokenVal)
+			statementMetadata.addMetadata(tokenVal, statementMetadata.proceduresSet, &statementMetadata.Procedures)
 		}
 	}
 }
@@ -234,7 +250,8 @@ func (n *Normalizer) normalizeSQL(source *string, token *Token, lastValueToken *
 			if err == nil {
 				// replace the content of the dollar quoted function with the normalized content
 				// if there is an error, we just keep the original content
-				var normalizedDollarQuotedFunc strings.Builder
+				normalizedDollarQuotedFunc := new(strings.Builder)
+				normalizedDollarQuotedFunc.Grow(len(normalizedQuotedFunc) + 12)
 				normalizedDollarQuotedFunc.WriteString("$func$")
 				normalizedDollarQuotedFunc.WriteString(normalizedQuotedFunc)
 				normalizedDollarQuotedFunc.WriteString("$func$")
@@ -256,7 +273,7 @@ func (n *Normalizer) normalizeSQL(source *string, token *Token, lastValueToken *
 					// this could be a CTE like WITH ... AS (...),
 					// so we do not discard the current token
 					n.appendWhitespace(source, token, lastValueToken, normalizedSQLBuilder)
-					n.writeToken(source, lastValueToken.Type, lastValueToken.Value, normalizedSQLBuilder)
+					n.writeToken(lastValueToken.Type, lastValueToken.Value, normalizedSQLBuilder)
 				}
 			}
 		}
@@ -269,19 +286,19 @@ func (n *Normalizer) normalizeSQL(source *string, token *Token, lastValueToken *
 
 		if headState.inLeadingParenthesesExpression {
 			n.appendWhitespace(source, token, lastValueToken, &headState.expressionInParentheses)
-			n.writeToken(source, token.Type, token.String(source), &headState.expressionInParentheses)
+			n.writeToken(token.Type, token.String(source), &headState.expressionInParentheses)
 			if token.Type == PUNCTUATION && token.String(source) == ")" {
 				headState.inLeadingParenthesesExpression = false
 				headState.foundLeadingExpressionInParentheses = true
 			}
 		} else {
 			n.appendWhitespace(source, token, lastValueToken, normalizedSQLBuilder)
-			n.writeToken(source, token.Type, token.String(source), normalizedSQLBuilder)
+			n.writeToken(token.Type, token.String(source), normalizedSQLBuilder)
 		}
 	}
 }
 
-func (n *Normalizer) writeToken(source *string, tokenType TokenType, tokenValue string, normalizedSQLBuilder *strings.Builder) {
+func (n *Normalizer) writeToken(tokenType TokenType, tokenValue string, normalizedSQLBuilder *strings.Builder) {
 	if n.config.UppercaseKeywords && (tokenType == COMMAND || tokenType == KEYWORD) {
 		normalizedSQLBuilder.WriteString(strings.ToUpper(tokenValue))
 	} else {
@@ -353,28 +370,4 @@ func (n *Normalizer) trimNormalizedSQL(normalizedSQL string) string {
 		normalizedSQL = strings.TrimSuffix(normalizedSQL, ";")
 	}
 	return strings.TrimSpace(normalizedSQL)
-}
-
-func dedupeCollectedMetadata(metadata []string) (dedupedMetadata []string, size int) {
-	// Dedupe collected metadata
-	// e.g. [SELECT, JOIN, SELECT, JOIN] -> [SELECT, JOIN]
-	dedupedMetadata = []string{}
-	var metadataSeen = make(map[string]struct{})
-	for _, m := range metadata {
-		if _, seen := metadataSeen[m]; !seen {
-			metadataSeen[m] = struct{}{}
-			dedupedMetadata = append(dedupedMetadata, m)
-			size += len(m)
-		}
-	}
-	return dedupedMetadata, size
-}
-
-func dedupeStatementMetadata(info *StatementMetadata) {
-	var tablesSize, commentsSize, commandsSize, procedureSize int
-	info.Tables, tablesSize = dedupeCollectedMetadata(info.Tables)
-	info.Comments, commentsSize = dedupeCollectedMetadata(info.Comments)
-	info.Commands, commandsSize = dedupeCollectedMetadata(info.Commands)
-	info.Procedures, procedureSize = dedupeCollectedMetadata(info.Procedures)
-	info.Size += tablesSize + commentsSize + commandsSize + procedureSize
 }

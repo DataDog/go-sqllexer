@@ -534,7 +534,7 @@ multiline comment */
 			got, statementMetadata, err := ObfuscateAndNormalize(test.input, obfuscator, normalizer, test.lexerOpts...)
 			assert.NoError(t, err)
 			assert.Equal(t, test.expected, got)
-			assert.Equal(t, &test.statementMetadata, statementMetadata)
+			assertStatementMetadataEqual(t, &test.statementMetadata, statementMetadata)
 		})
 	}
 }

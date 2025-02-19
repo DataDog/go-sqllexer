@@ -13,17 +13,12 @@ func ObfuscateAndNormalize(input string, obfuscator *Obfuscator, normalizer *Nor
 	normalizedSQLBuilder := new(strings.Builder)
 	normalizedSQLBuilder.Grow(len(input))
 
-	statementMetadata = &StatementMetadata{
-		Tables:     []string{},
-		Comments:   []string{},
-		Commands:   []string{},
-		Procedures: []string{},
-	}
+	statementMetadata = NewStatementMetadata()
 
 	var groupablePlaceholder groupablePlaceholder
 	var headState headState
 
-	ctes := make(map[string]bool) // Holds the CTEs that are currently being processed
+	ctes := make(map[string]bool, 2) // Holds the CTEs that are currently being processed
 
 	var lastValueToken *LastValueToken
 
@@ -41,9 +36,6 @@ func ObfuscateAndNormalize(input string, obfuscator *Obfuscator, normalizer *Nor
 	}
 
 	normalizedSQL = normalizedSQLBuilder.String()
-
-	// Dedupe collected metadata
-	dedupeStatementMetadata(statementMetadata)
 
 	return normalizer.trimNormalizedSQL(normalizedSQL), statementMetadata, nil
 }

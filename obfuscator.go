@@ -118,7 +118,8 @@ func (o *Obfuscator) ObfuscateTokenValue(source *string, token *Token, lastValue
 		if o.config.DollarQuotedFunc {
 			// obfuscate the content of dollar quoted function
 			quotedFunc := (*source)[token.Start+6 : token.End-6] // remove the $func$ prefix and suffix
-			var obfuscatedDollarQuotedFunc strings.Builder
+			obfuscatedDollarQuotedFunc := new(strings.Builder)
+			obfuscatedDollarQuotedFunc.Grow(len(quotedFunc) + 12)
 			obfuscatedDollarQuotedFunc.WriteString("$func$")
 			obfuscatedDollarQuotedFunc.WriteString(o.Obfuscate(quotedFunc, lexerOpts...))
 			obfuscatedDollarQuotedFunc.WriteString("$func$")

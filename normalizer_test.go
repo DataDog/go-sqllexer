@@ -393,7 +393,7 @@ multiline comment */
 			got, statementMetadata, err := normalizer.Normalize(test.input)
 			assert.NoError(t, err)
 			assert.Equal(t, test.expected, got)
-			assert.Equal(t, &test.statementMetadata, statementMetadata)
+			assertStatementMetadataEqual(t, &test.statementMetadata, statementMetadata)
 		})
 	}
 }
@@ -462,7 +462,7 @@ func TestNormalizerNotCollectMetadata(t *testing.T) {
 			got, statementMetadata, err := normalizer.Normalize(test.input)
 			assert.NoError(t, err)
 			assert.Equal(t, test.expected, got)
-			assert.Equal(t, &test.statementMetadata, statementMetadata)
+			assertStatementMetadataEqual(t, &test.statementMetadata, statementMetadata)
 		})
 	}
 }
@@ -922,7 +922,7 @@ func TestNormalizeDeobfuscatedSQL(t *testing.T) {
 			got, statementMetadata, err := normalizer.Normalize(test.input, test.lexerOptions...)
 			assert.NoError(t, err)
 			assert.Equal(t, test.expected, got)
-			assert.Equal(t, &test.statementMetadata, statementMetadata)
+			assertStatementMetadataEqual(t, &test.statementMetadata, statementMetadata)
 		})
 	}
 }
@@ -1107,7 +1107,7 @@ func TestNormalizerStoredProcedure(t *testing.T) {
 			got, statementMetadata, err := normalizer.Normalize(test.input)
 			assert.NoError(t, err)
 			assert.Equal(t, test.expected, got)
-			assert.Equal(t, &test.statementMetadata, statementMetadata)
+			assertStatementMetadataEqual(t, &test.statementMetadata, statementMetadata)
 		})
 	}
 }
@@ -1187,5 +1187,13 @@ func ExampleNormalizer() {
 	fmt.Println(normalizedSQL)
 	fmt.Println(statementMetadata)
 	// Output: SELECT * FROM users WHERE id in ( ? )
-	// &{34 [users] [/* this is a comment */] [SELECT] []}
+	// &{34 [users] [/* this is a comment */] [SELECT] [] map[users:{}] map[/* this is a comment */:{}] map[SELECT:{}] map[]}
+}
+
+func assertStatementMetadataEqual(t *testing.T, expected, actual *StatementMetadata) {
+	assert.Equal(t, expected.Size, actual.Size)
+	assert.Equal(t, expected.Tables, actual.Tables)
+	assert.Equal(t, expected.Comments, actual.Comments)
+	assert.Equal(t, expected.Commands, actual.Commands)
+	assert.Equal(t, expected.Procedures, actual.Procedures)
 }

@@ -624,7 +624,7 @@ func (s *Lexer) emit(t TokenType) *Token {
 		End:              s.cursor,
 		IsTableIndicator: s.isTableIndicator,
 		ExtraInfo:        extraInfo,
-		LastValueToken:   lastValueToken, // Restore LastValueToken
+		LastValueToken:   lastValueToken,
 	}
 
 	if len(s.digits) > 0 || len(s.quotes) > 0 {
