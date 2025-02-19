@@ -1111,6 +1111,17 @@ func TestNormalizerStoredProcedure(t *testing.T) {
 				Size:       35,
 			},
 		},
+		{
+			input:    "?",
+			expected: "?",
+			statementMetadata: StatementMetadata{
+				Tables:     []string{},
+				Comments:   []string{},
+				Commands:   []string{},
+				Procedures: []string{},
+				Size:       0,
+			},
+		},
 	}
 
 	normalizer := NewNormalizer(

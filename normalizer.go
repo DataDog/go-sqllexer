@@ -343,6 +343,10 @@ func (n *Normalizer) writeToken(tokenType TokenType, tokenValue string, normaliz
 
 func (n *Normalizer) isObfuscatedValueGroupable(token *Token, lastValueToken *LastValueToken, groupablePlaceholder *groupablePlaceholder, normalizedSQLBuilder *strings.Builder) bool {
 	if token.Value == NumberPlaceholder || token.Value == StringPlaceholder {
+		if lastValueToken == nil {
+			// if the last token is nil, we know it's the start of groupable placeholders
+			return false
+		}
 		if lastValueToken.Value == "(" || lastValueToken.Value == "[" {
 			// if the last token is "(" or "[", and the current token is a placeholder,
 			// we know it's the start of groupable placeholders
@@ -363,7 +367,7 @@ func (n *Normalizer) isObfuscatedValueGroupable(token *Token, lastValueToken *La
 		return false
 	}
 
-	if groupablePlaceholder.groupable && token.Value != NumberPlaceholder && token.Value != StringPlaceholder && lastValueToken.Value == "," {
+	if groupablePlaceholder.groupable && token.Value != NumberPlaceholder && token.Value != StringPlaceholder && lastValueToken != nil && lastValueToken.Value == "," {
 		// This is a tricky edge case. If we are inside a groupbale block, and the current token is not a placeholder,
 		// we not only want to write the current token to the normalizedSQLBuilder, but also write the last comma that we skipped.
 		// For example, (?, ARRAY[?, ?, ?]) should be normalized as (?, ARRAY[?])
