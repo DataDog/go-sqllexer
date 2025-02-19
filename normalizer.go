@@ -151,7 +151,7 @@ func NewStatementMetadata() *StatementMetadata {
 		tablesSet:     make(map[string]struct{}, 4),
 		commentsSet:   make(map[string]struct{}, 2),
 		commandsSet:   make(map[string]struct{}, 4),
-		proceduresSet: make(map[string]struct{}, 0),
+		proceduresSet: make(map[string]struct{}),
 	}
 }
 
