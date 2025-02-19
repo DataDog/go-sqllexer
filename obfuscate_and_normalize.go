@@ -25,13 +25,18 @@ func ObfuscateAndNormalize(input string, obfuscator *Obfuscator, normalizer *Nor
 
 	ctes := make(map[string]bool) // Holds the CTEs that are currently being processed
 
+	var lastValueToken *Token
+
 	for {
 		token := lexer.Scan()
-		obfuscator.ObfuscateTokenValue(token, lexerOpts...)
-		normalizer.collectMetadata(token, statementMetadata, ctes)
-		normalizer.normalizeSQL(token, normalizedSQLBuilder, &groupablePlaceholder, &headState, lexerOpts...)
+		obfuscator.ObfuscateTokenValue(token, lastValueToken, lexerOpts...)
+		normalizer.collectMetadata(token, lastValueToken, statementMetadata, ctes)
+		normalizer.normalizeSQL(token, lastValueToken, normalizedSQLBuilder, &groupablePlaceholder, &headState, lexerOpts...)
 		if token.Type == EOF {
 			break
+		}
+		if isValueToken(token) {
+			lastValueToken = token
 		}
 	}
 

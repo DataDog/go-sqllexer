@@ -39,15 +39,25 @@ const (
 
 // Token represents a SQL token with its type and value.
 type Token struct {
-	Type               TokenType
-	IsTableIndicator   bool    // true if the token is a table indicator
-	Start              int     // Start position in source
-	End                int     // End position in source
-	Source             *string // Pointer to original input
-	PreviousValueToken *Token  // Link to previous value token (not whitespace or comment)
-	Digits             []int   // Indexes of digits in the token
-	Quotes             []int   // Indexes of quotes in the token
-	OutputValue        string  // Output value of the token
+	Type             TokenType
+	IsTableIndicator bool
+	Start            int
+	End              int
+	Source           *string
+	ExtraInfo        *tokenExtraInfo
+}
+
+type tokenExtraInfo struct {
+	Digits      []int
+	Quotes      []int
+	OutputValue string
+}
+
+func (t *Token) SetOutputValue(outputValue string) {
+	if t.ExtraInfo == nil {
+		t.ExtraInfo = &tokenExtraInfo{}
+	}
+	t.ExtraInfo.OutputValue = outputValue
 }
 
 // Add method to get value when needed
@@ -56,8 +66,8 @@ func (t *Token) Value() string {
 }
 
 func (t *Token) String() string {
-	if t.OutputValue != "" {
-		return t.OutputValue
+	if t.ExtraInfo != nil && t.ExtraInfo.OutputValue != "" {
+		return t.ExtraInfo.OutputValue
 	}
 	return t.Value()
 }
@@ -88,10 +98,9 @@ type Lexer struct {
 	cursor           int    // the current position of the cursor
 	start            int    // the start position of the current token
 	config           *LexerConfig
-	lastValueToken   *Token // Track last non-whitespace token
-	digits           []int  // Indexes of digits in the token
-	quotes           []int  // Indexes of quotes in the token
-	isTableIndicator bool   // true if the token is a table indicator
+	digits           []int // Indexes of digits in the token
+	quotes           []int // Indexes of quotes in the token
+	isTableIndicator bool  // true if the token is a table indicator
 }
 
 func New(input string, opts ...lexerOption) *Lexer {
@@ -624,23 +633,26 @@ func (s *Lexer) scanSystemVariable() *Token {
 // Modify emit function to use positions and maintain links
 func (s *Lexer) emit(t TokenType) *Token {
 	tok := &Token{
-		Type:               t,
-		Start:              s.start,
-		End:                s.cursor,
-		Source:             &s.src,
-		PreviousValueToken: s.lastValueToken,
-		Digits:             s.digits,
-		Quotes:             s.quotes,
-		IsTableIndicator:   s.isTableIndicator,
+		Type:   t,
+		Start:  s.start,
+		End:    s.cursor,
+		Source: &s.src,
 	}
 
-	if t != WS && t != COMMENT && t != MULTILINE_COMMENT {
-		s.lastValueToken = tok
+	if len(s.digits) > 0 || len(s.quotes) > 0 {
+		tok.ExtraInfo = &tokenExtraInfo{
+			Digits: s.digits,
+			Quotes: s.quotes,
+		}
+	}
+
+	if s.isTableIndicator {
+		tok.IsTableIndicator = s.isTableIndicator
+		s.isTableIndicator = false // reset table indicator for the next token
 	}
 
 	s.start = s.cursor
-	s.digits = nil             // reset digits for the next token
-	s.quotes = nil             // reset quotes for the next token
-	s.isTableIndicator = false // reset table indicator for the next token
+	s.digits = nil // reset digits for the next token
+	s.quotes = nil // reset quotes for the next token
 	return tok
 }

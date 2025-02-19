@@ -1045,7 +1045,13 @@ func TestLexerIdentifierWithDigits(t *testing.T) {
 			}
 
 			for i, digits := range tt.expectedDigits {
-				got := tokens[i].Digits
+				if digits == nil {
+					if tokens[i].ExtraInfo != nil && tokens[i].ExtraInfo.Digits != nil {
+						t.Errorf("token[%d] got digits, want nil", i)
+					}
+					continue
+				}
+				got := tokens[i].ExtraInfo.Digits
 				if len(got) != len(digits) {
 					t.Errorf("token[%d] got %d digits, want %d", i, len(got), len(digits))
 					continue
@@ -1138,88 +1144,6 @@ func TestLexerUnicode(t *testing.T) {
 					t.Errorf("token[%d] got end %v, want %v", i, got.End, want.End)
 				}
 			}
-		})
-	}
-}
-
-func TestTokenPointers(t *testing.T) {
-	tests := []struct {
-		name   string
-		input  string
-		verify func(t *testing.T, tokens []*Token)
-	}{
-		{
-			name:  "select with comments - verify PreviousValueToken",
-			input: "SELECT * -- comment\n FROM users",
-			verify: func(t *testing.T, tokens []*Token) {
-				// Expected sequence of non-WS tokens: SELECT, *, COMMENT, FROM, users
-				valueTokens := make([]*Token, 0)
-				for _, tok := range tokens {
-					if isValueToken(tok) {
-						valueTokens = append(valueTokens, tok)
-					}
-				}
-
-				// Verify PreviousValueToken pointers
-				for i := 1; i < len(valueTokens); i++ {
-					if valueTokens[i].PreviousValueToken != valueTokens[i-1] {
-						t.Errorf("token '%v' PreviousValueToken points to '%v', want '%v'",
-							valueTokens[i].Value(),
-							valueTokens[i].PreviousValueToken.Value(),
-							valueTokens[i-1].Value())
-					}
-				}
-				// First non-WS token should have nil PreviousValueToken
-				if valueTokens[0].PreviousValueToken != nil {
-					t.Errorf("first value token PreviousValueToken = %v, want nil",
-						valueTokens[0].PreviousValueToken)
-				}
-			},
-		},
-		{
-			name:  "complex query - verify both pointers",
-			input: "SELECT age, /* comment */ name FROM users WHERE id = 1",
-			verify: func(t *testing.T, tokens []*Token) {
-				// Map to store expected PreviousValueToken relationships
-				expectedPrevValueTokens := map[string]string{
-					"age":   "SELECT",
-					",":     "age",
-					"name":  ",",
-					"FROM":  "name",
-					"users": "FROM",
-					"WHERE": "users",
-					"id":    "WHERE",
-					"=":     "id",
-					"1":     "=",
-				}
-
-				for _, tok := range tokens {
-					if tok.Type == WS {
-						continue
-					}
-					if tok.PreviousValueToken == nil {
-						if expectedPrev, exists := expectedPrevValueTokens[tok.Value()]; exists {
-							t.Errorf("token '%v' has nil PreviousValueToken, want '%v'",
-								tok.Value(), expectedPrev)
-						}
-					} else if expected, exists := expectedPrevValueTokens[tok.Value()]; exists {
-						if tok.PreviousValueToken.Value() != expected {
-							t.Errorf("token '%v' PreviousValueToken points to '%v', want '%v'",
-								tok.Value(),
-								tok.PreviousValueToken.Value(),
-								expected)
-						}
-					}
-				}
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			lexer := New(tt.input)
-			tokens := lexer.ScanAll()
-			tt.verify(t, tokens)
 		})
 	}
 }

@@ -13,18 +13,20 @@ func TestObfuscationAndNormalization(t *testing.T) {
 		statementMetadata StatementMetadata
 		lexerOpts         []lexerOption
 	}{
-		// {
-		// 	// boolean and null
-		// 	input:    `SELECT * FROM (SELECT customer_id, product_id, amount FROM order_details) AS SourceTable PIVOT (SUM(amount) FOR product_id IN ([1], [2], [3])) AS PivotTable;`,
-		// 	expected: `SELECT * FROM ( SELECT customer_id, product_id, amount FROM order_details ) PIVOT ( SUM ( amount ) FOR product_id IN ( ? ) )`,
-		// 	statementMetadata: StatementMetadata{
-		// 		Tables:     []string{"users"},
-		// 		Comments:   []string{},
-		// 		Commands:   []string{"SELECT"},
-		// 		Procedures: []string{},
-		// 		Size:       11,
-		// 	},
-		// },
+		{
+			input:    `DELETE FROM [discount]  WHERE [description]=@1`,
+			expected: `DELETE FROM discount WHERE description = @1`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"discount"},
+				Comments:   []string{},
+				Commands:   []string{"DELETE"},
+				Procedures: []string{},
+				Size:       14,
+			},
+			lexerOpts: []lexerOption{
+				WithDBMS(DBMSSQLServer),
+			},
+		},
 		{
 			input:    "SELECT 1",
 			expected: "SELECT ?",

@@ -221,10 +221,6 @@ var keywordRoot = buildCombinedTrie()
 // TODO: Optimize these functions to work with rune positions instead of string operations
 // They are currently used by obfuscator and normalizer, which we'll optimize later
 func replaceDigits(token *Token, placeholder string) string {
-	if token.Digits == nil {
-		return token.Value()
-	}
-
 	var replacedToken = new(strings.Builder)
 	replacedToken.Grow(token.End - token.Start)
 
@@ -233,43 +229,45 @@ func replaceDigits(token *Token, placeholder string) string {
 	// loop over token.digits indexes, write start:token.digits[i] to builder
 	// write placeholder to builder if no consecutive digits
 	// write start:token.End to builder
-	for i := 0; i < len(token.Digits); i++ {
-		if token.Digits[i]-start >= 1 {
-			replacedToken.WriteString((*token.Source)[start:token.Digits[i]])
+	for i := 0; i < len(token.ExtraInfo.Digits); i++ {
+		if token.ExtraInfo.Digits[i]-start >= 1 {
+			replacedToken.WriteString((*token.Source)[start:token.ExtraInfo.Digits[i]])
 		}
-		if i == 0 || token.Digits[i] != token.Digits[i-1]+1 {
+		if i == 0 || token.ExtraInfo.Digits[i] != token.ExtraInfo.Digits[i-1]+1 {
 			replacedToken.WriteString(placeholder)
 		}
-		start = token.Digits[i] + 1
+		start = token.ExtraInfo.Digits[i] + 1
 	}
 
 	// write start:token.End to builder
 	replacedToken.WriteString((*token.Source)[start:token.End])
+	token.ExtraInfo.Digits = nil
 	return replacedToken.String()
 }
 
 func trimQuotes(token *Token) string {
-	if token.Quotes == nil {
+	if token.ExtraInfo == nil || token.ExtraInfo.Quotes == nil {
 		return token.Value()
 	}
 
 	var trimmedToken = new(strings.Builder)
-	trimmedToken.Grow(token.End - token.Start - len(token.Quotes))
+	trimmedToken.Grow(token.End - token.Start - len(token.ExtraInfo.Quotes))
 
 	start := token.Start
 
 	// loop over token.digits indexes, write start:token.digits[i] to builder
 	// write placeholder to builder if no consecutive digits
 	// write start:token.End to builder
-	for i := 0; i < len(token.Quotes); i++ {
-		if token.Quotes[i]-start >= 1 {
-			trimmedToken.WriteString((*token.Source)[start:token.Quotes[i]])
+	for i := 0; i < len(token.ExtraInfo.Quotes); i++ {
+		if token.ExtraInfo.Quotes[i]-start >= 1 {
+			trimmedToken.WriteString((*token.Source)[start:token.ExtraInfo.Quotes[i]])
 		}
-		start = token.Quotes[i] + 1
+		start = token.ExtraInfo.Quotes[i] + 1
 	}
 
 	// write start:token.End to builder
 	trimmedToken.WriteString((*token.Source)[start:token.End])
+	token.ExtraInfo.Quotes = nil
 	return trimmedToken.String()
 }
 
