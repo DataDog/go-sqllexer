@@ -110,7 +110,7 @@ func (o *Obfuscator) Obfuscate(input string, lexerOpts ...lexerOption) string {
 func (o *Obfuscator) ObfuscateTokenValue(token *Token, lastValueToken *LastValueToken, lexerOpts ...lexerOption) {
 	switch token.Type {
 	case NUMBER:
-		if o.config.KeepJsonPath && lastValueToken.Type == JSON_OP {
+		if o.config.KeepJsonPath && lastValueToken != nil && lastValueToken.Type == JSON_OP {
 			break
 		}
 		token.Value = NumberPlaceholder
@@ -128,7 +128,7 @@ func (o *Obfuscator) ObfuscateTokenValue(token *Token, lastValueToken *LastValue
 		}
 		token.Value = StringPlaceholder
 	case STRING, INCOMPLETE_STRING, DOLLAR_QUOTED_STRING:
-		if o.config.KeepJsonPath && lastValueToken.Type == JSON_OP {
+		if o.config.KeepJsonPath && lastValueToken != nil && lastValueToken.Type == JSON_OP {
 			break
 		}
 		token.Value = StringPlaceholder
