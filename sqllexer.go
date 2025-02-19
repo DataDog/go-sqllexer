@@ -40,8 +40,8 @@ const (
 // Token represents a SQL token with its type and value.
 type Token struct {
 	Type             TokenType
-	IsTableIndicator bool
 	Value            string
+	isTableIndicator bool           // true if the token is a table indicator
 	digits           []int          // private - only used by replaceDigits
 	quotes           []int          // private - only used by trimQuotes
 	lastValueToken   LastValueToken // private - internal state
@@ -50,14 +50,14 @@ type Token struct {
 type LastValueToken struct {
 	Type             TokenType
 	Value            string
-	IsTableIndicator bool
+	isTableIndicator bool
 }
 
 // getLastValueToken can be private since it's only used internally
 func (t *Token) getLastValueToken() *LastValueToken {
 	t.lastValueToken.Type = t.Type
 	t.lastValueToken.Value = t.Value
-	t.lastValueToken.IsTableIndicator = t.IsTableIndicator
+	t.lastValueToken.isTableIndicator = t.isTableIndicator
 	return &t.lastValueToken
 }
 
@@ -597,7 +597,7 @@ func (s *Lexer) emit(t TokenType) *Token {
 	*tok = Token{
 		Type:             t,
 		Value:            s.src[s.start:s.cursor],
-		IsTableIndicator: s.isTableIndicator,
+		isTableIndicator: s.isTableIndicator,
 		lastValueToken:   lastValueToken,
 	}
 

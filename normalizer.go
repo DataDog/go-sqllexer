@@ -244,7 +244,7 @@ func (n *Normalizer) collectMetadata(token *Token, lastValueToken *LastValueToke
 		}
 		if lastValueToken != nil && lastValueToken.Type == CTE_INDICATOR {
 			ctes[tokenVal] = true
-		} else if n.config.CollectTables && lastValueToken != nil && lastValueToken.IsTableIndicator {
+		} else if n.config.CollectTables && lastValueToken != nil && lastValueToken.isTableIndicator {
 			if _, ok := ctes[tokenVal]; !ok {
 				statementMetadata.addMetadata(tokenVal, statementMetadata.tablesSet, &statementMetadata.Tables)
 			}
