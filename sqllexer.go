@@ -9,7 +9,7 @@ type TokenType int
 const (
 	ERROR TokenType = iota
 	EOF
-	WS                     // whitespace
+	SPACE                  // space or newline
 	STRING                 // string literal
 	INCOMPLETE_STRING      // incomplete string literal so that we can obfuscate it, e.g. 'abc
 	NUMBER                 // number literal
@@ -41,8 +41,6 @@ const (
 type Token struct {
 	Type             TokenType
 	IsTableIndicator bool
-	Start            int
-	End              int
 	Value            string
 	Digits           []int
 	Quotes           []int
@@ -110,7 +108,7 @@ func New(input string, opts ...lexerOption) *Lexer {
 func (s *Lexer) Scan() *Token {
 	ch := s.peek()
 	switch {
-	case isWhitespace(ch):
+	case isSpace(ch):
 		return s.scanWhitespace()
 	case isLetter(ch):
 		return s.scanIdentifier(ch)
@@ -334,11 +332,13 @@ func (s *Lexer) scanIdentifier(ch rune) *Token {
 	node := keywordRoot
 	pos := s.cursor
 
+	offset := s.start // offset is used to calculate the indexes of digits in the token value
+
 	// If first character is Unicode, skip trie lookup
 	if ch > 127 {
 		for isIdentifier(ch) {
 			if isDigit(ch) {
-				s.digits = append(s.digits, s.cursor)
+				s.digits = append(s.digits, s.cursor-offset)
 			}
 			ch = s.nextBy(utf8.RuneLen(ch))
 		}
@@ -369,7 +369,7 @@ func (s *Lexer) scanIdentifier(ch rune) *Token {
 	}
 
 	// If we found a complete keyword and next char is whitespace
-	if node.isEnd && (isPunctuation(s.peek()) || isWhitespace(s.peek()) || isEOF(s.peek())) {
+	if node.isEnd && (isPunctuation(s.peek()) || isSpace(s.peek()) || isEOF(s.peek())) {
 		s.cursor = pos + 1 // Include the last matched character
 		s.isTableIndicator = node.isTableIndicator
 		return s.emit(node.tokenType)
@@ -378,7 +378,7 @@ func (s *Lexer) scanIdentifier(ch rune) *Token {
 	// Continue scanning identifier if no keyword match
 	for isIdentifier(ch) {
 		if isDigit(ch) {
-			s.digits = append(s.digits, s.cursor)
+			s.digits = append(s.digits, s.cursor-offset)
 		}
 		ch = s.nextBy(utf8.RuneLen(ch))
 	}
@@ -396,18 +396,19 @@ func (s *Lexer) scanDoubleQuotedIdentifier(delimiter rune) *Token {
 	}
 
 	s.start = s.cursor
-	s.quotes = append(s.quotes, s.cursor) // store the opening quote position
-	ch := s.next()                        // consume the opening quote
+	offset := s.start                            // offset is used to calculate the indexes of quotes in the token value
+	s.quotes = append(s.quotes, s.cursor-offset) // store the opening quote position
+	ch := s.next()                               // consume the opening quote
 	for {
 		// encountered the closing quote
 		// BUT if it's followed by .", then we should keep going
 		// e.g. postgre "foo"."bar"
 		// e.g. sqlserver [foo].[bar]
 		if ch == closingDelimiter {
-			s.quotes = append(s.quotes, s.cursor)
+			s.quotes = append(s.quotes, s.cursor-offset)
 			specialCase := []rune{closingDelimiter, '.', delimiter}
 			if s.matchAt([]rune(specialCase)) {
-				s.quotes = append(s.quotes, s.cursor+2)
+				s.quotes = append(s.quotes, s.cursor+2-offset)
 				ch = s.nextBy(3) // consume the "."
 				continue
 			}
@@ -417,7 +418,7 @@ func (s *Lexer) scanDoubleQuotedIdentifier(delimiter rune) *Token {
 			return s.emit(ERROR)
 		}
 		if isDigit(ch) {
-			s.digits = append(s.digits, s.cursor)
+			s.digits = append(s.digits, s.cursor-offset)
 		}
 		ch = s.next()
 	}
@@ -429,10 +430,10 @@ func (s *Lexer) scanWhitespace() *Token {
 	// scan whitespace, tab, newline, carriage return
 	s.start = s.cursor
 	ch := s.next()
-	for isWhitespace(ch) {
+	for isSpace(ch) {
 		ch = s.next()
 	}
-	return s.emit(WS)
+	return s.emit(SPACE)
 }
 
 func (s *Lexer) scanOperator(lastCh rune) *Token {
@@ -594,8 +595,6 @@ func (s *Lexer) emit(t TokenType) *Token {
 	// Zero other fields
 	*tok = Token{
 		Type:             t,
-		Start:            s.start,
-		End:              s.cursor,
 		Value:            s.src[s.start:s.cursor],
 		IsTableIndicator: s.isTableIndicator,
 		LastValueToken:   lastValueToken,

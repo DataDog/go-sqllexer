@@ -119,7 +119,7 @@ type groupablePlaceholder struct {
 }
 
 type headState struct {
-	readFirstNonWSNonComment            bool
+	readFirstNonSpaceNonComment         bool
 	inLeadingParenthesesExpression      bool
 	foundLeadingExpressionInParentheses bool
 	standaloneExpressionInParentheses   bool
@@ -223,11 +223,11 @@ func (n *Normalizer) collectMetadata(token *Token, lastValueToken *LastValueToke
 }
 
 func (n *Normalizer) normalizeSQL(token *Token, lastValueToken *LastValueToken, normalizedSQLBuilder *strings.Builder, groupablePlaceholder *groupablePlaceholder, headState *headState, lexerOpts ...lexerOption) {
-	if token.Type != WS && token.Type != COMMENT && token.Type != MULTILINE_COMMENT {
+	if token.Type != SPACE && token.Type != COMMENT && token.Type != MULTILINE_COMMENT {
 
 		// handle leading expression in parentheses
-		if !headState.readFirstNonWSNonComment {
-			headState.readFirstNonWSNonComment = true
+		if !headState.readFirstNonSpaceNonComment {
+			headState.readFirstNonSpaceNonComment = true
 			if token.Type == PUNCTUATION && token.Value == "(" {
 				headState.inLeadingParenthesesExpression = true
 				headState.standaloneExpressionInParentheses = true

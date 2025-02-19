@@ -222,17 +222,16 @@ var keywordRoot = buildCombinedTrie()
 // They are currently used by obfuscator and normalizer, which we'll optimize later
 func replaceDigits(token *Token, placeholder string) string {
 	var replacedToken = new(strings.Builder)
-	replacedToken.Grow(token.End - token.Start)
+	replacedToken.Grow(len(token.Value))
 
-	start := token.Start
-	offset := token.Start
+	start := 0
 
 	// loop over token.digits indexes, write start:token.digits[i] to builder
 	// write placeholder to builder if no consecutive digits
 	// write start:token.End to builder
 	for i := 0; i < len(token.Digits); i++ {
 		if token.Digits[i]-start >= 1 {
-			replacedToken.WriteString(token.Value[start-offset : token.Digits[i]-offset])
+			replacedToken.WriteString(token.Value[start:token.Digits[i]])
 		}
 		if i == 0 || token.Digits[i] != token.Digits[i-1]+1 {
 			replacedToken.WriteString(placeholder)
@@ -241,7 +240,7 @@ func replaceDigits(token *Token, placeholder string) string {
 	}
 
 	// write start:token.End to builder
-	replacedToken.WriteString(token.Value[start-offset : token.End-offset])
+	replacedToken.WriteString(token.Value[start:len(token.Value)])
 	token.Digits = nil
 	return replacedToken.String()
 }
@@ -250,21 +249,20 @@ func trimQuotes(token *Token) string {
 	var trimmedToken = new(strings.Builder)
 	trimmedToken.Grow(len(token.Value) - len(token.Quotes))
 
-	start := token.Start
-	offset := token.Start
+	start := 0
 
 	// loop over token.digits indexes, write start:token.digits[i] to builder
 	// write placeholder to builder if no consecutive digits
 	// write start:token.End to builder
 	for i := 0; i < len(token.Quotes); i++ {
 		if token.Quotes[i]-start >= 1 {
-			trimmedToken.WriteString(token.Value[start-offset : token.Quotes[i]-offset])
+			trimmedToken.WriteString(token.Value[start:token.Quotes[i]])
 		}
 		start = token.Quotes[i] + 1
 	}
 
 	// write start:token.End to builder
-	trimmedToken.WriteString(token.Value[start-offset : token.End-offset])
+	trimmedToken.WriteString(token.Value[start:len(token.Value)])
 	token.Quotes = nil
 	return trimmedToken.String()
 }
@@ -282,7 +280,7 @@ func isExpontent(ch rune) bool {
 	return ch == 'e' || ch == 'E'
 }
 
-func isWhitespace(ch rune) bool {
+func isSpace(ch rune) bool {
 	return ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r'
 }
 
@@ -336,7 +334,7 @@ func isEOF(ch rune) bool {
 }
 
 func isValueToken(token *Token) bool {
-	return token.Type != EOF && token.Type != WS && token.Type != COMMENT && token.Type != MULTILINE_COMMENT
+	return token.Type != EOF && token.Type != SPACE && token.Type != COMMENT && token.Type != MULTILINE_COMMENT
 }
 
 func isIdentifier(ch rune) bool {
