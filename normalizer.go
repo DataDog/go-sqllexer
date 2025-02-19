@@ -307,7 +307,7 @@ func (n *Normalizer) normalizeSQL(token *Token, lastValueToken *LastValueToken, 
 					// if the last token is AS and the current token is not IDENT,
 					// this could be a CTE like WITH ... AS (...),
 					// so we do not discard the current token
-					n.appendWhitespace(token, lastValueToken, normalizedSQLBuilder)
+					n.appendSpace(token, lastValueToken, normalizedSQLBuilder)
 					n.writeToken(lastValueToken.Type, lastValueToken.Value, normalizedSQLBuilder)
 				}
 			}
@@ -320,14 +320,14 @@ func (n *Normalizer) normalizeSQL(token *Token, lastValueToken *LastValueToken, 
 		}
 
 		if headState.inLeadingParenthesesExpression {
-			n.appendWhitespace(token, lastValueToken, &headState.expressionInParentheses)
+			n.appendSpace(token, lastValueToken, &headState.expressionInParentheses)
 			n.writeToken(token.Type, token.Value, &headState.expressionInParentheses)
 			if token.Type == PUNCTUATION && token.Value == ")" {
 				headState.inLeadingParenthesesExpression = false
 				headState.foundLeadingExpressionInParentheses = true
 			}
 		} else {
-			n.appendWhitespace(token, lastValueToken, normalizedSQLBuilder)
+			n.appendSpace(token, lastValueToken, normalizedSQLBuilder)
 			n.writeToken(token.Type, token.Value, normalizedSQLBuilder)
 		}
 	}
@@ -374,7 +374,7 @@ func (n *Normalizer) isObfuscatedValueGroupable(token *Token, lastValueToken *La
 	return false
 }
 
-func (n *Normalizer) appendWhitespace(token *Token, lastValueToken *LastValueToken, normalizedSQLBuilder *strings.Builder) {
+func (n *Normalizer) appendSpace(token *Token, lastValueToken *LastValueToken, normalizedSQLBuilder *strings.Builder) {
 	// do not add a space between parentheses if RemoveSpaceBetweenParentheses is true
 	if n.config.RemoveSpaceBetweenParentheses && lastValueToken != nil && (lastValueToken.Type == FUNCTION || lastValueToken.Value == "(" || lastValueToken.Value == "[") {
 		return
