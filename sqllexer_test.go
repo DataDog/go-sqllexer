@@ -1057,16 +1057,16 @@ func TestLexerIdentifierWithDigits(t *testing.T) {
 				if i < len(tt.expectedDigits) {
 					digits := tt.expectedDigits[i]
 					if digits == nil {
-						if got.Digits != nil {
+						if got.digits != nil {
 							t.Errorf("token[%d] got digits, want nil", i)
 						}
 					} else {
-						if len(got.Digits) != len(digits) {
-							t.Errorf("token[%d] got %d digits, want %d", i, len(got.Digits), len(digits))
+						if len(got.digits) != len(digits) {
+							t.Errorf("token[%d] got %d digits, want %d", i, len(got.digits), len(digits))
 						} else {
 							for j, digit := range digits {
-								if got.Digits[j] != digit {
-									t.Errorf("token[%d] got digit[%d] %d, want %d", i, j, got.Digits[j], digit)
+								if got.digits[j] != digit {
+									t.Errorf("token[%d] got digit[%d] %d, want %d", i, j, got.digits[j], digit)
 								}
 							}
 						}

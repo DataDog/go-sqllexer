@@ -42,9 +42,9 @@ type Token struct {
 	Type             TokenType
 	IsTableIndicator bool
 	Value            string
-	Digits           []int
-	Quotes           []int
-	LastValueToken   LastValueToken
+	digits           []int          // private - only used by replaceDigits
+	quotes           []int          // private - only used by trimQuotes
+	lastValueToken   LastValueToken // private - internal state
 }
 
 type LastValueToken struct {
@@ -53,11 +53,12 @@ type LastValueToken struct {
 	IsTableIndicator bool
 }
 
-func (t *Token) GetLastValueToken() *LastValueToken {
-	t.LastValueToken.Type = t.Type
-	t.LastValueToken.Value = t.Value
-	t.LastValueToken.IsTableIndicator = t.IsTableIndicator
-	return &t.LastValueToken
+// getLastValueToken can be private since it's only used internally
+func (t *Token) getLastValueToken() *LastValueToken {
+	t.lastValueToken.Type = t.Type
+	t.lastValueToken.Value = t.Value
+	t.lastValueToken.IsTableIndicator = t.IsTableIndicator
+	return &t.lastValueToken
 }
 
 type LexerConfig struct {
@@ -590,26 +591,26 @@ func (s *Lexer) scanSystemVariable() *Token {
 // Modify emit function to use positions and maintain links
 func (s *Lexer) emit(t TokenType) *Token {
 	tok := s.token
-	lastValueToken := tok.LastValueToken
+	lastValueToken := tok.lastValueToken
 
 	// Zero other fields
 	*tok = Token{
 		Type:             t,
 		Value:            s.src[s.start:s.cursor],
 		IsTableIndicator: s.isTableIndicator,
-		LastValueToken:   lastValueToken,
+		lastValueToken:   lastValueToken,
 	}
 
 	if len(s.digits) > 0 {
-		tok.Digits = s.digits
+		tok.digits = s.digits
 	} else {
-		tok.Digits = nil
+		tok.digits = nil
 	}
 
 	if len(s.quotes) > 0 {
-		tok.Quotes = s.quotes
+		tok.quotes = s.quotes
 	} else {
-		tok.Quotes = nil
+		tok.quotes = nil
 	}
 
 	// Reset lexer state

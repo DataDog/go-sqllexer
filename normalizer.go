@@ -184,7 +184,7 @@ func (n *Normalizer) Normalize(input string, lexerOpts ...lexerOption) (normaliz
 			break
 		}
 		if isValueToken(token) {
-			lastValueToken = token.GetLastValueToken()
+			lastValueToken = token.getLastValueToken()
 		}
 	}
 

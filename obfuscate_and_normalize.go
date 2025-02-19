@@ -31,7 +31,7 @@ func ObfuscateAndNormalize(input string, obfuscator *Obfuscator, normalizer *Nor
 			break
 		}
 		if isValueToken(token) {
-			lastValueToken = token.GetLastValueToken()
+			lastValueToken = token.getLastValueToken()
 		}
 	}
 
