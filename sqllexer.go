@@ -43,6 +43,7 @@ type Token struct {
 	IsTableIndicator bool
 	Start            int
 	End              int
+	Value            string
 	ExtraInfo        *tokenExtraInfo
 	LastValueToken   LastValueToken
 }
@@ -54,33 +55,13 @@ type LastValueToken struct {
 }
 
 type tokenExtraInfo struct {
-	Digits      []int
-	Quotes      []int
-	OutputValue string
+	Digits []int
+	Quotes []int
 }
 
-func (t *Token) SetOutputValue(outputValue string) {
-	if t.ExtraInfo == nil {
-		t.ExtraInfo = &tokenExtraInfo{}
-	}
-	t.ExtraInfo.OutputValue = outputValue
-}
-
-// Add method to get value when needed
-func (t *Token) Value(source *string) string {
-	return (*source)[t.Start:t.End]
-}
-
-func (t *Token) String(source *string) string {
-	if t.ExtraInfo != nil && t.ExtraInfo.OutputValue != "" {
-		return t.ExtraInfo.OutputValue
-	}
-	return t.Value(source)
-}
-
-func (t *Token) GetLastValueToken(source *string) *LastValueToken {
+func (t *Token) GetLastValueToken() *LastValueToken {
 	t.LastValueToken.Type = t.Type
-	t.LastValueToken.Value = t.String(source)
+	t.LastValueToken.Value = t.Value
 	t.LastValueToken.IsTableIndicator = t.IsTableIndicator
 	return &t.LastValueToken
 }
@@ -615,13 +596,14 @@ func (s *Lexer) scanSystemVariable() *Token {
 func (s *Lexer) emit(t TokenType) *Token {
 	tok := s.token
 	extraInfo := tok.ExtraInfo
-	lastValueToken := tok.LastValueToken // Save LastValueToken
+	lastValueToken := tok.LastValueToken
 
 	// Zero other fields
 	*tok = Token{
 		Type:             t,
 		Start:            s.start,
 		End:              s.cursor,
+		Value:            s.src[s.start:s.cursor],
 		IsTableIndicator: s.isTableIndicator,
 		ExtraInfo:        extraInfo,
 		LastValueToken:   lastValueToken,
@@ -634,7 +616,6 @@ func (s *Lexer) emit(t TokenType) *Token {
 		tok.ExtraInfo.Digits = nil
 		tok.ExtraInfo.Quotes = nil
 	}
-	tok.ExtraInfo.OutputValue = "" // Reset this
 
 	// Reset lexer state
 	s.start = s.cursor
