@@ -220,7 +220,7 @@ var keywordRoot = buildCombinedTrie()
 
 // TODO: Optimize these functions to work with rune positions instead of string operations
 // They are currently used by obfuscator and normalizer, which we'll optimize later
-func replaceDigits(token *Token, placeholder string) string {
+func replaceDigits(source *string, token *Token, placeholder string) string {
 	var replacedToken = new(strings.Builder)
 	replacedToken.Grow(token.End - token.Start)
 
@@ -231,7 +231,7 @@ func replaceDigits(token *Token, placeholder string) string {
 	// write start:token.End to builder
 	for i := 0; i < len(token.ExtraInfo.Digits); i++ {
 		if token.ExtraInfo.Digits[i]-start >= 1 {
-			replacedToken.WriteString((*token.Source)[start:token.ExtraInfo.Digits[i]])
+			replacedToken.WriteString((*source)[start:token.ExtraInfo.Digits[i]])
 		}
 		if i == 0 || token.ExtraInfo.Digits[i] != token.ExtraInfo.Digits[i-1]+1 {
 			replacedToken.WriteString(placeholder)
@@ -240,16 +240,12 @@ func replaceDigits(token *Token, placeholder string) string {
 	}
 
 	// write start:token.End to builder
-	replacedToken.WriteString((*token.Source)[start:token.End])
+	replacedToken.WriteString((*source)[start:token.End])
 	token.ExtraInfo.Digits = nil
 	return replacedToken.String()
 }
 
-func trimQuotes(token *Token) string {
-	if token.ExtraInfo == nil || token.ExtraInfo.Quotes == nil {
-		return token.Value()
-	}
-
+func trimQuotes(source *string, token *Token) string {
 	var trimmedToken = new(strings.Builder)
 	trimmedToken.Grow(token.End - token.Start - len(token.ExtraInfo.Quotes))
 
@@ -260,13 +256,13 @@ func trimQuotes(token *Token) string {
 	// write start:token.End to builder
 	for i := 0; i < len(token.ExtraInfo.Quotes); i++ {
 		if token.ExtraInfo.Quotes[i]-start >= 1 {
-			trimmedToken.WriteString((*token.Source)[start:token.ExtraInfo.Quotes[i]])
+			trimmedToken.WriteString((*source)[start:token.ExtraInfo.Quotes[i]])
 		}
 		start = token.ExtraInfo.Quotes[i] + 1
 	}
 
 	// write start:token.End to builder
-	trimmedToken.WriteString((*token.Source)[start:token.End])
+	trimmedToken.WriteString((*source)[start:token.End])
 	token.ExtraInfo.Quotes = nil
 	return trimmedToken.String()
 }

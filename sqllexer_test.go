@@ -952,15 +952,24 @@ here */`,
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			lexer := New(tt.input, tt.lexerOpts...)
-			tokens := lexer.ScanAll()
+			i := 0
 
-			if len(tokens) != len(tt.expected) {
-				t.Errorf("got %d tokens, want %d", len(tokens), len(tt.expected))
-				return
-			}
+			for {
+				got := lexer.Scan()
+				if got.Type == EOF {
+					// Check if we've processed all expected tokens
+					if i != len(tt.expected) {
+						t.Errorf("got %d tokens, want %d", i, len(tt.expected))
+					}
+					break
+				}
 
-			for i, want := range tt.expected {
-				got := tokens[i]
+				if i >= len(tt.expected) {
+					t.Errorf("got more tokens than expected at position %d", i)
+					break
+				}
+
+				want := tt.expected[i]
 				if got.Type != want.Type {
 					t.Errorf("token[%d] got type %v, want %v", i, got.Type, want.Type)
 				}
@@ -970,6 +979,8 @@ here */`,
 				if got.End != want.End {
 					t.Errorf("token[%d] got end %v, want %v", i, got.End, want.End)
 				}
+
+				i++
 			}
 		})
 	}
@@ -1024,15 +1035,24 @@ func TestLexerIdentifierWithDigits(t *testing.T) {
 	for _, tt := range tests {
 		t.Run("", func(t *testing.T) {
 			lexer := New(tt.input, tt.lexerOpts...)
-			tokens := lexer.ScanAll()
+			i := 0
 
-			if len(tokens) != len(tt.expectedTokens) {
-				t.Errorf("got %d tokens, want %d", len(tokens), len(tt.expectedTokens))
-				return
-			}
+			for {
+				got := lexer.Scan()
+				if got.Type == EOF {
+					// Check if we've processed all expected tokens
+					if i != len(tt.expectedTokens) {
+						t.Errorf("got %d tokens, want %d", i, len(tt.expectedTokens))
+					}
+					break
+				}
 
-			for i, want := range tt.expectedTokens {
-				got := tokens[i]
+				if i >= len(tt.expectedTokens) {
+					t.Errorf("got more tokens than expected at position %d", i)
+					break
+				}
+
+				want := tt.expectedTokens[i]
 				if got.Type != want.Type {
 					t.Errorf("token[%d] got type %v, want %v", i, got.Type, want.Type)
 				}
@@ -1042,25 +1062,28 @@ func TestLexerIdentifierWithDigits(t *testing.T) {
 				if got.End != want.End {
 					t.Errorf("token[%d] got end %v, want %v", i, got.End, want.End)
 				}
-			}
 
-			for i, digits := range tt.expectedDigits {
-				if digits == nil {
-					if tokens[i].ExtraInfo != nil && tokens[i].ExtraInfo.Digits != nil {
-						t.Errorf("token[%d] got digits, want nil", i)
+				// Check digits if we have expectations
+				if i < len(tt.expectedDigits) {
+					digits := tt.expectedDigits[i]
+					if digits == nil {
+						if got.ExtraInfo != nil && got.ExtraInfo.Digits != nil {
+							t.Errorf("token[%d] got digits, want nil", i)
+						}
+					} else {
+						if len(got.ExtraInfo.Digits) != len(digits) {
+							t.Errorf("token[%d] got %d digits, want %d", i, len(got.ExtraInfo.Digits), len(digits))
+						} else {
+							for j, digit := range digits {
+								if got.ExtraInfo.Digits[j] != digit {
+									t.Errorf("token[%d] got digit[%d] %d, want %d", i, j, got.ExtraInfo.Digits[j], digit)
+								}
+							}
+						}
 					}
-					continue
 				}
-				got := tokens[i].ExtraInfo.Digits
-				if len(got) != len(digits) {
-					t.Errorf("token[%d] got %d digits, want %d", i, len(got), len(digits))
-					continue
-				}
-				for j, digit := range digits {
-					if got[j] != digit {
-						t.Errorf("token[%d] got digit[%d] %d, want %d", i, j, got[j], digit)
-					}
-				}
+
+				i++
 			}
 		})
 	}
@@ -1125,15 +1148,13 @@ func TestLexerUnicode(t *testing.T) {
 	for _, tt := range tests {
 		t.Run("", func(t *testing.T) {
 			lexer := New(tt.input, tt.lexerOpts...)
-			tokens := lexer.ScanAll()
-
-			if len(tokens) != len(tt.expected) {
-				t.Errorf("got %d tokens, want %d", len(tokens), len(tt.expected))
-				return
-			}
-
-			for i, want := range tt.expected {
-				got := tokens[i]
+			i := 0
+			for {
+				got := lexer.Scan()
+				if got.Type == EOF {
+					break
+				}
+				want := tt.expected[i]
 				if got.Type != want.Type {
 					t.Errorf("token[%d] got type %v, want %v", i, got.Type, want.Type)
 				}
@@ -1151,6 +1172,13 @@ func TestLexerUnicode(t *testing.T) {
 func ExampleLexer() {
 	query := "SELECT * FROM users WHERE id = 1"
 	lexer := New(query)
-	tokens := lexer.ScanAll()
-	fmt.Println(tokens)
+
+	// Print tokens one by one
+	for {
+		token := lexer.Scan()
+		if token.Type == EOF {
+			break
+		}
+		fmt.Println(token)
+	}
 }

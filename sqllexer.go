@@ -43,8 +43,13 @@ type Token struct {
 	IsTableIndicator bool
 	Start            int
 	End              int
-	Source           *string
 	ExtraInfo        *tokenExtraInfo
+}
+
+type LastValueToken struct {
+	Type             TokenType
+	Value            string
+	IsTableIndicator bool
 }
 
 type tokenExtraInfo struct {
@@ -61,15 +66,23 @@ func (t *Token) SetOutputValue(outputValue string) {
 }
 
 // Add method to get value when needed
-func (t *Token) Value() string {
-	return (*t.Source)[t.Start:t.End]
+func (t *Token) Value(source *string) string {
+	return (*source)[t.Start:t.End]
 }
 
-func (t *Token) String() string {
+func (t *Token) String(source *string) string {
 	if t.ExtraInfo != nil && t.ExtraInfo.OutputValue != "" {
 		return t.ExtraInfo.OutputValue
 	}
-	return t.Value()
+	return t.Value(source)
+}
+
+func (t *Token) GetLastValueToken(source *string) *LastValueToken {
+	return &LastValueToken{
+		Type:             t.Type,
+		Value:            t.String(source),
+		IsTableIndicator: t.IsTableIndicator,
+	}
 }
 
 type LexerConfig struct {
@@ -98,6 +111,7 @@ type Lexer struct {
 	cursor           int    // the current position of the cursor
 	start            int    // the start position of the current token
 	config           *LexerConfig
+	token            *Token
 	digits           []int // Indexes of digits in the token
 	quotes           []int // Indexes of quotes in the token
 	isTableIndicator bool  // true if the token is a table indicator
@@ -107,47 +121,14 @@ func New(input string, opts ...lexerOption) *Lexer {
 	lexer := &Lexer{
 		src:    input,
 		config: &LexerConfig{},
+		token: &Token{
+			ExtraInfo: &tokenExtraInfo{},
+		},
 	}
 	for _, opt := range opts {
 		opt(lexer.config)
 	}
 	return lexer
-}
-
-// ScanAll scans the entire input string and returns a slice of tokens.
-func (s *Lexer) ScanAll() []*Token {
-	// Pre-allocate tokens slice - estimate 1 token per 4 characters
-	tokens := make([]*Token, 0, len(s.src)/4)
-	for {
-		token := s.Scan()
-		if token == nil || token.Type == EOF {
-			// don't include EOF token in the result
-			break
-		}
-		tokens = append(tokens, token)
-	}
-	return tokens
-}
-
-// ScanAllTokens scans the entire input string and returns a channel of tokens.
-// Use this if you want to process the tokens as they are scanned.
-func (s *Lexer) ScanAllTokens() <-chan *Token {
-	tokenCh := make(chan *Token)
-
-	go func() {
-		defer close(tokenCh)
-
-		for {
-			token := s.Scan()
-			if token == nil || token.Type == EOF {
-				// don't include EOF token in the result
-				break
-			}
-			tokenCh <- token
-		}
-	}()
-
-	return tokenCh
 }
 
 // Scan scans the next token and returns it.
@@ -632,27 +613,33 @@ func (s *Lexer) scanSystemVariable() *Token {
 
 // Modify emit function to use positions and maintain links
 func (s *Lexer) emit(t TokenType) *Token {
-	tok := &Token{
-		Type:   t,
-		Start:  s.start,
-		End:    s.cursor,
-		Source: &s.src,
+	tok := s.token
+
+	extraInfo := tok.ExtraInfo
+
+	// Zero other fields
+	*tok = Token{
+		Type:             t,
+		Start:            s.start,
+		End:              s.cursor,
+		IsTableIndicator: s.isTableIndicator,
+		ExtraInfo:        extraInfo,
 	}
 
 	if len(s.digits) > 0 || len(s.quotes) > 0 {
-		tok.ExtraInfo = &tokenExtraInfo{
-			Digits: s.digits,
-			Quotes: s.quotes,
-		}
+		tok.ExtraInfo.Digits = s.digits
+		tok.ExtraInfo.Quotes = s.quotes
+	} else {
+		tok.ExtraInfo.Digits = nil
+		tok.ExtraInfo.Quotes = nil
 	}
+	tok.ExtraInfo.OutputValue = "" // Reset this
 
-	if s.isTableIndicator {
-		tok.IsTableIndicator = s.isTableIndicator
-		s.isTableIndicator = false // reset table indicator for the next token
-	}
-
+	// Reset lexer state
 	s.start = s.cursor
-	s.digits = nil // reset digits for the next token
-	s.quotes = nil // reset quotes for the next token
+	s.digits = nil
+	s.quotes = nil
+	s.isTableIndicator = false
+
 	return tok
 }

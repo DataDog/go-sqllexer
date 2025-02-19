@@ -91,7 +91,12 @@ GROUP BY sales.product_key;
 			b.ReportAllocs()
 			for i := 0; i < b.N; i++ {
 				lexer := New(bm.query)
-				lexer.ScanAll()
+				for {
+					token := lexer.Scan()
+					if token.Type == EOF {
+						break
+					}
+				}
 			}
 		})
 	}
