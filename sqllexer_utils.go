@@ -230,25 +230,25 @@ func replaceDigits(token *Token, placeholder string) string {
 	// loop over token.digits indexes, write start:token.digits[i] to builder
 	// write placeholder to builder if no consecutive digits
 	// write start:token.End to builder
-	for i := 0; i < len(token.ExtraInfo.Digits); i++ {
-		if token.ExtraInfo.Digits[i]-start >= 1 {
-			replacedToken.WriteString(token.Value[start-offset : token.ExtraInfo.Digits[i]-offset])
+	for i := 0; i < len(token.Digits); i++ {
+		if token.Digits[i]-start >= 1 {
+			replacedToken.WriteString(token.Value[start-offset : token.Digits[i]-offset])
 		}
-		if i == 0 || token.ExtraInfo.Digits[i] != token.ExtraInfo.Digits[i-1]+1 {
+		if i == 0 || token.Digits[i] != token.Digits[i-1]+1 {
 			replacedToken.WriteString(placeholder)
 		}
-		start = token.ExtraInfo.Digits[i] + 1
+		start = token.Digits[i] + 1
 	}
 
 	// write start:token.End to builder
 	replacedToken.WriteString(token.Value[start-offset : token.End-offset])
-	token.ExtraInfo.Digits = nil
+	token.Digits = nil
 	return replacedToken.String()
 }
 
 func trimQuotes(token *Token) string {
 	var trimmedToken = new(strings.Builder)
-	trimmedToken.Grow(len(token.Value) - len(token.ExtraInfo.Quotes))
+	trimmedToken.Grow(len(token.Value) - len(token.Quotes))
 
 	start := token.Start
 	offset := token.Start
@@ -256,16 +256,16 @@ func trimQuotes(token *Token) string {
 	// loop over token.digits indexes, write start:token.digits[i] to builder
 	// write placeholder to builder if no consecutive digits
 	// write start:token.End to builder
-	for i := 0; i < len(token.ExtraInfo.Quotes); i++ {
-		if token.ExtraInfo.Quotes[i]-start >= 1 {
-			trimmedToken.WriteString(token.Value[start-offset : token.ExtraInfo.Quotes[i]-offset])
+	for i := 0; i < len(token.Quotes); i++ {
+		if token.Quotes[i]-start >= 1 {
+			trimmedToken.WriteString(token.Value[start-offset : token.Quotes[i]-offset])
 		}
-		start = token.ExtraInfo.Quotes[i] + 1
+		start = token.Quotes[i] + 1
 	}
 
 	// write start:token.End to builder
 	trimmedToken.WriteString(token.Value[start-offset : token.End-offset])
-	token.ExtraInfo.Quotes = nil
+	token.Quotes = nil
 	return trimmedToken.String()
 }
 

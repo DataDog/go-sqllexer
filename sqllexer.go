@@ -44,7 +44,8 @@ type Token struct {
 	Start            int
 	End              int
 	Value            string
-	ExtraInfo        *tokenExtraInfo
+	Digits           []int
+	Quotes           []int
 	LastValueToken   LastValueToken
 }
 
@@ -52,11 +53,6 @@ type LastValueToken struct {
 	Type             TokenType
 	Value            string
 	IsTableIndicator bool
-}
-
-type tokenExtraInfo struct {
-	Digits []int
-	Quotes []int
 }
 
 func (t *Token) GetLastValueToken() *LastValueToken {
@@ -102,9 +98,7 @@ func New(input string, opts ...lexerOption) *Lexer {
 	lexer := &Lexer{
 		src:    input,
 		config: &LexerConfig{},
-		token: &Token{
-			ExtraInfo: &tokenExtraInfo{},
-		},
+		token:  &Token{},
 	}
 	for _, opt := range opts {
 		opt(lexer.config)
@@ -595,7 +589,6 @@ func (s *Lexer) scanSystemVariable() *Token {
 // Modify emit function to use positions and maintain links
 func (s *Lexer) emit(t TokenType) *Token {
 	tok := s.token
-	extraInfo := tok.ExtraInfo
 	lastValueToken := tok.LastValueToken
 
 	// Zero other fields
@@ -605,16 +598,19 @@ func (s *Lexer) emit(t TokenType) *Token {
 		End:              s.cursor,
 		Value:            s.src[s.start:s.cursor],
 		IsTableIndicator: s.isTableIndicator,
-		ExtraInfo:        extraInfo,
 		LastValueToken:   lastValueToken,
 	}
 
-	if len(s.digits) > 0 || len(s.quotes) > 0 {
-		tok.ExtraInfo.Digits = s.digits
-		tok.ExtraInfo.Quotes = s.quotes
+	if len(s.digits) > 0 {
+		tok.Digits = s.digits
 	} else {
-		tok.ExtraInfo.Digits = nil
-		tok.ExtraInfo.Quotes = nil
+		tok.Digits = nil
+	}
+
+	if len(s.quotes) > 0 {
+		tok.Quotes = s.quotes
+	} else {
+		tok.Quotes = nil
 	}
 
 	// Reset lexer state
