@@ -32,6 +32,19 @@ func TestLexer(t *testing.T) {
 			},
 		},
 		{
+			name:  "simple select with mixed case keywords",
+			input: "sElEcT * fRoM users",
+			expected: []TokenSpec{
+				{COMMAND, "sElEcT"},
+				{SPACE, " "},
+				{WILDCARD, "*"},
+				{SPACE, " "},
+				{KEYWORD, "fRoM"},
+				{SPACE, " "},
+				{IDENT, "users"},
+			},
+		},
+		{
 			name:  "select with number",
 			input: "SELECT id FROM users WHERE id = 1",
 			expected: []TokenSpec{
