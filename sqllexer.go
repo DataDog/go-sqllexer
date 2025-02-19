@@ -44,6 +44,7 @@ type Token struct {
 	Start            int
 	End              int
 	ExtraInfo        *tokenExtraInfo
+	LastValueToken   LastValueToken
 }
 
 type LastValueToken struct {
@@ -78,11 +79,10 @@ func (t *Token) String(source *string) string {
 }
 
 func (t *Token) GetLastValueToken(source *string) *LastValueToken {
-	return &LastValueToken{
-		Type:             t.Type,
-		Value:            t.String(source),
-		IsTableIndicator: t.IsTableIndicator,
-	}
+	t.LastValueToken.Type = t.Type
+	t.LastValueToken.Value = t.String(source)
+	t.LastValueToken.IsTableIndicator = t.IsTableIndicator
+	return &t.LastValueToken
 }
 
 type LexerConfig struct {
@@ -614,8 +614,8 @@ func (s *Lexer) scanSystemVariable() *Token {
 // Modify emit function to use positions and maintain links
 func (s *Lexer) emit(t TokenType) *Token {
 	tok := s.token
-
 	extraInfo := tok.ExtraInfo
+	lastValueToken := tok.LastValueToken // Save LastValueToken
 
 	// Zero other fields
 	*tok = Token{
@@ -624,6 +624,7 @@ func (s *Lexer) emit(t TokenType) *Token {
 		End:              s.cursor,
 		IsTableIndicator: s.isTableIndicator,
 		ExtraInfo:        extraInfo,
+		LastValueToken:   lastValueToken, // Restore LastValueToken
 	}
 
 	if len(s.digits) > 0 || len(s.quotes) > 0 {
