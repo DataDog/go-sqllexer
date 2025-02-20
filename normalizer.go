@@ -174,22 +174,8 @@ func NewNormalizer(opts ...normalizerOption) *Normalizer {
 	return &normalizer
 }
 
-// Normalize takes an input SQL string and returns a normalized SQL string, a StatementMetadata struct, and an error.
-// The normalizer collapses input SQL into compact format, groups obfuscated values into single placeholder,
-// and collects metadata such as table names, comments, and commands.
-func (n *Normalizer) Normalize(input string, lexerOpts ...lexerOption) (normalizedSQL string, statementMetadata *StatementMetadata, err error) {
-	lexer := New(
-		input,
-		lexerOpts...,
-	)
-
-	normalizedSQLBuilder := new(strings.Builder)
-	normalizedSQLBuilder.Grow(len(input))
-
-	statementMetadata = statementMetadataPool.Get().(*StatementMetadata)
-	statementMetadata.reset()
-	defer statementMetadataPool.Put(statementMetadata)
-
+// normalizeToken is a helper function that handles the common normalization logic
+func (n *Normalizer) normalizeToken(lexer *Lexer, normalizedSQLBuilder *strings.Builder, statementMetadata *StatementMetadata, preProcessToken func(*Token, *LastValueToken), lexerOpts ...lexerOption) error {
 	var groupablePlaceholder groupablePlaceholder
 	var headState headState
 	var ctes map[string]bool
@@ -203,6 +189,10 @@ func (n *Normalizer) Normalize(input string, lexerOpts ...lexerOption) (normaliz
 
 	for {
 		token := lexer.Scan()
+		if preProcessToken != nil {
+			// pre-process the token, often used for obfuscation
+			preProcessToken(token, lastValueToken)
+		}
 		if n.shouldCollectMetadata() {
 			n.collectMetadata(token, lastValueToken, statementMetadata, ctes)
 		}
@@ -213,6 +203,22 @@ func (n *Normalizer) Normalize(input string, lexerOpts ...lexerOption) (normaliz
 		if isValueToken(token) {
 			lastValueToken = token.getLastValueToken()
 		}
+	}
+
+	return nil
+}
+
+func (n *Normalizer) Normalize(input string, lexerOpts ...lexerOption) (normalizedSQL string, statementMetadata *StatementMetadata, err error) {
+	lexer := New(input, lexerOpts...)
+	normalizedSQLBuilder := new(strings.Builder)
+	normalizedSQLBuilder.Grow(len(input))
+
+	statementMetadata = statementMetadataPool.Get().(*StatementMetadata)
+	statementMetadata.reset()
+	defer statementMetadataPool.Put(statementMetadata)
+
+	if err = n.normalizeToken(lexer, normalizedSQLBuilder, statementMetadata, nil, lexerOpts...); err != nil {
+		return "", nil, err
 	}
 
 	normalizedSQL = normalizedSQLBuilder.String()
@@ -281,7 +287,7 @@ func (n *Normalizer) normalizeSQL(token *Token, lastValueToken *LastValueToken, 
 			// if the token is a dollar quoted function and it is not obfuscated,
 			// we need to recusively normalize the content of the dollar quoted function
 			quotedFunc := token.Value[6 : len(token.Value)-6] // remove the $func$ prefix and suffix
-			normalizedQuotedFunc, _, err := n.Normalize(quotedFunc, lexerOpts...)
+			normalizedQuotedFunc, _, err := n.Normalize(quotedFunc)
 			if err == nil {
 				// replace the content of the dollar quoted function with the normalized content
 				// if there is an error, we just keep the original content

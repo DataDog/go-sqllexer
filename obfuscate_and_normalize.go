@@ -14,30 +14,13 @@ func ObfuscateAndNormalize(input string, obfuscator *Obfuscator, normalizer *Nor
 	statementMetadata.reset()
 	defer statementMetadataPool.Put(statementMetadata)
 
-	var groupablePlaceholder groupablePlaceholder
-	var headState headState
-	var ctes map[string]bool
-
-	// Only allocate CTEs map if collecting tables
-	if normalizer.config.CollectTables {
-		ctes = make(map[string]bool, 2)
+	obfuscate := func(token *Token, lastValueToken *LastValueToken) {
+		obfuscator.ObfuscateTokenValue(token, lastValueToken, lexerOpts...)
 	}
 
-	var lastValueToken *LastValueToken
-
-	for {
-		token := lexer.Scan()
-		obfuscator.ObfuscateTokenValue(token, lastValueToken, lexerOpts...)
-		if normalizer.shouldCollectMetadata() {
-			normalizer.collectMetadata(token, lastValueToken, statementMetadata, ctes)
-		}
-		normalizer.normalizeSQL(token, lastValueToken, normalizedSQLBuilder, &groupablePlaceholder, &headState, lexerOpts...)
-		if token.Type == EOF {
-			break
-		}
-		if isValueToken(token) {
-			lastValueToken = token.getLastValueToken()
-		}
+	// Pass obfuscation as the pre-process step
+	if err = normalizer.normalizeToken(lexer, normalizedSQLBuilder, statementMetadata, obfuscate, lexerOpts...); err != nil {
+		return "", nil, err
 	}
 
 	normalizedSQL = normalizedSQLBuilder.String()
