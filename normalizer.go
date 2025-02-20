@@ -150,16 +150,26 @@ var statementMetadataPool = sync.Pool{
 // Reset StatementMetadata for reuse
 func (sm *StatementMetadata) reset() {
 	sm.Size = 0
-	sm.Tables = sm.Tables[:0]
-	sm.Comments = sm.Comments[:0]
-	sm.Commands = sm.Commands[:0]
-	sm.Procedures = sm.Procedures[:0]
+	sm.resetSlice(&sm.Tables, 4)
+	sm.resetSlice(&sm.Comments, 2)
+	sm.resetSlice(&sm.Commands, 4)
+	sm.resetSlice(&sm.Procedures, 0)
 
 	// Just create new maps instead of clearing old ones
 	sm.tablesSet = make(map[string]struct{}, 4)
 	sm.commentsSet = make(map[string]struct{}, 2)
 	sm.commandsSet = make(map[string]struct{}, 4)
 	sm.proceduresSet = make(map[string]struct{})
+}
+
+func (sm *StatementMetadata) resetSlice(slice *[]string, capacity int) {
+	for i := range *slice {
+		(*slice)[i] = ""
+	}
+	*slice = (*slice)[:0]
+	if cap(*slice) > capacity*2 {
+		*slice = make([]string, 0, capacity)
+	}
 }
 
 func NewNormalizer(opts ...normalizerOption) *Normalizer {
