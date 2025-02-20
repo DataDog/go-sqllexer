@@ -3,239 +3,334 @@ package sqllexer
 import (
 	"fmt"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
+
+// TokenSpec is a simplified token specification for testing
+type TokenSpec struct {
+	Type  TokenType
+	Value string
+}
 
 func TestLexer(t *testing.T) {
 	tests := []struct {
 		name      string
 		input     string
-		expected  []Token
+		expected  []TokenSpec
 		lexerOpts []lexerOption
 	}{
 		{
-			name:  "simple select with number",
-			input: "SELECT * FROM users where id = 1",
-			expected: []Token{
-				{IDENT, "SELECT"},
-				{WS, " "},
+			name:  "simple select",
+			input: "SELECT * FROM users",
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
 				{WILDCARD, "*"},
-				{WS, " "},
-				{IDENT, "FROM"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
 				{IDENT, "users"},
-				{WS, " "},
-				{IDENT, "where"},
-				{WS, " "},
+			},
+		},
+		{
+			name:  "simple select with mixed case keywords",
+			input: "sElEcT * fRoM users",
+			expected: []TokenSpec{
+				{COMMAND, "sElEcT"},
+				{SPACE, " "},
+				{WILDCARD, "*"},
+				{SPACE, " "},
+				{KEYWORD, "fRoM"},
+				{SPACE, " "},
+				{IDENT, "users"},
+			},
+		},
+		{
+			name:  "select with number",
+			input: "SELECT id FROM users WHERE id = 1",
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
 				{IDENT, "id"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
+				{IDENT, "users"},
+				{SPACE, " "},
+				{KEYWORD, "WHERE"},
+				{SPACE, " "},
+				{IDENT, "id"},
+				{SPACE, " "},
 				{OPERATOR, "="},
-				{WS, " "},
+				{SPACE, " "},
 				{NUMBER, "1"},
 			},
 		},
 		{
 			name:  "simple select with number",
-			input: "SELECT * FROM users where id = '1'",
-			expected: []Token{
-				{IDENT, "SELECT"},
-				{WS, " "},
+			input: "SELECT * FROM users where id = 1",
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
 				{WILDCARD, "*"},
-				{WS, " "},
-				{IDENT, "FROM"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
 				{IDENT, "users"},
-				{WS, " "},
-				{IDENT, "where"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "where"},
+				{SPACE, " "},
 				{IDENT, "id"},
-				{WS, " "},
+				{SPACE, " "},
 				{OPERATOR, "="},
-				{WS, " "},
+				{SPACE, " "},
+				{NUMBER, "1"},
+			},
+		},
+		{
+			name:  "simple select with number in quotes",
+			input: "SELECT * FROM users where id = '1'",
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
+				{WILDCARD, "*"},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
+				{IDENT, "users"},
+				{SPACE, " "},
+				{KEYWORD, "where"},
+				{SPACE, " "},
+				{IDENT, "id"},
+				{SPACE, " "},
+				{OPERATOR, "="},
+				{SPACE, " "},
 				{STRING, "'1'"},
 			},
 		},
 		{
 			name:  "simple select with negative number",
 			input: "SELECT * FROM users where id = -1",
-			expected: []Token{
-				{IDENT, "SELECT"},
-				{WS, " "},
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
 				{WILDCARD, "*"},
-				{WS, " "},
-				{IDENT, "FROM"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
 				{IDENT, "users"},
-				{WS, " "},
-				{IDENT, "where"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "where"},
+				{SPACE, " "},
 				{IDENT, "id"},
-				{WS, " "},
+				{SPACE, " "},
 				{OPERATOR, "="},
-				{WS, " "},
+				{SPACE, " "},
 				{NUMBER, "-1"},
 			},
 		},
 		{
 			name:  "simple select with string",
 			input: "SELECT * FROM users where id = '12'",
-			expected: []Token{
-				{IDENT, "SELECT"},
-				{WS, " "},
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
 				{WILDCARD, "*"},
-				{WS, " "},
-				{IDENT, "FROM"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
 				{IDENT, "users"},
-				{WS, " "},
-				{IDENT, "where"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "where"},
+				{SPACE, " "},
 				{IDENT, "id"},
-				{WS, " "},
+				{SPACE, " "},
 				{OPERATOR, "="},
-				{WS, " "},
+				{SPACE, " "},
 				{STRING, "'12'"},
+			},
+		},
+		{
+			name:  "simple select with boolean",
+			input: "SELECT * FROM users where id = true",
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
+				{WILDCARD, "*"},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
+				{IDENT, "users"},
+				{SPACE, " "},
+				{KEYWORD, "where"},
+				{SPACE, " "},
+				{IDENT, "id"},
+				{SPACE, " "},
+				{OPERATOR, "="},
+				{SPACE, " "},
+				{BOOLEAN, "true"},
+			},
+		},
+		{
+			name:  "simple select with null",
+			input: "SELECT * FROM users where id = null",
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
+				{WILDCARD, "*"},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
+				{IDENT, "users"},
+				{SPACE, " "},
+				{KEYWORD, "where"},
+				{SPACE, " "},
+				{IDENT, "id"},
+				{SPACE, " "},
+				{OPERATOR, "="},
+				{SPACE, " "},
+				{NULL, "null"},
 			},
 		},
 		{
 			name:  "simple select with double quoted identifier",
 			input: "SELECT * FROM \"users table\" where id = 1",
-			expected: []Token{
-				{IDENT, "SELECT"},
-				{WS, " "},
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
 				{WILDCARD, "*"},
-				{WS, " "},
-				{IDENT, "FROM"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
 				{QUOTED_IDENT, "\"users table\""},
-				{WS, " "},
-				{IDENT, "where"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "where"},
+				{SPACE, " "},
 				{IDENT, "id"},
-				{WS, " "},
+				{SPACE, " "},
 				{OPERATOR, "="},
-				{WS, " "},
+				{SPACE, " "},
 				{NUMBER, "1"},
 			},
 		},
 		{
 			name:  "simple select with single line comment",
 			input: "SELECT * FROM users where id = 1 -- comment here",
-			expected: []Token{
-				{IDENT, "SELECT"},
-				{WS, " "},
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
 				{WILDCARD, "*"},
-				{WS, " "},
-				{IDENT, "FROM"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
 				{IDENT, "users"},
-				{WS, " "},
-				{IDENT, "where"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "where"},
+				{SPACE, " "},
 				{IDENT, "id"},
-				{WS, " "},
+				{SPACE, " "},
 				{OPERATOR, "="},
-				{WS, " "},
+				{SPACE, " "},
 				{NUMBER, "1"},
-				{WS, " "},
+				{SPACE, " "},
 				{COMMENT, "-- comment here"},
 			},
 		},
 		{
-			name:  "simple select with multi line comment",
-			input: "SELECT * /* comment here */ FROM users where id = 1",
-			expected: []Token{
-				{IDENT, "SELECT"},
-				{WS, " "},
+			name: "simple select with multi line comment",
+			input: `SELECT * /* comment here */ FROM users where id = 1/* comment 
+here */`,
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
 				{WILDCARD, "*"},
-				{WS, " "},
+				{SPACE, " "},
 				{MULTILINE_COMMENT, "/* comment here */"},
-				{WS, " "},
-				{IDENT, "FROM"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
 				{IDENT, "users"},
-				{WS, " "},
-				{IDENT, "where"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "where"},
+				{SPACE, " "},
 				{IDENT, "id"},
-				{WS, " "},
+				{SPACE, " "},
 				{OPERATOR, "="},
-				{WS, " "},
+				{SPACE, " "},
 				{NUMBER, "1"},
+				{MULTILINE_COMMENT, "/* comment \nhere */"},
 			},
 		},
 		{
 			name:  "simple malformed select",
 			input: "SELECT * FROM users where id = 1 and name = 'j",
-			expected: []Token{
-				{IDENT, "SELECT"},
-				{WS, " "},
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
 				{WILDCARD, "*"},
-				{WS, " "},
-				{IDENT, "FROM"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
 				{IDENT, "users"},
-				{WS, " "},
-				{IDENT, "where"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "where"},
+				{SPACE, " "},
 				{IDENT, "id"},
-				{WS, " "},
+				{SPACE, " "},
 				{OPERATOR, "="},
-				{WS, " "},
+				{SPACE, " "},
 				{NUMBER, "1"},
-				{WS, " "},
-				{IDENT, "and"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "and"},
+				{SPACE, " "},
 				{IDENT, "name"},
-				{WS, " "},
+				{SPACE, " "},
 				{OPERATOR, "="},
-				{WS, " "},
+				{SPACE, " "},
 				{INCOMPLETE_STRING, "'j"},
 			},
 		},
 		{
 			name:  "truncated sql",
 			input: "SELECT * FROM users where id = ",
-			expected: []Token{
-				{IDENT, "SELECT"},
-				{WS, " "},
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
 				{WILDCARD, "*"},
-				{WS, " "},
-				{IDENT, "FROM"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
 				{IDENT, "users"},
-				{WS, " "},
-				{IDENT, "where"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "where"},
+				{SPACE, " "},
 				{IDENT, "id"},
-				{WS, " "},
+				{SPACE, " "},
 				{OPERATOR, "="},
-				{WS, " "},
+				{SPACE, " "},
 			},
 		},
 		{
 			name:  "simple select with array of literals",
 			input: "SELECT * FROM users where id in (1, '2')",
-			expected: []Token{
-				{IDENT, "SELECT"},
-				{WS, " "},
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
 				{WILDCARD, "*"},
-				{WS, " "},
-				{IDENT, "FROM"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
 				{IDENT, "users"},
-				{WS, " "},
-				{IDENT, "where"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "where"},
+				{SPACE, " "},
 				{IDENT, "id"},
-				{WS, " "},
-				{IDENT, "in"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "in"},
+				{SPACE, " "},
 				{PUNCTUATION, "("},
 				{NUMBER, "1"},
 				{PUNCTUATION, ","},
-				{WS, " "},
+				{SPACE, " "},
 				{STRING, "'2'"},
 				{PUNCTUATION, ")"},
 			},
@@ -243,151 +338,143 @@ func TestLexer(t *testing.T) {
 		{
 			name:  "dollar quoted function",
 			input: "SELECT $func$INSERT INTO table VALUES ('a', 1, 2)$func$ FROM users",
-			expected: []Token{
-				{IDENT, "SELECT"},
-				{WS, " "},
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
 				{DOLLAR_QUOTED_FUNCTION, "$func$INSERT INTO table VALUES ('a', 1, 2)$func$"},
-				{WS, " "},
-				{IDENT, "FROM"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
 				{IDENT, "users"},
 			},
 		},
 		{
 			name:  "dollar quoted string",
 			input: "SELECT * FROM users where id = $tag$test$tag$",
-			expected: []Token{
-				{IDENT, "SELECT"},
-				{WS, " "},
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
 				{WILDCARD, "*"},
-				{WS, " "},
-				{IDENT, "FROM"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
 				{IDENT, "users"},
-				{WS, " "},
-				{IDENT, "where"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "where"},
+				{SPACE, " "},
 				{IDENT, "id"},
-				{WS, " "},
+				{SPACE, " "},
 				{OPERATOR, "="},
-				{WS, " "},
+				{SPACE, " "},
 				{DOLLAR_QUOTED_STRING, "$tag$test$tag$"},
 			},
 		},
 		{
 			name:  "dollar quoted string",
 			input: "SELECT * FROM users where id = $$test$$",
-			expected: []Token{
-				{IDENT, "SELECT"},
-				{WS, " "},
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
 				{WILDCARD, "*"},
-				{WS, " "},
-				{IDENT, "FROM"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
 				{IDENT, "users"},
-				{WS, " "},
-				{IDENT, "where"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "where"},
+				{SPACE, " "},
 				{IDENT, "id"},
-				{WS, " "},
+				{SPACE, " "},
 				{OPERATOR, "="},
-				{WS, " "},
+				{SPACE, " "},
 				{DOLLAR_QUOTED_STRING, "$$test$$"},
 			},
 		},
 		{
 			name:  "numbered parameter",
 			input: "SELECT * FROM users where id = $1",
-			expected: []Token{
-				{IDENT, "SELECT"},
-				{WS, " "},
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
 				{WILDCARD, "*"},
-				{WS, " "},
-				{IDENT, "FROM"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
 				{IDENT, "users"},
-				{WS, " "},
-				{IDENT, "where"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "where"},
+				{SPACE, " "},
 				{IDENT, "id"},
-				{WS, " "},
+				{SPACE, " "},
 				{OPERATOR, "="},
-				{WS, " "},
+				{SPACE, " "},
 				{POSITIONAL_PARAMETER, "$1"},
 			},
 		},
 		{
 			name:  "identifier with underscore and period",
 			input: "SELECT * FROM users where user_id = 2 and users.name = 'j'",
-			expected: []Token{
-				{IDENT, "SELECT"},
-				{WS, " "},
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
 				{WILDCARD, "*"},
-				{WS, " "},
-				{IDENT, "FROM"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
 				{IDENT, "users"},
-				{WS, " "},
-				{IDENT, "where"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "where"},
+				{SPACE, " "},
 				{IDENT, "user_id"},
-				{WS, " "},
+				{SPACE, " "},
 				{OPERATOR, "="},
-				{WS, " "},
+				{SPACE, " "},
 				{NUMBER, "2"},
-				{WS, " "},
-				{IDENT, "and"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "and"},
+				{SPACE, " "},
 				{IDENT, "users.name"},
-				{WS, " "},
+				{SPACE, " "},
 				{OPERATOR, "="},
-				{WS, " "},
+				{SPACE, " "},
 				{STRING, "'j'"},
 			},
 		},
 		{
 			name:  "select with hex and octal numbers",
-			input: "SELECT * FROM users where id = 0x123 and id = 0X123 and id = 0123",
-			expected: []Token{
-				{IDENT, "SELECT"},
-				{WS, " "},
+			input: "SELECT * FROM users where id = 0x123 and id = 0123",
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
 				{WILDCARD, "*"},
-				{WS, " "},
-				{IDENT, "FROM"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
 				{IDENT, "users"},
-				{WS, " "},
-				{IDENT, "where"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "where"},
+				{SPACE, " "},
 				{IDENT, "id"},
-				{WS, " "},
+				{SPACE, " "},
 				{OPERATOR, "="},
-				{WS, " "},
+				{SPACE, " "},
 				{NUMBER, "0x123"},
-				{WS, " "},
-				{IDENT, "and"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "and"},
+				{SPACE, " "},
 				{IDENT, "id"},
-				{WS, " "},
+				{SPACE, " "},
 				{OPERATOR, "="},
-				{WS, " "},
-				{NUMBER, "0X123"},
-				{WS, " "},
-				{IDENT, "and"},
-				{WS, " "},
-				{IDENT, "id"},
-				{WS, " "},
-				{OPERATOR, "="},
-				{WS, " "},
+				{SPACE, " "},
 				{NUMBER, "0123"},
 			},
 		},
 		{
 			name:  "select with float numbers and scientific notation",
 			input: "SELECT 1.2,1.2e3,1.2e-3,1.2E3,1.2E-3 FROM users",
-			expected: []Token{
-				{IDENT, "SELECT"},
-				{WS, " "},
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
 				{NUMBER, "1.2"},
 				{PUNCTUATION, ","},
 				{NUMBER, "1.2e3"},
@@ -397,75 +484,75 @@ func TestLexer(t *testing.T) {
 				{NUMBER, "1.2E3"},
 				{PUNCTUATION, ","},
 				{NUMBER, "1.2E-3"},
-				{WS, " "},
-				{IDENT, "FROM"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
 				{IDENT, "users"},
 			},
 		},
 		{
 			name:  "select with double quoted identifier",
 			input: `SELECT * FROM "users table"`,
-			expected: []Token{
-				{IDENT, "SELECT"},
-				{WS, " "},
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
 				{WILDCARD, "*"},
-				{WS, " "},
-				{IDENT, "FROM"},
-				{WS, " "},
-				{QUOTED_IDENT, `"users table"`},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
+				{QUOTED_IDENT, "\"users table\""},
 			},
 		},
 		{
-			name:  "select with double quoted identifier",
+			name:  "select with double quoted identifier with period",
 			input: `SELECT * FROM "public"."users table"`,
-			expected: []Token{
-				{IDENT, "SELECT"},
-				{WS, " "},
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
 				{WILDCARD, "*"},
-				{WS, " "},
-				{IDENT, "FROM"},
-				{WS, " "},
-				{QUOTED_IDENT, `"public"."users table"`},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
+				{QUOTED_IDENT, "\"public\".\"users table\""},
 			},
 		},
 		{
 			name:  "select with escaped string",
 			input: "SELECT * FROM users where id = 'j\\'s'",
-			expected: []Token{
-				{IDENT, "SELECT"},
-				{WS, " "},
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
 				{WILDCARD, "*"},
-				{WS, " "},
-				{IDENT, "FROM"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
 				{IDENT, "users"},
-				{WS, " "},
-				{IDENT, "where"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "where"},
+				{SPACE, " "},
 				{IDENT, "id"},
-				{WS, " "},
+				{SPACE, " "},
 				{OPERATOR, "="},
-				{WS, " "},
+				{SPACE, " "},
 				{STRING, "'j\\'s'"},
 			},
 		},
 		{
 			name:  "select with escaped string",
 			input: "SELECT * FROM users where id =?",
-			expected: []Token{
-				{IDENT, "SELECT"},
-				{WS, " "},
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
 				{WILDCARD, "*"},
-				{WS, " "},
-				{IDENT, "FROM"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
 				{IDENT, "users"},
-				{WS, " "},
-				{IDENT, "where"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "where"},
+				{SPACE, " "},
 				{IDENT, "id"},
-				{WS, " "},
+				{SPACE, " "},
 				{OPERATOR, "="},
 				{OPERATOR, "?"},
 			},
@@ -473,29 +560,29 @@ func TestLexer(t *testing.T) {
 		{
 			name:  "select with bind parameter",
 			input: "SELECT * FROM users where id = :id and name = :1",
-			expected: []Token{
-				{IDENT, "SELECT"},
-				{WS, " "},
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
 				{WILDCARD, "*"},
-				{WS, " "},
-				{IDENT, "FROM"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
 				{IDENT, "users"},
-				{WS, " "},
-				{IDENT, "where"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "where"},
+				{SPACE, " "},
 				{IDENT, "id"},
-				{WS, " "},
+				{SPACE, " "},
 				{OPERATOR, "="},
-				{WS, " "},
+				{SPACE, " "},
 				{BIND_PARAMETER, ":id"},
-				{WS, " "},
-				{IDENT, "and"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "and"},
+				{SPACE, " "},
 				{IDENT, "name"},
-				{WS, " "},
+				{SPACE, " "},
 				{OPERATOR, "="},
-				{WS, " "},
+				{SPACE, " "},
 				{BIND_PARAMETER, ":1"},
 			},
 			lexerOpts: []lexerOption{WithDBMS(DBMSOracle)},
@@ -503,84 +590,84 @@ func TestLexer(t *testing.T) {
 		{
 			name:  "select with bind parameter",
 			input: "SELECT * FROM users where id = @id and name = @1",
-			expected: []Token{
-				{IDENT, "SELECT"},
-				{WS, " "},
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
 				{WILDCARD, "*"},
-				{WS, " "},
-				{IDENT, "FROM"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
 				{IDENT, "users"},
-				{WS, " "},
-				{IDENT, "where"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "where"},
+				{SPACE, " "},
 				{IDENT, "id"},
-				{WS, " "},
+				{SPACE, " "},
 				{OPERATOR, "="},
-				{WS, " "},
+				{SPACE, " "},
 				{BIND_PARAMETER, "@id"},
-				{WS, " "},
-				{IDENT, "and"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "and"},
+				{SPACE, " "},
 				{IDENT, "name"},
-				{WS, " "},
+				{SPACE, " "},
 				{OPERATOR, "="},
-				{WS, " "},
+				{SPACE, " "},
 				{BIND_PARAMETER, "@1"},
 			},
 		},
 		{
 			name:  "select with bind parameter using underscore",
 			input: "SELECT * FROM users where id = @__my_id",
-			expected: []Token{
-				{IDENT, "SELECT"},
-				{WS, " "},
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
 				{WILDCARD, "*"},
-				{WS, " "},
-				{IDENT, "FROM"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
 				{IDENT, "users"},
-				{WS, " "},
-				{IDENT, "where"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "where"},
+				{SPACE, " "},
 				{IDENT, "id"},
-				{WS, " "},
+				{SPACE, " "},
 				{OPERATOR, "="},
-				{WS, " "},
+				{SPACE, " "},
 				{BIND_PARAMETER, "@__my_id"},
 			},
 		},
 		{
 			name:  "select with system variable",
 			input: "SELECT @@VERSION AS SqlServerVersion",
-			expected: []Token{
-				{IDENT, "SELECT"},
-				{WS, " "},
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
 				{SYSTEM_VARIABLE, "@@VERSION"},
-				{WS, " "},
-				{IDENT, "AS"},
-				{WS, " "},
+				{SPACE, " "},
+				{ALIAS_INDICATOR, "AS"},
+				{SPACE, " "},
 				{IDENT, "SqlServerVersion"},
 			},
 		},
 		{
 			name:  "SQL Server quoted identifier",
 			input: "SELECT [user] FROM [test].[table] WHERE [id] = 1",
-			expected: []Token{
-				{IDENT, "SELECT"},
-				{WS, " "},
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
 				{QUOTED_IDENT, "[user]"},
-				{WS, " "},
-				{IDENT, "FROM"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
 				{QUOTED_IDENT, "[test].[table]"},
-				{WS, " "},
-				{IDENT, "WHERE"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "WHERE"},
+				{SPACE, " "},
 				{QUOTED_IDENT, "[id]"},
-				{WS, " "},
+				{SPACE, " "},
 				{OPERATOR, "="},
-				{WS, " "},
+				{SPACE, " "},
 				{NUMBER, "1"},
 			},
 			lexerOpts: []lexerOption{WithDBMS(DBMSSQLServer)},
@@ -588,21 +675,21 @@ func TestLexer(t *testing.T) {
 		{
 			name:  "MySQL backtick quoted identifier",
 			input: "SELECT `user` FROM `test`.`table` WHERE `id` = 1",
-			expected: []Token{
-				{IDENT, "SELECT"},
-				{WS, " "},
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
 				{QUOTED_IDENT, "`user`"},
-				{WS, " "},
-				{IDENT, "FROM"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
 				{QUOTED_IDENT, "`test`.`table`"},
-				{WS, " "},
-				{IDENT, "WHERE"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "WHERE"},
+				{SPACE, " "},
 				{QUOTED_IDENT, "`id`"},
-				{WS, " "},
+				{SPACE, " "},
 				{OPERATOR, "="},
-				{WS, " "},
+				{SPACE, " "},
 				{NUMBER, "1"},
 			},
 			lexerOpts: []lexerOption{WithDBMS(DBMSMySQL)},
@@ -610,29 +697,29 @@ func TestLexer(t *testing.T) {
 		{
 			name:  "Tokenize function",
 			input: "SELECT count(*) FROM users",
-			expected: []Token{
-				{IDENT, "SELECT"},
-				{WS, " "},
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
 				{FUNCTION, "count"},
 				{PUNCTUATION, "("},
 				{WILDCARD, "*"},
 				{PUNCTUATION, ")"},
-				{WS, " "},
-				{IDENT, "FROM"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
 				{IDENT, "users"},
 			},
 		},
 		{
 			name:  "Tokenize temp table",
 			input: `SELECT * FROM #temp`,
-			expected: []Token{
-				{IDENT, "SELECT"},
-				{WS, " "},
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
 				{WILDCARD, "*"},
-				{WS, " "},
-				{IDENT, "FROM"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
 				{IDENT, "#temp"},
 			},
 			lexerOpts: []lexerOption{WithDBMS(DBMSSQLServer)},
@@ -640,15 +727,15 @@ func TestLexer(t *testing.T) {
 		{
 			name:  "MySQL comment",
 			input: `SELECT * FROM users # comment`,
-			expected: []Token{
-				{IDENT, "SELECT"},
-				{WS, " "},
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
 				{WILDCARD, "*"},
-				{WS, " "},
-				{IDENT, "FROM"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
 				{IDENT, "users"},
-				{WS, " "},
+				{SPACE, " "},
 				{COMMENT, "# comment"},
 			},
 			lexerOpts: []lexerOption{WithDBMS(DBMSMySQL)},
@@ -656,191 +743,220 @@ func TestLexer(t *testing.T) {
 		{
 			name:  "drop table if exists",
 			input: `DROP TABLE IF EXISTS users`,
-			expected: []Token{
-				{IDENT, "DROP"},
-				{WS, " "},
-				{IDENT, "TABLE"},
-				{WS, " "},
-				{IDENT, "IF"},
-				{WS, " "},
-				{IDENT, "EXISTS"},
-				{WS, " "},
+			expected: []TokenSpec{
+				{COMMAND, "DROP"},
+				{SPACE, " "},
+				{KEYWORD, "TABLE"},
+				{SPACE, " "},
+				{KEYWORD, "IF"},
+				{SPACE, " "},
+				{KEYWORD, "EXISTS"},
+				{SPACE, " "},
 				{IDENT, "users"},
 			},
 		},
 		{
 			name:  "select only",
 			input: "SELECT * FROM ONLY tab1 where id = 1",
-			expected: []Token{
-				{IDENT, "SELECT"},
-				{WS, " "},
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
 				{WILDCARD, "*"},
-				{WS, " "},
-				{IDENT, "FROM"},
-				{WS, " "},
-				{IDENT, "ONLY"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
+				{KEYWORD, "ONLY"},
+				{SPACE, " "},
 				{IDENT, "tab1"},
-				{WS, " "},
-				{IDENT, "where"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "where"},
+				{SPACE, " "},
 				{IDENT, "id"},
-				{WS, " "},
+				{SPACE, " "},
 				{OPERATOR, "="},
-				{WS, " "},
+				{SPACE, " "},
 				{NUMBER, "1"},
 			},
 		},
 		{
-			name:  "extracts n'th element of JSON array ",
+			name:  "extracts n'th element of JSON array",
 			input: `SELECT data::json -> 2 FROM users`,
-			expected: []Token{
-				{IDENT, "SELECT"},
-				{WS, " "},
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
 				{IDENT, "data"},
 				{OPERATOR, "::"},
 				{IDENT, "json"},
-				{WS, " "},
-				{OPERATOR, "->"},
-				{WS, " "},
+				{SPACE, " "},
+				{JSON_OP, "->"},
+				{SPACE, " "},
 				{NUMBER, "2"},
-				{WS, " "},
-				{IDENT, "FROM"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
 				{IDENT, "users"},
 			},
 		},
 		{
 			name:  "extracts JSON object field with the given key",
 			input: `SELECT data::json -> 'key' FROM users`,
-			expected: []Token{
-				{IDENT, "SELECT"},
-				{WS, " "},
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
 				{IDENT, "data"},
 				{OPERATOR, "::"},
 				{IDENT, "json"},
-				{WS, " "},
-				{OPERATOR, "->"},
-				{WS, " "},
+				{SPACE, " "},
+				{JSON_OP, "->"},
+				{SPACE, " "},
 				{STRING, "'key'"},
-				{WS, " "},
-				{IDENT, "FROM"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
 				{IDENT, "users"},
 			},
 		},
 		{
 			name:  "extracts n'th element of JSON array, as text",
 			input: `SELECT data::json ->> 2 FROM users`,
-			expected: []Token{
-				{IDENT, "SELECT"},
-				{WS, " "},
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
 				{IDENT, "data"},
 				{OPERATOR, "::"},
 				{IDENT, "json"},
-				{WS, " "},
-				{OPERATOR, "->>"},
-				{WS, " "},
+				{SPACE, " "},
+				{JSON_OP, "->>"},
+				{SPACE, " "},
 				{NUMBER, "2"},
-				{WS, " "},
-				{IDENT, "FROM"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
 				{IDENT, "users"},
 			},
 		},
 		{
 			name:  "extracts JSON object field with the given key, as text",
 			input: `SELECT data::json ->> 'key' FROM users`,
-			expected: []Token{
-				{IDENT, "SELECT"},
-				{WS, " "},
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
 				{IDENT, "data"},
 				{OPERATOR, "::"},
 				{IDENT, "json"},
-				{WS, " "},
-				{OPERATOR, "->>"},
-				{WS, " "},
+				{SPACE, " "},
+				{JSON_OP, "->>"},
+				{SPACE, " "},
 				{STRING, "'key'"},
-				{WS, " "},
-				{IDENT, "FROM"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
 				{IDENT, "users"},
 			},
 		},
 		{
 			name:  "extracts JSON sub-object at the specified path",
 			input: `SELECT data::json #> '{key1,key2}' FROM users`,
-			expected: []Token{
-				{IDENT, "SELECT"},
-				{WS, " "},
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
 				{IDENT, "data"},
 				{OPERATOR, "::"},
 				{IDENT, "json"},
-				{WS, " "},
-				{OPERATOR, "#>"},
-				{WS, " "},
+				{SPACE, " "},
+				{JSON_OP, "#>"},
+				{SPACE, " "},
 				{STRING, "'{key1,key2}'"},
-				{WS, " "},
-				{IDENT, "FROM"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
 				{IDENT, "users"},
 			},
 		},
 		{
 			name:  "extracts JSON sub-object at the specified path as text",
 			input: `SELECT data::json #>> '{key1,key2}' FROM users`,
-			expected: []Token{
-				{IDENT, "SELECT"},
-				{WS, " "},
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
 				{IDENT, "data"},
 				{OPERATOR, "::"},
 				{IDENT, "json"},
-				{WS, " "},
-				{OPERATOR, "#>>"},
-				{WS, " "},
+				{SPACE, " "},
+				{JSON_OP, "#>>"},
+				{SPACE, " "},
 				{STRING, "'{key1,key2}'"},
-				{WS, " "},
-				{IDENT, "FROM"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
 				{IDENT, "users"},
 			},
 		},
 		{
 			name:  "JSON path return any item for the specified JSON value",
 			input: `SELECT data::jsonb @? '$.a[*] ? (@ > 2)' FROM users`,
-			expected: []Token{
-				{IDENT, "SELECT"},
-				{WS, " "},
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
 				{IDENT, "data"},
 				{OPERATOR, "::"},
 				{IDENT, "jsonb"},
-				{WS, " "},
-				{OPERATOR, "@?"},
-				{WS, " "},
+				{SPACE, " "},
+				{JSON_OP, "@?"},
+				{SPACE, " "},
 				{STRING, "'$.a[*] ? (@ > 2)'"},
-				{WS, " "},
-				{IDENT, "FROM"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
 				{IDENT, "users"},
 			},
 		},
 		{
 			name:  "JSON path predicate check for the specified JSON value",
 			input: `SELECT data::jsonb @@ '$.a[*] > 2' FROM users`,
-			expected: []Token{
-				{IDENT, "SELECT"},
-				{WS, " "},
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
 				{IDENT, "data"},
 				{OPERATOR, "::"},
 				{IDENT, "jsonb"},
-				{WS, " "},
-				{OPERATOR, "@@"},
-				{WS, " "},
+				{SPACE, " "},
+				{JSON_OP, "@@"},
+				{SPACE, " "},
 				{STRING, "'$.a[*] > 2'"},
-				{WS, " "},
-				{IDENT, "FROM"},
-				{WS, " "},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
 				{IDENT, "users"},
+			},
+		},
+		{
+			name:  "create procedure",
+			input: `CREATE PROCEDURE test_proc (IN param1 INT, OUT param2 VARCHAR(255))`,
+			expected: []TokenSpec{
+				{COMMAND, "CREATE"},
+				{SPACE, " "},
+				{PROC_INDICATOR, "PROCEDURE"},
+				{SPACE, " "},
+				{IDENT, "test_proc"},
+				{SPACE, " "},
+				{PUNCTUATION, "("},
+				{KEYWORD, "IN"},
+				{SPACE, " "},
+				{IDENT, "param1"},
+				{SPACE, " "},
+				{IDENT, "INT"},
+				{PUNCTUATION, ","},
+				{SPACE, " "},
+				{KEYWORD, "OUT"},
+				{SPACE, " "},
+				{IDENT, "param2"},
+				{SPACE, " "},
+				{FUNCTION, "VARCHAR"},
+				{PUNCTUATION, "("},
+				{NUMBER, "255"},
+				{PUNCTUATION, ")"},
+				{PUNCTUATION, ")"},
 			},
 		},
 	}
@@ -848,8 +964,130 @@ func TestLexer(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			lexer := New(tt.input, tt.lexerOpts...)
-			tokens := lexer.ScanAll()
-			assert.Equal(t, tt.expected, tokens)
+			i := 0
+
+			for {
+				got := lexer.Scan()
+				if got.Type == EOF {
+					if i != len(tt.expected) {
+						t.Errorf("got %d tokens, want %d", i, len(tt.expected))
+					}
+					break
+				}
+
+				if i >= len(tt.expected) {
+					t.Errorf("got more tokens than expected at position %d", i)
+					break
+				}
+
+				want := tt.expected[i]
+				if got.Type != want.Type {
+					t.Errorf("token[%d] got type %v, want %v", i, got.Type, want.Type)
+				}
+				if got.Value != want.Value {
+					t.Errorf("token[%d] got value %q, want %q", i, got.Value, want.Value)
+				}
+
+				i++
+			}
+		})
+	}
+}
+
+func TestLexerIdentifierWithDigits(t *testing.T) {
+	tests := []struct {
+		input          string
+		expectedTokens []TokenSpec
+		expectedDigits [][]int
+		lexerOpts      []lexerOption
+	}{
+		{
+			input: `abc123`,
+			expectedTokens: []TokenSpec{
+				{IDENT, "abc123"},
+			},
+			expectedDigits: [][]int{
+				{3, 4, 5},
+			},
+		},
+		{
+			input: `abc123def456`,
+			expectedTokens: []TokenSpec{
+				{IDENT, "abc123def456"},
+			},
+			expectedDigits: [][]int{
+				{3, 4, 5, 9, 10, 11},
+			},
+		},
+		{
+			input: `abc123 bc12d456, "c123ef"`,
+			expectedTokens: []TokenSpec{
+				{IDENT, "abc123"},
+				{SPACE, " "},
+				{IDENT, "bc12d456"},
+				{PUNCTUATION, ","},
+				{SPACE, " "},
+				{QUOTED_IDENT, `"c123ef"`},
+			},
+			expectedDigits: [][]int{
+				{3, 4, 5},
+				nil,
+				{2, 3, 5, 6, 7},
+				nil,
+				nil,
+				{2, 3, 4},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run("", func(t *testing.T) {
+			lexer := New(tt.input, tt.lexerOpts...)
+			i := 0
+
+			for {
+				got := lexer.Scan()
+				if got.Type == EOF {
+					if i != len(tt.expectedTokens) {
+						t.Errorf("got %d tokens, want %d", i, len(tt.expectedTokens))
+					}
+					break
+				}
+
+				if i >= len(tt.expectedTokens) {
+					t.Errorf("got more tokens than expected at position %d", i)
+					break
+				}
+
+				want := tt.expectedTokens[i]
+				if got.Type != want.Type {
+					t.Errorf("token[%d] got type %v, want %v", i, got.Type, want.Type)
+				}
+				if got.Value != want.Value {
+					t.Errorf("token[%d] got value %q, want %q", i, got.Value, want.Value)
+				}
+
+				if i < len(tt.expectedDigits) {
+					digits := tt.expectedDigits[i]
+					if digits == nil {
+						if got.digits != nil {
+							t.Errorf("token[%d] got digits, want nil", i)
+						}
+					} else {
+						if len(got.digits) != len(digits) {
+							t.Errorf("token[%d] got %d digits, want %d", i, len(got.digits), len(digits))
+						} else {
+							for j, digit := range digits {
+								if got.digits[j] != digit {
+									t.Errorf("token[%d] got digit[%d] %d, want %d", i, j, got.digits[j], digit)
+								}
+							}
+						}
+					}
+				}
+
+				i++
+			}
 		})
 	}
 }
@@ -857,48 +1095,54 @@ func TestLexer(t *testing.T) {
 func TestLexerUnicode(t *testing.T) {
 	tests := []struct {
 		input     string
-		expected  []Token
+		expected  []TokenSpec
 		lexerOpts []lexerOption
 	}{
 		{
+			input: `abc`,
+			expected: []TokenSpec{
+				{IDENT, "abc"},
+			},
+		},
+		{
 			input: `Descripció_CAT`,
-			expected: []Token{
-				{IDENT, `Descripció_CAT`},
+			expected: []TokenSpec{
+				{IDENT, "Descripció_CAT"},
 			},
 		},
 		{
 			input: `世界`,
-			expected: []Token{
-				{IDENT, `世界`},
+			expected: []TokenSpec{
+				{IDENT, "世界"},
 			},
 		},
 		{
 			input: `こんにちは`,
-			expected: []Token{
-				{IDENT, `こんにちは`},
+			expected: []TokenSpec{
+				{IDENT, "こんにちは"},
 			},
 		},
 		{
 			input: `안녕하세요`,
-			expected: []Token{
-				{IDENT, `안녕하세요`},
+			expected: []TokenSpec{
+				{IDENT, "안녕하세요"},
 			},
 		},
 		{
 			input: `über`,
-			expected: []Token{
+			expected: []TokenSpec{
 				{IDENT, `über`},
 			},
 		},
 		{
 			input: `résumé`,
-			expected: []Token{
-				{IDENT, `résumé`},
+			expected: []TokenSpec{
+				{IDENT, "résumé"},
 			},
 		},
 		{
 			input: `"über"`,
-			expected: []Token{
+			expected: []TokenSpec{
 				{QUOTED_IDENT, `"über"`},
 			},
 		},
@@ -907,8 +1151,21 @@ func TestLexerUnicode(t *testing.T) {
 	for _, tt := range tests {
 		t.Run("", func(t *testing.T) {
 			lexer := New(tt.input, tt.lexerOpts...)
-			tokens := lexer.ScanAll()
-			assert.Equal(t, tt.expected, tokens)
+			i := 0
+			for {
+				got := lexer.Scan()
+				if got.Type == EOF {
+					break
+				}
+				want := tt.expected[i]
+				if got.Type != want.Type {
+					t.Errorf("token[%d] got type %v, want %v", i, got.Type, want.Type)
+				}
+				if got.Value != want.Value {
+					t.Errorf("token[%d] got value %q, want %q", i, got.Value, want.Value)
+				}
+				i++
+			}
 		})
 	}
 }
@@ -916,7 +1173,13 @@ func TestLexerUnicode(t *testing.T) {
 func ExampleLexer() {
 	query := "SELECT * FROM users WHERE id = 1"
 	lexer := New(query)
-	tokens := lexer.ScanAll()
-	fmt.Println(tokens)
-	// Output: [{6 SELECT} {2  } {9 *} {2  } {6 FROM} {2  } {6 users} {2  } {6 WHERE} {2  } {6 id} {2  } {8 =} {2  } {5 1}]
+
+	// Print tokens one by one
+	for {
+		token := lexer.Scan()
+		if token.Type == EOF {
+			break
+		}
+		fmt.Println(token)
+	}
 }

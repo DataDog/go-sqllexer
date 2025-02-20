@@ -140,7 +140,7 @@ func TestQueriesPerDBMS(t *testing.T) {
 
 						// Compare the expected statement metadata with the actual statement metadata
 						if output.StatementMetadata != nil {
-							assert.Equal(t, output.StatementMetadata, statementMetadata)
+							assertStatementMetadataEqual(t, output.StatementMetadata, statementMetadata)
 						}
 					}
 				})

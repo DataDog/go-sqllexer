@@ -186,6 +186,11 @@ func TestObfuscator(t *testing.T) {
 			replaceDigits: true,
 		},
 		{
+			input:         "SELECT * FROM users123ab where id12 = 1",
+			expected:      "SELECT * FROM users?ab where id? = ?",
+			replaceDigits: true,
+		},
+		{
 			input:         "SELECT * FROM users where id in (1, '2', 3, 1.5, '12')",
 			expected:      "SELECT * FROM users where id in (?, ?, ?, ?, ?)",
 			replaceDigits: true,
