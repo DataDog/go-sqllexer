@@ -1216,7 +1216,7 @@ func ExampleNormalizer() {
 	fmt.Println(normalizedSQL)
 	fmt.Println(statementMetadata)
 	// Output: SELECT * FROM users WHERE id in ( ? )
-	// &{34 [users] [/* this is a comment */] [SELECT] [] map[users:{}] map[/* this is a comment */:{}] map[SELECT:{}] map[]}
+	// &{34 [users] [/* this is a comment */] [SELECT] []}
 }
 
 func assertStatementMetadataEqual(t *testing.T, expected, actual *StatementMetadata) {

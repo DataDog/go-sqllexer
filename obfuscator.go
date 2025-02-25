@@ -82,7 +82,7 @@ const (
 // Obfuscate takes an input SQL string and returns an obfuscated SQL string.
 // The obfuscator replaces all literal values with a single placeholder
 func (o *Obfuscator) Obfuscate(input string, lexerOpts ...lexerOption) string {
-	var obfuscatedSQL = new(strings.Builder)
+	var obfuscatedSQL strings.Builder
 	obfuscatedSQL.Grow(len(input))
 
 	lexer := New(
@@ -118,7 +118,7 @@ func (o *Obfuscator) ObfuscateTokenValue(token *Token, lastValueToken *LastValue
 		if o.config.DollarQuotedFunc {
 			// obfuscate the content of dollar quoted function
 			quotedFunc := token.Value[6 : len(token.Value)-6] // remove the $func$ prefix and suffix
-			obfuscatedDollarQuotedFunc := new(strings.Builder)
+			var obfuscatedDollarQuotedFunc strings.Builder
 			obfuscatedDollarQuotedFunc.Grow(len(quotedFunc) + 12)
 			obfuscatedDollarQuotedFunc.WriteString("$func$")
 			obfuscatedDollarQuotedFunc.WriteString(o.Obfuscate(quotedFunc, lexerOpts...))

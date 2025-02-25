@@ -959,6 +959,24 @@ here */`,
 				{PUNCTUATION, ")"},
 			},
 		},
+		{
+			name:  "escape character",
+			input: `SELECT E'\c'`,
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
+				{IDENT, "E"},
+				{STRING, `'\c'`},
+			},
+		},
+		{
+			name:  "unknown character",
+			input: `\c`, // \c is a psql command but not a valid postgres sql
+			expected: []TokenSpec{
+				{UNKNOWN, `\`},
+				{IDENT, "c"},
+			},
+		},
 	}
 
 	for _, tt := range tests {

@@ -191,16 +191,23 @@ func (s *Lexer) Scan() *Token {
 	case isEOF(ch):
 		return s.emit(EOF)
 	default:
-		return s.emit(UNKNOWN)
+		return s.scanUnknown()
 	}
 }
 
 // lookAhead returns the rune n positions ahead of the cursor.
 func (s *Lexer) lookAhead(n int) rune {
-	if s.cursor+n >= len(s.src) || s.cursor+n < 0 {
+	pos := s.cursor + n
+	if pos >= len(s.src) || pos < 0 {
 		return 0
 	}
-	r, _ := utf8.DecodeRuneInString(s.src[s.cursor+n:])
+	// Fast path for ASCII
+	b := s.src[pos]
+	if b < utf8.RuneSelf {
+		return rune(b)
+	}
+	// Slow path for non-ASCII
+	r, _ := utf8.DecodeRuneInString(s.src[pos:])
 	return r
 }
 
@@ -219,6 +226,12 @@ func (s *Lexer) nextBy(n int) rune {
 	if s.cursor >= len(s.src) {
 		return 0
 	}
+	// Fast path for ASCII
+	b := s.src[s.cursor]
+	if b < utf8.RuneSelf {
+		return rune(b)
+	}
+	// Slow path for non-ASCII
 	r, _ := utf8.DecodeRuneInString(s.src[s.cursor:])
 	return r
 }
@@ -242,8 +255,8 @@ func (s *Lexer) matchAt(match []rune) bool {
 
 func (s *Lexer) scanNumberWithLeadingSign() *Token {
 	s.start = s.cursor
-	s.next() // consume the leading sign
-	return s.scanDecimalNumber()
+	ch := s.next() // consume the leading sign
+	return s.scanDecimalNumber(ch)
 }
 
 func (s *Lexer) scanNumber(ch rune) *Token {
@@ -262,24 +275,21 @@ func (s *Lexer) scanNumberic(ch rune) *Token {
 		}
 	}
 
-	s.next() // consume first digit
-	return s.scanDecimalNumber()
+	ch = s.next() // consume first digit
+	return s.scanDecimalNumber(ch)
 }
 
-func (s *Lexer) scanDecimalNumber() *Token {
-	ch := s.peek()
-
+func (s *Lexer) scanDecimalNumber(ch rune) *Token {
 	// scan digits
 	for isDigit(ch) || ch == '.' || isExpontent(ch) {
 		if isExpontent(ch) {
 			ch = s.next()
 			if isLeadingSign(ch) {
-				s.next()
+				ch = s.next()
 			}
 		} else {
-			s.next()
+			ch = s.next()
 		}
-		ch = s.peek()
 	}
 	return s.emit(NUMBER)
 }
@@ -370,7 +380,7 @@ func (s *Lexer) scanIdentifier(ch rune) *Token {
 	}
 
 	// If we found a complete keyword and next char is whitespace
-	if node.isEnd && (isPunctuation(s.peek()) || isSpace(s.peek()) || isEOF(s.peek())) {
+	if node.isEnd && (isPunctuation(ch) || isSpace(ch) || isEOF(ch)) {
 		s.cursor = pos + 1 // Include the last matched character
 		s.isTableIndicator = node.isTableIndicator
 		return s.emit(node.tokenType)
@@ -586,6 +596,13 @@ func (s *Lexer) scanSystemVariable() *Token {
 		ch = s.next()
 	}
 	return s.emit(SYSTEM_VARIABLE)
+}
+
+func (s *Lexer) scanUnknown() *Token {
+	// When we see an unknown token, we advance the cursor until we see something that looks like a token boundary.
+	s.start = s.cursor
+	s.next()
+	return s.emit(UNKNOWN)
 }
 
 // Modify emit function to use positions and maintain links
