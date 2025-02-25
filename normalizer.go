@@ -2,7 +2,6 @@ package sqllexer
 
 import (
 	"strings"
-	"sync"
 )
 
 type normalizerConfig struct {
@@ -99,19 +98,22 @@ type StatementMetadata struct {
 	Comments   []string `json:"comments"`
 	Commands   []string `json:"commands"`
 	Procedures []string `json:"procedures"`
-	// Internal maps for deduping during collection - exclude from JSON
-	tablesSet     map[string]struct{} `json:"-"`
-	commentsSet   map[string]struct{} `json:"-"`
-	commandsSet   map[string]struct{} `json:"-"`
-	proceduresSet map[string]struct{} `json:"-"`
+}
+
+type metadataSet struct {
+	size          int
+	tablesSet     map[string]struct{}
+	commentsSet   map[string]struct{}
+	commandsSet   map[string]struct{}
+	proceduresSet map[string]struct{}
 }
 
 // addMetadata adds a value to a metadata slice if it doesn't exist in the set
-func (sm *StatementMetadata) addMetadata(value string, set map[string]struct{}, slice *[]string) {
+func (m *metadataSet) addMetadata(value string, set map[string]struct{}, slice *[]string) {
 	if _, exists := set[value]; !exists {
 		set[value] = struct{}{}
 		*slice = append(*slice, value)
-		sm.Size += len(value)
+		m.size += len(value)
 	}
 }
 
@@ -131,47 +133,6 @@ type Normalizer struct {
 	config *normalizerConfig
 }
 
-// Add a pool for StatementMetadata reuse
-var statementMetadataPool = sync.Pool{
-	New: func() interface{} {
-		return &StatementMetadata{
-			Tables:        make([]string, 0, 4),
-			Comments:      make([]string, 0, 2),
-			Commands:      make([]string, 0, 4),
-			Procedures:    make([]string, 0),
-			tablesSet:     make(map[string]struct{}, 4),
-			commentsSet:   make(map[string]struct{}, 2),
-			commandsSet:   make(map[string]struct{}, 4),
-			proceduresSet: make(map[string]struct{}),
-		}
-	},
-}
-
-// Reset StatementMetadata for reuse
-func (sm *StatementMetadata) reset() {
-	sm.Size = 0
-	sm.resetSlice(&sm.Tables, 4)
-	sm.resetSlice(&sm.Comments, 2)
-	sm.resetSlice(&sm.Commands, 4)
-	sm.resetSlice(&sm.Procedures, 0)
-
-	// Just create new maps instead of clearing old ones
-	sm.tablesSet = make(map[string]struct{}, 4)
-	sm.commentsSet = make(map[string]struct{}, 2)
-	sm.commandsSet = make(map[string]struct{}, 4)
-	sm.proceduresSet = make(map[string]struct{})
-}
-
-func (sm *StatementMetadata) resetSlice(slice *[]string, capacity int) {
-	for i := range *slice {
-		(*slice)[i] = ""
-	}
-	*slice = (*slice)[:0]
-	if cap(*slice) > capacity*2 {
-		*slice = make([]string, 0, capacity)
-	}
-}
-
 func NewNormalizer(opts ...normalizerOption) *Normalizer {
 	normalizer := Normalizer{
 		config: &normalizerConfig{},
@@ -185,7 +146,7 @@ func NewNormalizer(opts ...normalizerOption) *Normalizer {
 }
 
 // normalizeToken is a helper function that handles the common normalization logic
-func (n *Normalizer) normalizeToken(lexer *Lexer, normalizedSQLBuilder *strings.Builder, statementMetadata *StatementMetadata, preProcessToken func(*Token, *LastValueToken), lexerOpts ...lexerOption) error {
+func (n *Normalizer) normalizeToken(lexer *Lexer, normalizedSQLBuilder *strings.Builder, meta *metadataSet, statementMetadata *StatementMetadata, preProcessToken func(*Token, *LastValueToken), lexerOpts ...lexerOption) error {
 	var groupablePlaceholder groupablePlaceholder
 	var headState headState
 	var ctes map[string]bool
@@ -204,7 +165,7 @@ func (n *Normalizer) normalizeToken(lexer *Lexer, normalizedSQLBuilder *strings.
 			preProcessToken(token, lastValueToken)
 		}
 		if n.shouldCollectMetadata() {
-			n.collectMetadata(token, lastValueToken, statementMetadata, ctes)
+			n.collectMetadata(token, lastValueToken, meta, statementMetadata, ctes)
 		}
 		n.normalizeSQL(token, lastValueToken, normalizedSQLBuilder, &groupablePlaceholder, &headState, lexerOpts...)
 		if token.Type == EOF {
@@ -220,18 +181,29 @@ func (n *Normalizer) normalizeToken(lexer *Lexer, normalizedSQLBuilder *strings.
 
 func (n *Normalizer) Normalize(input string, lexerOpts ...lexerOption) (normalizedSQL string, statementMetadata *StatementMetadata, err error) {
 	lexer := New(input, lexerOpts...)
-	normalizedSQLBuilder := new(strings.Builder)
+	var normalizedSQLBuilder strings.Builder
 	normalizedSQLBuilder.Grow(len(input))
 
-	statementMetadata = statementMetadataPool.Get().(*StatementMetadata)
-	statementMetadata.reset()
-	defer statementMetadataPool.Put(statementMetadata)
+	meta := &metadataSet{
+		tablesSet:     map[string]struct{}{},
+		commentsSet:   map[string]struct{}{},
+		commandsSet:   map[string]struct{}{},
+		proceduresSet: map[string]struct{}{},
+	}
 
-	if err = n.normalizeToken(lexer, normalizedSQLBuilder, statementMetadata, nil, lexerOpts...); err != nil {
+	statementMetadata = &StatementMetadata{
+		Tables:     []string{},
+		Comments:   []string{},
+		Commands:   []string{},
+		Procedures: []string{},
+	}
+
+	if err = n.normalizeToken(lexer, &normalizedSQLBuilder, meta, statementMetadata, nil, lexerOpts...); err != nil {
 		return "", nil, err
 	}
 
 	normalizedSQL = normalizedSQLBuilder.String()
+	statementMetadata.Size = meta.size
 	return n.trimNormalizedSQL(normalizedSQL), statementMetadata, nil
 }
 
@@ -239,14 +211,14 @@ func (n *Normalizer) shouldCollectMetadata() bool {
 	return n.config.CollectTables || n.config.CollectCommands || n.config.CollectComments || n.config.CollectProcedure
 }
 
-func (n *Normalizer) collectMetadata(token *Token, lastValueToken *LastValueToken, statementMetadata *StatementMetadata, ctes map[string]bool) {
+func (n *Normalizer) collectMetadata(token *Token, lastValueToken *LastValueToken, meta *metadataSet, statementMetadata *StatementMetadata, ctes map[string]bool) {
 	if n.config.CollectComments && (token.Type == COMMENT || token.Type == MULTILINE_COMMENT) {
 		comment := token.Value
-		statementMetadata.addMetadata(comment, statementMetadata.commentsSet, &statementMetadata.Comments)
+		meta.addMetadata(comment, meta.commentsSet, &statementMetadata.Comments)
 	} else if token.Type == COMMAND {
 		if n.config.CollectCommands {
 			command := strings.ToUpper(token.Value)
-			statementMetadata.addMetadata(command, statementMetadata.commandsSet, &statementMetadata.Commands)
+			meta.addMetadata(command, meta.commandsSet, &statementMetadata.Commands)
 		}
 	} else if token.Type == IDENT || token.Type == QUOTED_IDENT || token.Type == FUNCTION {
 		tokenVal := token.Value
@@ -262,10 +234,10 @@ func (n *Normalizer) collectMetadata(token *Token, lastValueToken *LastValueToke
 			ctes[tokenVal] = true
 		} else if n.config.CollectTables && lastValueToken != nil && lastValueToken.isTableIndicator {
 			if _, ok := ctes[tokenVal]; !ok {
-				statementMetadata.addMetadata(tokenVal, statementMetadata.tablesSet, &statementMetadata.Tables)
+				meta.addMetadata(tokenVal, meta.tablesSet, &statementMetadata.Tables)
 			}
 		} else if n.config.CollectProcedure && lastValueToken != nil && lastValueToken.Type == PROC_INDICATOR {
-			statementMetadata.addMetadata(tokenVal, statementMetadata.proceduresSet, &statementMetadata.Procedures)
+			meta.addMetadata(tokenVal, meta.proceduresSet, &statementMetadata.Procedures)
 		}
 	}
 }
@@ -301,7 +273,7 @@ func (n *Normalizer) normalizeSQL(token *Token, lastValueToken *LastValueToken, 
 			if err == nil {
 				// replace the content of the dollar quoted function with the normalized content
 				// if there is an error, we just keep the original content
-				normalizedDollarQuotedFunc := new(strings.Builder)
+				var normalizedDollarQuotedFunc strings.Builder
 				normalizedDollarQuotedFunc.Grow(len(normalizedQuotedFunc) + 12)
 				normalizedDollarQuotedFunc.WriteString("$func$")
 				normalizedDollarQuotedFunc.WriteString(normalizedQuotedFunc)
@@ -317,7 +289,7 @@ func (n *Normalizer) normalizeSQL(token *Token, lastValueToken *LastValueToken, 
 			}
 
 			if lastValueToken != nil && lastValueToken.Type == ALIAS_INDICATOR {
-				if token.Type == IDENT {
+				if token.Type == IDENT || token.Type == QUOTED_IDENT {
 					return
 				} else {
 					// if the last token is AS and the current token is not IDENT,
@@ -405,13 +377,11 @@ func (n *Normalizer) appendSpace(token *Token, lastValueToken *LastValueToken, n
 	}
 
 	switch token.Value {
-	case ",":
-	case ";":
+	case ",", ";":
+		return
 	case "=":
 		if lastValueToken != nil && lastValueToken.Value == ":" {
-			// do not add a space before an equals if a colon was
-			// present before it.
-			break
+			return
 		}
 		fallthrough
 	default:

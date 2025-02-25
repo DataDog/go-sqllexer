@@ -222,7 +222,7 @@ var keywordRoot = buildCombinedTrie()
 // TODO: Optimize these functions to work with rune positions instead of string operations
 // They are currently used by obfuscator and normalizer, which we'll optimize later
 func replaceDigits(token *Token, placeholder string) string {
-	var replacedToken = new(strings.Builder)
+	var replacedToken strings.Builder
 	replacedToken.Grow(len(token.Value))
 
 	start := 0
@@ -247,7 +247,7 @@ func replaceDigits(token *Token, placeholder string) string {
 }
 
 func trimQuotes(token *Token) string {
-	var trimmedToken = new(strings.Builder)
+	var trimmedToken strings.Builder
 	trimmedToken.Grow(len(token.Value) - len(token.quotes))
 
 	start := 0
