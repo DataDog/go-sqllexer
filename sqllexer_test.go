@@ -695,6 +695,27 @@ here */`,
 			lexerOpts: []lexerOption{WithDBMS(DBMSMySQL)},
 		},
 		{
+			name:  "Quoted identifier with non-ascii characters",
+			input: `SELECT "test" FROM "fóo"."bar" WHERE "id" = 1`,
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
+				{QUOTED_IDENT, `"test"`},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
+				{QUOTED_IDENT, `"fóo"."bar"`},
+				{SPACE, " "},
+				{KEYWORD, "WHERE"},
+				{SPACE, " "},
+				{QUOTED_IDENT, `"id"`},
+				{SPACE, " "},
+				{OPERATOR, "="},
+				{SPACE, " "},
+				{NUMBER, "1"},
+			},
+		},
+		{
 			name:  "Tokenize function",
 			input: "SELECT count(*) FROM users",
 			expected: []TokenSpec{
@@ -1098,6 +1119,103 @@ func TestLexerIdentifierWithDigits(t *testing.T) {
 							for j, digit := range digits {
 								if got.digits[j] != digit {
 									t.Errorf("token[%d] got digit[%d] %d, want %d", i, j, got.digits[j], digit)
+								}
+							}
+						}
+					}
+				}
+
+				i++
+			}
+		})
+	}
+}
+
+func TestLexerIdentifierWithQuotes(t *testing.T) {
+	tests := []struct {
+		input          string
+		expectedTokens []TokenSpec
+		expectedQuotes [][]int
+		lexerOpts      []lexerOption
+	}{
+		{
+			input: `"abc"`,
+			expectedTokens: []TokenSpec{
+				{QUOTED_IDENT, `"abc"`},
+			},
+			expectedQuotes: [][]int{
+				{0, 4},
+			},
+		},
+		{
+			input: `"abc"."def"`,
+			expectedTokens: []TokenSpec{
+				{QUOTED_IDENT, `"abc"."def"`},
+			},
+			expectedQuotes: [][]int{
+				{0, 4, 6, 10},
+			},
+		},
+		{
+			input: `"fóo"."bar"`,
+			expectedTokens: []TokenSpec{
+				{QUOTED_IDENT, `"fóo"."bar"`},
+			},
+			expectedQuotes: [][]int{
+				{0, 5, 7, 11},
+			},
+		},
+		{
+			input: `SELECT "fóo"."`,
+			expectedTokens: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
+				{ERROR, `"fóo"."`},
+			},
+			expectedQuotes: [][]int{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run("", func(t *testing.T) {
+			lexer := New(tt.input, tt.lexerOpts...)
+			i := 0
+
+			for {
+				got := lexer.Scan()
+				if got.Type == EOF {
+					if i != len(tt.expectedTokens) {
+						t.Errorf("got %d tokens, want %d", i, len(tt.expectedTokens))
+					}
+					break
+				}
+
+				if i >= len(tt.expectedTokens) {
+					t.Errorf("got more tokens than expected at position %d", i)
+					break
+				}
+
+				want := tt.expectedTokens[i]
+				if got.Type != want.Type {
+					t.Errorf("token[%d] got type %v, want %v", i, got.Type, want.Type)
+				}
+				if got.Value != want.Value {
+					t.Errorf("token[%d] got value %q, want %q", i, got.Value, want.Value)
+				}
+
+				if i < len(tt.expectedQuotes) {
+					quotes := tt.expectedQuotes[i]
+					if quotes == nil {
+						if got.quotes != nil {
+							t.Errorf("token[%d] got quotes, want nil", i)
+						}
+					} else {
+						if len(got.quotes) != len(quotes) {
+							t.Errorf("token[%d] got %d quotes, want %d", i, len(got.digits), len(quotes))
+						} else {
+							for j, quote := range quotes {
+								if got.quotes[j] != quote {
+									t.Errorf("token[%d] got quote[%d] %d, want %d", i, j, got.quotes[j], quote)
 								}
 							}
 						}
