@@ -195,6 +195,20 @@ multiline comment */
 			},
 		},
 		{
+			input:    "SELECT * FROM `database`.`table`",
+			expected: "SELECT * FROM database.table",
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"database.table"},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       20,
+			},
+			lexerOpts: []lexerOption{
+				WithDBMS(DBMSMySQL),
+			},
+		},
+		{
 			// double quoted table name with non-ascii characters
 			input:    `SELECT * FROM "fóo"."users" WHERE id = 1`,
 			expected: `SELECT * FROM fóo.users WHERE id = ?`,
