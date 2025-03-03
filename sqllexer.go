@@ -118,7 +118,7 @@ func (s *Lexer) Scan() *Token {
 	case isSingleQuote(ch):
 		return s.scanString()
 	case isSingleLineComment(ch, s.lookAhead(1)):
-		return s.scanSingleLineComment()
+		return s.scanSingleLineComment(ch)
 	case isMultiLineComment(ch, s.lookAhead(1)):
 		return s.scanMultiLineComment()
 	case isLeadingSign(ch):
@@ -151,13 +151,13 @@ func (s *Lexer) Scan() *Token {
 		if s.config.DBMS == DBMSMySQL {
 			return s.scanDoubleQuotedIdentifier('`')
 		}
-		fallthrough
+		return s.scanUnknown() // backtick is only valid in mysql
 	case ch == '#':
 		if s.config.DBMS == DBMSSQLServer {
 			return s.scanIdentifier(ch)
 		} else if s.config.DBMS == DBMSMySQL {
 			// MySQL treats # as a comment
-			return s.scanSingleLineComment()
+			return s.scanSingleLineComment(ch)
 		}
 		return s.scanOperator(ch)
 	case ch == '@':
@@ -353,6 +353,9 @@ func (s *Lexer) scanIdentifier(ch rune) *Token {
 			}
 			ch = s.nextBy(utf8.RuneLen(ch))
 		}
+		if s.start == s.cursor {
+			return s.scanUnknown()
+		}
 		return s.emit(IDENT)
 	}
 
@@ -392,6 +395,10 @@ func (s *Lexer) scanIdentifier(ch rune) *Token {
 			s.digits = append(s.digits, s.cursor-offset)
 		}
 		ch = s.nextBy(utf8.RuneLen(ch))
+	}
+
+	if s.start == s.cursor {
+		return s.scanUnknown()
 	}
 
 	if ch == '(' {
@@ -505,9 +512,13 @@ func (s *Lexer) scanWildcard() *Token {
 	return s.emit(WILDCARD)
 }
 
-func (s *Lexer) scanSingleLineComment() *Token {
+func (s *Lexer) scanSingleLineComment(ch rune) *Token {
 	s.start = s.cursor
-	ch := s.nextBy(2) // consume the opening dashes
+	if ch == '#' {
+		ch = s.next() // consume the opening #
+	} else {
+		ch = s.nextBy(2) // consume the opening dashes
+	}
 	for ch != '\n' && !isEOF(ch) {
 		ch = s.next()
 	}

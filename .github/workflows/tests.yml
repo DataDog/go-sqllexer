@@ -30,3 +30,7 @@ jobs:
         run: go test -v ./...
       - name: Test Race
         run: go test -race -v ./...
+      - name: Fuzz Normalizer
+        run: go test -fuzz=FuzzNormalizer -fuzztime 60s
+      - name: Fuzz Obfuscator and Normalizer
+        run: go test -fuzz=FuzzObfuscatorAndNormalizer -fuzztime 60s

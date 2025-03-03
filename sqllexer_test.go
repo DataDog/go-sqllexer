@@ -193,7 +193,7 @@ func TestLexer(t *testing.T) {
 		},
 		{
 			name:  "simple select with double quoted identifier",
-			input: "SELECT * FROM \"users table\" where id = 1",
+			input: "SELECT * FROM \"users`table\" where id = 1",
 			expected: []TokenSpec{
 				{COMMAND, "SELECT"},
 				{SPACE, " "},
@@ -201,7 +201,7 @@ func TestLexer(t *testing.T) {
 				{SPACE, " "},
 				{KEYWORD, "FROM"},
 				{SPACE, " "},
-				{QUOTED_IDENT, "\"users table\""},
+				{QUOTED_IDENT, "\"users`table\""},
 				{SPACE, " "},
 				{KEYWORD, "where"},
 				{SPACE, " "},
@@ -997,6 +997,14 @@ here */`,
 				{UNKNOWN, `\`},
 				{IDENT, "c"},
 			},
+		},
+		{
+			name:  "mysql comment",
+			input: "#1",
+			expected: []TokenSpec{
+				{COMMENT, "#1"},
+			},
+			lexerOpts: []lexerOption{WithDBMS(DBMSMySQL)},
 		},
 	}
 
