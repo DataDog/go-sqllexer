@@ -1,6 +1,7 @@
 package sqllexer
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -146,7 +147,13 @@ func NewNormalizer(opts ...normalizerOption) *Normalizer {
 }
 
 // normalizeToken is a helper function that handles the common normalization logic
-func (n *Normalizer) normalizeToken(lexer *Lexer, normalizedSQLBuilder *strings.Builder, meta *metadataSet, statementMetadata *StatementMetadata, preProcessToken func(*Token, *LastValueToken), lexerOpts ...lexerOption) error {
+func (n *Normalizer) normalizeToken(lexer *Lexer, normalizedSQLBuilder *strings.Builder, meta *metadataSet, statementMetadata *StatementMetadata, preProcessToken func(*Token, *LastValueToken), lexerOpts ...lexerOption) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("error normalizing SQL token: %v", r)
+		}
+	}()
+
 	var groupablePlaceholder groupablePlaceholder
 	var headState headState
 	var ctes map[string]bool

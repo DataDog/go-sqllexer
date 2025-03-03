@@ -413,7 +413,7 @@ func (s *Lexer) scanDoubleQuotedIdentifier(delimiter rune) *Token {
 	for {
 		// encountered the closing quote
 		// BUT if it's followed by .", then we should keep going
-		// e.g. postgre "foo"."bar"
+		// e.g. postgres "foo"."bar"
 		// e.g. sqlserver [foo].[bar]
 		if ch == closingDelimiter {
 			s.quotes = append(s.quotes, s.cursor-offset)
@@ -426,6 +426,7 @@ func (s *Lexer) scanDoubleQuotedIdentifier(delimiter rune) *Token {
 			break
 		}
 		if isEOF(ch) {
+			s.quotes = nil // if we hit EOF, we clear the quotes
 			return s.emit(ERROR)
 		}
 		if isDigit(ch) {

@@ -231,6 +231,9 @@ func replaceDigits(token *Token, placeholder string) string {
 	// write placeholder to builder if no consecutive digits
 	// write start:token.End to builder
 	for i := 0; i < len(token.digits); i++ {
+		if token.digits[i] > len(token.Value) {
+			break
+		}
 		if token.digits[i]-start >= 1 {
 			replacedToken.WriteString(token.Value[start:token.digits[i]])
 		}
@@ -241,7 +244,9 @@ func replaceDigits(token *Token, placeholder string) string {
 	}
 
 	// write start:token.End to builder
-	replacedToken.WriteString(token.Value[start:len(token.Value)])
+	if start < len(token.Value) {
+		replacedToken.WriteString(token.Value[start:len(token.Value)])
+	}
 	token.digits = nil
 	return replacedToken.String()
 }
@@ -252,10 +257,12 @@ func trimQuotes(token *Token) string {
 
 	start := 0
 
-	// loop over token.digits indexes, write start:token.digits[i] to builder
-	// write placeholder to builder if no consecutive digits
+	// loop over token.quotes indexes, write start:token.quotes[i] to builder
 	// write start:token.End to builder
 	for i := 0; i < len(token.quotes); i++ {
+		if token.quotes[i] > len(token.Value) {
+			break
+		}
 		if token.quotes[i]-start >= 1 {
 			trimmedToken.WriteString(token.Value[start:token.quotes[i]])
 		}
@@ -263,7 +270,9 @@ func trimQuotes(token *Token) string {
 	}
 
 	// write start:token.End to builder
-	trimmedToken.WriteString(token.Value[start:len(token.Value)])
+	if start < len(token.Value) {
+		trimmedToken.WriteString(token.Value[start:len(token.Value)])
+	}
 	token.quotes = nil
 	return trimmedToken.String()
 }

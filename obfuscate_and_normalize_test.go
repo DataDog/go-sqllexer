@@ -195,6 +195,42 @@ multiline comment */
 			},
 		},
 		{
+			// double quoted table name with non-ascii characters
+			input:    `SELECT * FROM "fóo"."users" WHERE id = 1`,
+			expected: `SELECT * FROM fóo.users WHERE id = ?`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"fóo.users"},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       16,
+			},
+		},
+		{
+			// double quoted table name with truncated quotes
+			input:    `SELECT * FROM "fóo"."us`,
+			expected: `SELECT * FROM "fóo"."us`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       6,
+			},
+		},
+		{
+			// double quoted table name with truncated quotes
+			input:    `SELECT "fun" FROM "`,
+			expected: `SELECT fun FROM "`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       6,
+			},
+		},
+		{
 			// [] quoted table name
 			input:    `SELECT * FROM [public].[users] WHERE id = 1`,
 			expected: `SELECT * FROM public.users WHERE id = ?`,
