@@ -29,7 +29,7 @@ func FuzzNormalizer(f *testing.F) {
 func FuzzObfuscatorAndNormalizer(f *testing.F) {
 	// Test the combined obfuscation and normalization
 	addComplexTestCases(f)
-	// addObfuscationTestCases(f)
+	addObfuscationTestCases(f)
 
 	normalizer := NewNormalizer(
 		WithCollectComments(true),
