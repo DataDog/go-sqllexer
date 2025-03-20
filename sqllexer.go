@@ -1,6 +1,7 @@
 package sqllexer
 
 import (
+	"strings"
 	"unicode/utf8"
 )
 
@@ -324,7 +325,7 @@ func (s *Lexer) scanString() *Token {
 			continue
 		}
 
-		if ch == '\\' {
+		if ch == '\\' && !strings.EqualFold(s.token.lastValueToken.Value, "ESCAPE") { // LIKE...ESCAPE clause accepts only one character, backslash included
 			escaped = true
 			continue
 		}

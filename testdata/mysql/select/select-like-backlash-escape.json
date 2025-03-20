@@ -1,0 +1,16 @@
+{
+    "input": "SELECT count(*) FROM `test` WHERE (`type`=?) AND (`name` LIKE '%\\_temp\\_%' ESCAPE '\\') LIMIT 1",
+    "outputs": [
+      {
+        "expected": "SELECT count ( * ) FROM test WHERE ( type = ? ) AND ( name LIKE ? ESCAPE ? ) LIMIT ?",
+        "statement_metadata": {
+          "size": 10,
+          "tables": ["test"],
+          "commands": ["SELECT"],
+          "comments": [],
+          "procedures": []
+        }
+      }
+    ]
+  }
+  
