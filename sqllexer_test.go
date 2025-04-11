@@ -1006,6 +1006,27 @@ here */`,
 			},
 			lexerOpts: []lexerOption{WithDBMS(DBMSMySQL)},
 		},
+		{
+			name:  "string with escaped characters",
+			input: `SELECT 1 WHERE 'test_temp_test' LIKE '%\_temp\_%' ESCAPE '\'`,
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
+				{NUMBER, "1"},
+				{SPACE, " "},
+				{KEYWORD, "WHERE"},
+				{SPACE, " "},
+				{STRING, "'test_temp_test'"},
+				{SPACE, " "},
+				{KEYWORD, "LIKE"},
+				{SPACE, " "},
+				{STRING, `'%\_temp\_%'`},
+				{SPACE, " "},
+				{KEYWORD, "ESCAPE"},
+				{SPACE, " "},
+				{STRING, `'\'`},
+			},
+		},
 	}
 
 	for _, tt := range tests {
