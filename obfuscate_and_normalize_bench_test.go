@@ -3,6 +3,7 @@ package sqllexer
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -117,6 +118,17 @@ ORDER BY
 
 	var backtickQuotedQuery = "SELECT `orders`.`OrderID`, `customers`.`CustomerName`, `products`.`ProductName`, `order_details`.`Quantity`, `order_details`.`UnitPrice`, (`order_details`.`Quantity` * `order_details`.`UnitPrice`) AS `TotalPrice`, `orders`.`OrderDate`, `orders`.`ShippedDate`, CASE WHEN `orders`.`ShippedDate` IS NULL THEN 'Pending' ELSE 'Shipped' END AS `OrderStatus` FROM `orders` INNER JOIN `customers` ON `orders`.`CustomerID` = `customers`.`CustomerID` INNER JOIN `order_details` ON `orders`.`OrderID` = `order_details`.`OrderID` INNER JOIN `products` ON `order_details`.`ProductID` = `products`.`ProductID` WHERE `orders`.`OrderDate` >= '2024-01-01' AND `orders`.`OrderDate` <= '2024-12-31' AND `customers`.`Region` = 'North America' GROUP BY `orders`.`OrderID`, `customers`.`CustomerName`, `products`.`ProductName`, `order_details`.`Quantity`, `order_details`.`UnitPrice`, `orders`.`OrderDate`, `orders`.`ShippedDate` HAVING SUM(`order_details`.`Quantity`) > 10 ORDER BY `orders`.`OrderDate` DESC;"
 
+	// Generate a query with 12000+ parameters like in test.csv
+	generateLargeParamQuery := func() string {
+		// Build the IN clause parameters
+		var params []string
+		for i := 1; i <= 15000; i++ {
+			params = append(params, fmt.Sprintf("$%d", i))
+		}
+		return fmt.Sprintf("SELECT service_instance_id, CASE WHEN last_seen::timestamptz < NOW() - interval $11111 THEN $22222 ELSE $33333 END FROM apm_telemetry.service_instance WHERE service_instance_id IN (%s)",
+			strings.Join(params, ", ")) // The IN clause parameters
+	}
+
 	benchmarks := []struct {
 		name  string
 		query string
@@ -128,6 +140,7 @@ ORDER BY
 		{"SuperLarge", fmt.Sprintf(superLargeQuery, 1)},
 		{"BracketQuoted", bracketQuotedQuery},
 		{"BacktickQuoted", backtickQuotedQuery},
+		{"ManyParams", generateLargeParamQuery()},
 	}
 	obfuscator := NewObfuscator(
 		WithReplaceDigits(true),
