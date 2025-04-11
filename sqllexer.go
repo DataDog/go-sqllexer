@@ -315,12 +315,14 @@ func (s *Lexer) scanOctalNumber() *Token {
 func (s *Lexer) scanString() *Token {
 	s.start = s.cursor
 	escaped := false
+	escapedQuote := false
 
-	for ch := s.next(); !isEOF(ch); ch = s.next() {
+	ch := s.next() // consume opening quote
+
+	for ; !isEOF(ch); ch = s.next() {
 		if escaped {
-			// encountered an escape character
-			// reset the escaped flag and continue
 			escaped = false
+			escapedQuote = ch == '\''
 			continue
 		}
 
@@ -333,6 +335,10 @@ func (s *Lexer) scanString() *Token {
 			s.next() // consume the closing quote
 			return s.emit(STRING)
 		}
+	}
+	// Special case: if we ended with an escaped quote (e.g. ESCAPE '\')
+	if escapedQuote {
+		return s.emit(STRING)
 	}
 	// If we get here, we hit EOF before finding closing quote
 	return s.emit(INCOMPLETE_STRING)

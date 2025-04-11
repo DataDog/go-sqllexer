@@ -93,6 +93,7 @@ var keywords = []string{
 	"DISTINCT",
 	"ELSE",
 	"END",
+	"ESCAPE",
 	"EXISTS",
 	"FOREIGN",
 	"FROM",
