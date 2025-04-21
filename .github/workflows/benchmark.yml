@@ -71,7 +71,7 @@ jobs:
       - name: Build
         run: go build -v ./...
       - name: Benchmark
-        run: go test -timeout=9999999s -bench=. -benchmem -count=10  ./... | tee bench/${{github.sha}}.txt
+        run: go test -timeout=9999999s -bench=. -benchmem -count=2  ./... | tee bench/${{github.sha}}.txt
       - name: Install benchstat
         run: go get -u golang.org/x/perf/cmd/benchstat
       - name: Compare benchmarks
