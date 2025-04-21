@@ -1,0 +1,50 @@
+name: Run benchmarks
+permissions:
+  contents: read
+ 
+on:
+  push:
+    branches: 
+    - "*"
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: [ '1.24' ]
+
+    steps:
+      - name: Setup Go ${{ matrix.go-version }}
+        uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
+        with:
+          go-version: ${{ matrix.go-version }}
+      - name: Display Go version
+        run: go version
+      - run: mkdir -p bench
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Install dependencies
+        run: go get .
+      - name: Build
+        run: go build -v ./...
+      - name: Benchmark
+        run: go test -timeout=9999999s -bench=. -benchmem -count=10  ./... | tee bench/main.txt
+      - name: Checkout branch
+        uses: actions/checkout@v4
+      - name: Install dependencies
+        run: go get .
+      - name: Build
+        run: go build -v ./...
+      - name: Benchmark
+        run: go test -timeout=9999999s -bench=. -benchmem -count=10  ./... | tee bench/${{github.head_ref}}.txt
+      - name: Install benchstat
+        run: go get -u golang.org/x/perf/cmd/benchstat
+      - name: Compare benchmarks
+        run: |
+          benchstat bench/main.txt bench/${{github.head_ref}}.txt > bench/benchstat.txt
+          cat bench/benchstat.txt
