@@ -34,15 +34,24 @@ jobs:
         run: go build -v ./...
       - run: mkdir -p bench
       - name: Benchmark
-        run: go test -timeout=9999999s -bench=. -benchmem -count=2  ./... | tee bench/main.txt
+        run: go test -timeout=9999999s -bench=. -benchmem -count=10  ./... | tee bench/main.txt
+      - name: Store benchmark
+        uses: actions/upload-artifact@v4
+        with:
+          name: main-benchmark
+          path: bench/main.txt
       - name: Checkout branch
-        run: git checkout ${{ github.head_ref }}
+        uses: actions/checkout@v4
+      - name: Restore benchmark
+        uses: actions/download-artifact@v4
+        with:
+          name: main-benchmark
       - name: Install dependencies
         run: go get .
       - name: Build
         run: go build -v ./...
       - name: Benchmark
-        run: go test -timeout=9999999s -bench=. -benchmem -count=2  ./... | tee bench/${{github.head_ref}}.txt
+        run: go test -timeout=9999999s -bench=. -benchmem -count=10  ./... | tee bench/${{github.head_ref}}.txt
       - name: Install benchstat
         run: go get -u golang.org/x/perf/cmd/benchstat
       - name: Compare benchmarks
