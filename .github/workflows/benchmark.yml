@@ -17,49 +17,55 @@ jobs:
         go-version: [ '1.24' ]
 
     steps:
-      - name: Setup Go ${{ matrix.go-version }}
-        uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
+      - name: Restore main benchmark
+        uses: actions/cache/restore@v4
+        id: restore-main-benchmark
         with:
-          go-version: ${{ matrix.go-version }}
-      - name: Display Go version
-        run: go version
+          path: bench/main.txt
+          key: main-benchmark-2
       - name: Checkout main
+        if: steps.restore-main-benchmark.outputs.cache-hit != 'true'
         uses: actions/checkout@v4
         with:
           ref: main
           clean: false
+      - name: Setup Go ${{ matrix.go-version }}
+        if: steps.restore-main-benchmark.outputs.cache-hit != 'true'
+        uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
+        with:
+            go-version: ${{ matrix.go-version }}
+      - name: Display Go version
+        run: go version  
+        if: steps.restore-main-benchmark.outputs.cache-hit != 'true'
       - name: Install dependencies
+        if: steps.restore-main-benchmark.outputs.cache-hit != 'true'
         run: go get .
       - name: Build
+        if: steps.restore-main-benchmark.outputs.cache-hit != 'true'
         run: go build -v ./...
       - run: mkdir -p bench
-      # - name: Restore benchmark
-      #   uses: actions/download-artifact@v4
-      #   with:
-      #     name: main-benchmark
-      - name: Restore main benchmark
-        uses: actions/cache/restore@v4
-        with:
-          path: bench/main.txt
-          key: main-benchmark-2
+        if: steps.restore-main-benchmark.outputs.cache-hit != 'true'
       - name: Benchmark
-        run: if [ ! -f bench/main.txt ]; then go test -timeout=9999999s -bench=. -benchmem -count=2  ./... | tee bench/main.txt; fi
+        if: steps.restore-main-benchmark.outputs.cache-hit != 'true'
+        run: go test -timeout=9999999s -bench=. -benchmem -count=2  ./... | tee bench/main.txt
       - name: Save main benchmark
+        if: steps.restore-main-benchmark.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
           path: bench/main.txt
           key: main-benchmark-2
-      # - name: Store benchmark
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: main-benchmark
-      #     path: bench/main.txt
       - name: Checkout branch
         uses: actions/checkout@v4
-      # - name: Restore benchmark
-      #   uses: actions/download-artifact@v4
-      #   with:
-      #     name: main-benchmark
+      - name: Setup Go ${{ matrix.go-version }}
+        uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
+        with:
+            go-version: ${{ matrix.go-version }}
+      - name: Display Go version
+        run: go version  
+      - name: Install benchstat
+        run: go get -u golang.org/x/perf/cmd/benchstat
+      - name: Compare benchmarks
+        run: benchstat bench/main.txt bench/${{github.sha}}.txt | tee bench/benchstat.txt
       - name: Restore main benchmark
         uses: actions/cache/restore@v4
         with:
@@ -72,10 +78,6 @@ jobs:
         run: go build -v ./...
       - name: Benchmark
         run: go test -timeout=9999999s -bench=. -benchmem -count=2  ./... | tee bench/${{github.sha}}.txt
-      - name: Install benchstat
-        run: go get -u golang.org/x/perf/cmd/benchstat
-      - name: Compare benchmarks
-        run: benchstat bench/main.txt bench/${{github.sha}}.txt | tee bench/benchstat.txt
       - name: Store benchmark
         uses: actions/upload-artifact@v4
         with:
