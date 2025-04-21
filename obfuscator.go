@@ -149,7 +149,7 @@ func (o *Obfuscator) ObfuscateTokenValue(token *Token, lastValueToken *LastValue
 			token.Value = StringPlaceholder
 		}
 	case IDENT, QUOTED_IDENT:
-		if o.config.ReplaceDigits && len(token.digits) > 0 {
+		if o.config.ReplaceDigits && (token.hasDigits || len(token.digits) > 0) {
 			token.Value = replaceDigits(token, NumberPlaceholder)
 		}
 	}

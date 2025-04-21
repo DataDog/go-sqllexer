@@ -1315,21 +1315,24 @@ func TestLexerUnicode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run("", func(t *testing.T) {
-			lexer := New(tt.input, tt.lexerOpts...)
-			i := 0
-			for {
-				got := lexer.Scan()
-				if got.Type == EOF {
-					break
+			for _, d := range []bool{true, false} {
+				tt.lexerOpts = append(tt.lexerOpts, WithUseHasDigits(d))
+				lexer := New(tt.input, tt.lexerOpts...)
+				i := 0
+				for {
+					got := lexer.Scan()
+					if got.Type == EOF {
+						break
+					}
+					want := tt.expected[i]
+					if got.Type != want.Type {
+						t.Errorf("token[%d] got type %v, want %v", i, got.Type, want.Type)
+					}
+					if got.Value != want.Value {
+						t.Errorf("token[%d] got value %q, want %q", i, got.Value, want.Value)
+					}
+					i++
 				}
-				want := tt.expected[i]
-				if got.Type != want.Type {
-					t.Errorf("token[%d] got type %v, want %v", i, got.Type, want.Type)
-				}
-				if got.Value != want.Value {
-					t.Errorf("token[%d] got value %q, want %q", i, got.Value, want.Value)
-				}
-				i++
 			}
 		})
 	}

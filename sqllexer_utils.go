@@ -226,29 +226,40 @@ func replaceDigits(token *Token, placeholder string) string {
 	var replacedToken strings.Builder
 	replacedToken.Grow(len(token.Value))
 
-	start := 0
+	if token.hasDigits {
+		for i := 0; i < len(token.Value); i++ {
+			r := rune(token.Value[i])
+			if isDigit(r) {
+				replacedToken.WriteString(placeholder)
+			} else {
+				replacedToken.WriteRune(r)
+			}
+		}
+	} else if len(token.digits) > 0 {
+		start := 0
 
-	// loop over token.digits indexes, write start:token.digits[i] to builder
-	// write placeholder to builder if no consecutive digits
-	// write start:token.End to builder
-	for i := 0; i < len(token.digits); i++ {
-		if token.digits[i] > len(token.Value) {
-			break
+		// loop over token.digits indexes, write start:token.digits[i] to builder
+		// write placeholder to builder if no consecutive digits
+		// write start:token.End to builder
+		for i := 0; i < len(token.digits); i++ {
+			if token.digits[i] > len(token.Value) {
+				break
+			}
+			if token.digits[i]-start >= 1 {
+				replacedToken.WriteString(token.Value[start:token.digits[i]])
+			}
+			if i == 0 || token.digits[i] != token.digits[i-1]+1 {
+				replacedToken.WriteString(placeholder)
+			}
+			start = token.digits[i] + 1
 		}
-		if token.digits[i]-start >= 1 {
-			replacedToken.WriteString(token.Value[start:token.digits[i]])
-		}
-		if i == 0 || token.digits[i] != token.digits[i-1]+1 {
-			replacedToken.WriteString(placeholder)
-		}
-		start = token.digits[i] + 1
-	}
 
-	// write start:token.End to builder
-	if start < len(token.Value) {
-		replacedToken.WriteString(token.Value[start:len(token.Value)])
+		// write start:token.End to builder
+		if start < len(token.Value) {
+			replacedToken.WriteString(token.Value[start:len(token.Value)])
+		}
+		token.digits = nil
 	}
-	token.digits = nil
 	return replacedToken.String()
 }
 

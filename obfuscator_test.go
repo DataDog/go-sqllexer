@@ -566,6 +566,8 @@ func TestObfuscator(t *testing.T) {
 			)
 			got := obfuscator.Obfuscate(tt.input, WithDBMS(tt.dbms))
 			assert.Equal(t, tt.expected, got)
+			got = obfuscator.Obfuscate(tt.input, WithDBMS(tt.dbms))
+			assert.Equal(t, tt.expected, got)
 		})
 	}
 }

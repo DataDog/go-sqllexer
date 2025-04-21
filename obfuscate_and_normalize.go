@@ -5,6 +5,7 @@ import "strings"
 // ObfuscateAndNormalize takes an input SQL string and returns an normalized SQL string with metadata
 // This function is a convenience function that combines the Obfuscator and Normalizer in one pass
 func ObfuscateAndNormalize(input string, obfuscator *Obfuscator, normalizer *Normalizer, lexerOpts ...lexerOption) (normalizedSQL string, statementMetadata *StatementMetadata, err error) {
+	lexerOpts = append(lexerOpts, WithUseHasDigits(true))
 	lexer := New(input, lexerOpts...)
 	var normalizedSQLBuilder strings.Builder
 	normalizedSQLBuilder.Grow(len(input))
