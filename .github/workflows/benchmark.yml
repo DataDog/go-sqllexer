@@ -1,5 +1,7 @@
-name: Run tests
-
+name: Run benchmarks
+permissions:
+  contents: read
+ 
 on:
   push:
     branches: 
@@ -16,7 +18,7 @@ jobs:
 
     steps:
       - name: Setup Go ${{ matrix.go-version }}
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@0aaccfd
         with:
           go-version: ${{ matrix.go-version }}
       - name: Display Go version
@@ -30,8 +32,7 @@ jobs:
       - name: Build
         run: go build -v ./...
       - name: Benchmark
-        run: go test -timeout=9999999s -bench="BenchmarkObfuscatorMore" -benchmem -count=10  ./... | tee bench/main.txt
-      - uses: actions/checkout@v4
+        run: go test -timeout=9999999s -bench=. -benchmem -count=10  ./... | tee bench/main.txt
       - name: Checkout branch
         uses: actions/checkout@v4
       - name: Install dependencies
@@ -39,11 +40,10 @@ jobs:
       - name: Build
         run: go build -v ./...
       - name: Benchmark
-        run: go test -timeout=9999999s -bench="BenchmarkObfuscatorMore" -benchmem -count=10  ./... | tee bench/${{GITHUB_HEAD_REF}}.txt
-      - uses: actions/checkout@v4
+        run: go test -timeout=9999999s -bench=. -benchmem -count=10  ./... | tee bench/${{github.head_ref}}.txt
       - name: Install benchstat
         run: go get -u golang.org/x/perf/cmd/benchstat
       - name: Compare benchmarks
         run: |
-          benchstat bench/main.txt bench/${{GITHUB_HEAD_REF}}.txt > bench/benchstat.txt
+          benchstat bench/main.txt bench/${{github.head_ref}}.txt > bench/benchstat.txt
           cat bench/benchstat.txt
