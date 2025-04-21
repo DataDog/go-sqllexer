@@ -28,6 +28,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: main
+          clean: false
       - name: Install dependencies
         run: go get .
       - name: Build
@@ -36,6 +37,8 @@ jobs:
         run: go test -timeout=9999999s -bench=. -benchmem -count=10  ./... | tee bench/main.txt
       - name: Checkout branch
         uses: actions/checkout@v4
+        with:
+          clean: false
       - name: Install dependencies
         run: go get .
       - name: Build
