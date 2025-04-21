@@ -24,7 +24,7 @@ jobs:
       - name: Display Go version
         run: go version
       - name: Restore main benchmark
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         id: restore-main-benchmark
         with:
           path: bench/main.txt
@@ -46,6 +46,11 @@ jobs:
       - name: Benchmark
         if: steps.restore-main-benchmark.outputs.cache-hit != 'true'
         run: go test -timeout=9999999s -bench=. -benchmem -count=10  ./... | tee bench/main.txt
+      - name: Save main benchmark
+        uses: actions/cache/save@v4
+        with:
+          path: bench/main.txt
+          key: ${{ steps.restore-main-benchmark.outputs.cache-primary-key }}
       - name: Checkout branch
         uses: actions/checkout@v4
       - name: Restore main benchmark
