@@ -24,6 +24,7 @@ jobs:
       - name: Display Go version
         run: go version
       - run: mkdir -p bench
+      - run: touch bench/main.txt
       - name: Checkout main
         uses: actions/checkout@v4
         with:
@@ -49,6 +50,4 @@ jobs:
       - name: Install benchstat
         run: go get -u golang.org/x/perf/cmd/benchstat
       - name: Compare benchmarks
-        run: |
-          benchstat bench/main.txt bench/${{github.head_ref}}.txt > bench/benchstat.txt
-          cat bench/benchstat.txt
+        run: benchstat bench/main.txt bench/${{github.head_ref}}.txt | tee bench/benchstat.txt
