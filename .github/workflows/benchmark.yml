@@ -37,19 +37,34 @@ jobs:
       #   uses: actions/download-artifact@v4
       #   with:
       #     name: main-benchmark
-      - name: Benchmark
-        run: if ! -f bench/main.txt; then go test -timeout=9999999s -bench=. -benchmem -count=10  ./... | tee bench/main.txt; fi
-      - name: Store benchmark
-        uses: actions/upload-artifact@v4
+      - name: Restore main benchmark
+        uses: actions/cache/restore@v4
         with:
-          name: main-benchmark
           path: bench/main.txt
+          key: main-benchmark-2
+      - name: Benchmark
+        run: if ! -f bench/main.txt; then go test -timeout=9999999s -bench=. -benchmem -count=2  ./... | tee bench/main.txt; fi
+      - name: Save main benchmark
+        uses: actions/cache/save@v4
+        with:
+          path: bench/main.txt
+          key: main-benchmark-2
+      # - name: Store benchmark
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: main-benchmark
+      #     path: bench/main.txt
       - name: Checkout branch
         uses: actions/checkout@v4
-      - name: Restore benchmark
-        uses: actions/download-artifact@v4
+      # - name: Restore benchmark
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: main-benchmark
+      - name: Restore main benchmark
+        uses: actions/cache/restore@v4
         with:
-          name: main-benchmark
+          path: bench/main.txt
+          key: main-bennchmark-2
       - name: Install dependencies
         run: go get .
       - name: Build
