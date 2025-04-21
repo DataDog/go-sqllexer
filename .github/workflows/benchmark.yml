@@ -43,7 +43,7 @@ jobs:
           path: bench/main.txt
           key: main-benchmark-2
       - name: Benchmark
-        run: if ! -f bench/main.txt; then go test -timeout=9999999s -bench=. -benchmem -count=2  ./... | tee bench/main.txt; fi
+        run: if [ ! -f bench/main.txt ]; then go test -timeout=9999999s -bench=. -benchmem -count=2  ./... | tee bench/main.txt; fi
       - name: Save main benchmark
         uses: actions/cache/save@v4
         with:
@@ -64,7 +64,8 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: bench/main.txt
-          key: main-bennchmark-2
+          key: main-benchmark-2
+          fail-on-cache-miss: true
       - name: Install dependencies
         run: go get .
       - name: Build
