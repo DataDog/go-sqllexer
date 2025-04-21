@@ -76,6 +76,12 @@ jobs:
         run: go get -u golang.org/x/perf/cmd/benchstat
       - name: Compare benchmarks
         run: benchstat bench/main.txt bench/${{github.sha}}.txt | tee bench/benchstat.txt
+      - name: Store benchmark
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-${{ github.sha }}
+          path: bench
+
 
   benchmark_main:
     if: github.ref == 'refs/heads/main'
@@ -98,9 +104,9 @@ jobs:
         run: go build -v ./...
       - run: mkdir -p bench
       - name: Benchmark
-        run: go test -timeout=9999999s -bench=. -benchmem -count=10  ./... | tee bench/main.txt    
-      - name: Store benchmark
-        uses: actions/upload-artifact@v4
+        run: go test -timeout=9999999s -bench=. -benchmem -count=2  ./... | tee bench/main.txt    
+      - name: Save main benchmark
+        uses: actions/cache/save@v4
         with:
-          name: main-benchmark
           path: bench/main.txt
+          key: main-benchmark-10
