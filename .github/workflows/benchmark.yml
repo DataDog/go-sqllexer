@@ -60,12 +60,12 @@ jobs:
           path: bench/main.txt
           key: main-benchmark-2
           fail-on-cache-miss: true
-      # - name: Install dependencies
-      #   run: go get .
-      # - name: Build
-      #   run: go build -v ./...
-      # - name: Benchmark
-      #   run: go test -timeout=9999999s -bench=. -benchmem -count=2  ./... | tee bench/${{github.sha}}.txt
+      - name: Install dependencies
+        run: go get .
+      - name: Build
+        run: go build -v ./...
+      - name: Benchmark
+        run: go test -timeout=9999999s -bench=. -benchmem -count=2  ./... | tee bench/${{github.sha}}.txt
       - name: Install benchstat
         run: go get -u golang.org/x/perf/cmd/benchstat && go install golang.org/x/perf/cmd/benchstat
       - name: Compare benchmarks
