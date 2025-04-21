@@ -28,7 +28,7 @@ jobs:
         id: restore-main-benchmark
         with:
           path: bench/main.txt
-          key: main-benchmark-2
+          key: main-benchmark-10
       - name: Checkout main
         if: steps.restore-main-benchmark.outputs.cache-hit != 'true'
         uses: actions/checkout@v4
@@ -51,21 +51,21 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: bench/main.txt
-          key: main-benchmark-2
+          key: main-benchmark-10
       - name: Checkout branch
         uses: actions/checkout@v4
       - name: Restore main benchmark
         uses: actions/cache/restore@v4
         with:
           path: bench/main.txt
-          key: main-benchmark-2
+          key: main-benchmark-10
           fail-on-cache-miss: true
       - name: Install dependencies
         run: go get .
       - name: Build
         run: go build -v ./...
       - name: Benchmark
-        run: go test -timeout=9999999s -bench=. -benchmem -count=2  ./... | tee bench/${{github.sha}}.txt
+        run: go test -timeout=9999999s -bench=. -benchmem -count=10  ./... | tee bench/${{github.sha}}.txt
       - name: Install benchstat
         run: go get -u golang.org/x/perf/cmd/benchstat && go install golang.org/x/perf/cmd/benchstat
       - name: Compare benchmarks
