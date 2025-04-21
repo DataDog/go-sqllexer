@@ -35,7 +35,7 @@ jobs:
         id: restore-main-benchmark
         with:
           path: bench/main.txt
-          key: main-benchmark-6
+          key: main-benchmark-6-${{ github.sha }}
       - name: Checkout main
         if: steps.restore-main-benchmark.outputs.cache-hit != 'true'
         uses: actions/checkout@v4
@@ -65,7 +65,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: bench/main.txt
-          key: main-benchmark-6
+          key: main-benchmark-6-${{ github.sha }}
           fail-on-cache-miss: true
       - name: Install dependencies
         run: go get .
