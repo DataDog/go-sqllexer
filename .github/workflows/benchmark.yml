@@ -29,6 +29,7 @@ jobs:
         with:
           ref: main
           clean: false
+      - run: ls -alh
       - name: Install dependencies
         run: go get .
       - name: Build
