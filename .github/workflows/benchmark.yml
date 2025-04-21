@@ -12,9 +12,10 @@ on:
 concurrency:
   group: ${{ github.ref }}
   cancel-in-progress: true
-  
+
 jobs:
   benchmark:
+    if: github.ref != 'refs/heads/main'
     runs-on:
       group: ARM LINUX SHARED
       labels: arm-8core-linux
