@@ -33,10 +33,10 @@ jobs:
       - name: Build
         run: go build -v ./...
       - run: mkdir -p bench
-      - name: Restore benchmark
-        uses: actions/download-artifact@v4
-        with:
-          name: main-benchmark
+      # - name: Restore benchmark
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: main-benchmark
       - name: Benchmark
         run: if ! -f bench/main.txt; then go test -timeout=9999999s -bench=. -benchmem -count=10  ./... | tee bench/main.txt; fi
       - name: Store benchmark
