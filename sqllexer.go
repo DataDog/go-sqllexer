@@ -41,8 +41,7 @@ const (
 type Token struct {
 	Type             TokenType
 	Value            string
-	isTableIndicator bool  // true if the token is a table indicator
-	digits           []int // private - only used by replaceDigits
+	isTableIndicator bool // true if the token is a table indicator
 	hasDigits        bool
 	quotes           []int          // private - only used by trimQuotes
 	lastValueToken   LastValueToken // private - internal state
@@ -63,8 +62,7 @@ func (t *Token) getLastValueToken() *LastValueToken {
 }
 
 type LexerConfig struct {
-	DBMS         DBMSType `json:"dbms,omitempty"`
-	UseHasDigits bool     `json:"useHasDigits,omitempty"`
+	DBMS DBMSType `json:"dbms,omitempty"`
 }
 
 type lexerOption func(*LexerConfig)
@@ -73,12 +71,6 @@ func WithDBMS(dbms DBMSType) lexerOption {
 	dbms = getDBMSFromAlias(dbms)
 	return func(c *LexerConfig) {
 		c.DBMS = dbms
-	}
-}
-
-func WithUseHasDigits(useHasDigits bool) lexerOption {
-	return func(c *LexerConfig) {
-		c.UseHasDigits = useHasDigits
 	}
 }
 
@@ -96,7 +88,6 @@ type Lexer struct {
 	start            int    // the start position of the current token
 	config           *LexerConfig
 	token            *Token
-	digits           []int // Indexes of digits in the token
 	hasDigits        bool  // true if the token has digits
 	quotes           []int // Indexes of quotes in the token
 	isTableIndicator bool  // true if the token is a table indicator
@@ -358,18 +349,10 @@ func (s *Lexer) scanIdentifier(ch rune) *Token {
 	node := keywordRoot
 	pos := s.cursor
 
-	offset := s.start // offset is used to calculate the indexes of digits in the token value
-
 	// If first character is Unicode, skip trie lookup
 	if ch > 127 {
 		for isIdentifier(ch) {
-			if isDigit(ch) {
-				if s.config.UseHasDigits {
-					s.hasDigits = true
-				} else {
-					s.digits = append(s.digits, s.cursor-offset)
-				}
-			}
+			s.hasDigits = s.hasDigits || isDigit(ch)
 			ch = s.nextBy(utf8.RuneLen(ch))
 		}
 		if s.start == s.cursor {
@@ -410,13 +393,7 @@ func (s *Lexer) scanIdentifier(ch rune) *Token {
 
 	// Continue scanning identifier if no keyword match
 	for isIdentifier(ch) {
-		if isDigit(ch) {
-			if s.config.UseHasDigits {
-				s.hasDigits = true
-			} else {
-				s.digits = append(s.digits, s.cursor-offset)
-			}
-		}
+		s.hasDigits = s.hasDigits || isDigit(ch)
 		ch = s.nextBy(utf8.RuneLen(ch))
 	}
 
@@ -459,13 +436,7 @@ func (s *Lexer) scanDoubleQuotedIdentifier(delimiter rune) *Token {
 			s.quotes = nil // if we hit EOF, we clear the quotes
 			return s.emit(ERROR)
 		}
-		if isDigit(ch) {
-			if s.config.UseHasDigits {
-				s.hasDigits = true
-			} else {
-				s.digits = append(s.digits, s.cursor-offset)
-			}
-		}
+		s.hasDigits = s.hasDigits || isDigit(ch)
 		ch = s.next()
 	}
 	s.next() // consume the closing quote
@@ -657,12 +628,6 @@ func (s *Lexer) emit(t TokenType) *Token {
 		lastValueToken:   lastValueToken,
 	}
 
-	if len(s.digits) > 0 {
-		tok.digits = s.digits
-	} else {
-		tok.digits = nil
-	}
-
 	tok.hasDigits = s.hasDigits
 
 	if len(s.quotes) > 0 {
@@ -673,7 +638,6 @@ func (s *Lexer) emit(t TokenType) *Token {
 
 	// Reset lexer state
 	s.start = s.cursor
-	s.digits = nil
 	s.quotes = nil
 	s.isTableIndicator = false
 	s.hasDigits = false

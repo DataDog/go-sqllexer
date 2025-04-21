@@ -22,3 +22,6 @@ go.work
 
 # Go fuzz test files
 testdata/fuzz/
+
+# Benchmark directory
+bench
