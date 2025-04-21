@@ -1135,24 +1135,11 @@ func TestLexerIdentifierWithDigits(t *testing.T) {
 					t.Errorf("token[%d] got value %q, want %q", i, got.Value, want.Value)
 				}
 
-				// if i < len(tt.expectedDigits) {
-				// 	digits := tt.expectedDigits[i]
-				// 	if digits == nil {
-				// 		if got.hasDigits {
-				// 			t.Errorf("token[%d] got digits, want nil", i)
-				// 		}
-				// 	} else {
-				// 		if len(got.digits) != len(digits) {
-				// 			t.Errorf("token[%d] got %d digits, want %d", i, len(got.digits), len(digits))
-				// 		} else {
-				// 			for j, digit := range digits {
-				// 				if got.digits[j] != digit {
-				// 					t.Errorf("token[%d] got digit[%d] %d, want %d", i, j, got.digits[j], digit)
-				// 				}
-				// 			}
-				// 		}
-				// 	}
-				// }
+				if i < len(tt.expectedDigits) {
+					if got.hasDigits != tt.expectedDigits[i] {
+						t.Errorf("token[%d] got %v digits, want %v", i, got.hasDigits, tt.expectedDigits[i])
+					}
+				}
 
 				i++
 			}
@@ -1240,7 +1227,7 @@ func TestLexerIdentifierWithQuotes(t *testing.T) {
 						}
 					} else {
 						if len(got.quotes) != len(quotes) {
-							// t.Errorf("token[%d] got %d quotes, want %d", i, len(got.digits), len(quotes))
+							t.Errorf("token[%d] got %d quotes, want %d", i, len(got.quotes), len(quotes))
 						} else {
 							for j, quote := range quotes {
 								if got.quotes[j] != quote {
