@@ -23,30 +23,26 @@ jobs:
           go-version: ${{ matrix.go-version }}
       - name: Display Go version
         run: go version
-      - run: mkdir -p bench
-      - run: touch bench/main.txt
       - name: Checkout main
         uses: actions/checkout@v4
         with:
           ref: main
           clean: false
-      - run: ls -alh
       - name: Install dependencies
         run: go get .
       - name: Build
         run: go build -v ./...
+      - run: mkdir -p bench
       - name: Benchmark
-        run: go test -timeout=9999999s -bench=. -benchmem -count=10  ./... | tee bench/main.txt
+        run: go test -timeout=9999999s -bench=. -benchmem -count=2  ./... | tee bench/main.txt
       - name: Checkout branch
-        uses: actions/checkout@v4
-        with:
-          clean: false
+        run: git checkout ${{ github.head_ref }}
       - name: Install dependencies
         run: go get .
       - name: Build
         run: go build -v ./...
       - name: Benchmark
-        run: go test -timeout=9999999s -bench=. -benchmem -count=10  ./... | tee bench/${{github.head_ref}}.txt
+        run: go test -timeout=9999999s -bench=. -benchmem -count=2  ./... | tee bench/${{github.head_ref}}.txt
       - name: Install benchstat
         run: go get -u golang.org/x/perf/cmd/benchstat
       - name: Compare benchmarks
