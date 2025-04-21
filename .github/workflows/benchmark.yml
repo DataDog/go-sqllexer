@@ -67,7 +67,7 @@ jobs:
       # - name: Benchmark
       #   run: go test -timeout=9999999s -bench=. -benchmem -count=2  ./... | tee bench/${{github.sha}}.txt
       - name: Install benchstat
-        run: go install golang.org/x/perf/cmd/benchstat
+        run: go get -u golang.org/x/perf/cmd/benchstat && go install golang.org/x/perf/cmd/benchstat
       - name: Compare benchmarks
         run: benchstat bench/main.txt bench/${{github.sha}}.txt | tee bench/benchstat.txt
       - name: Store benchmark
