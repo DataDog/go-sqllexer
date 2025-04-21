@@ -24,7 +24,7 @@ jobs:
       - name: Display Go version
         run: go version
       - name: Restore main benchmark
-        uses: actions/cache/restore@v4
+        uses: actions/cache@v4
         id: restore-main-benchmark
         with:
           path: bench/main.txt
@@ -46,12 +46,6 @@ jobs:
       - name: Benchmark
         if: steps.restore-main-benchmark.outputs.cache-hit != 'true'
         run: go test -timeout=9999999s -bench=. -benchmem -count=10  ./... | tee bench/main.txt
-      - name: Save main benchmark
-        if: steps.restore-main-benchmark.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: bench/main.txt
-          key: main-benchmark-10
       - name: Checkout branch
         uses: actions/checkout@v4
       - name: Restore main benchmark
@@ -97,10 +91,10 @@ jobs:
       - name: Build
         run: go build -v ./...
       - run: mkdir -p bench
-      - name: Benchmark
-        run: go test -timeout=9999999s -bench=. -benchmem -count=10  ./... | tee bench/main.txt    
-      - name: Save main benchmark
-        uses: actions/cache/save@v4
+      - name: Cache main benchmark
+        uses: actions/cache@v4
         with:
           path: bench/main.txt
           key: main-benchmark-10
+      - name: Benchmark
+        run: go test -timeout=9999999s -bench=. -benchmem -count=10  ./... | tee bench/main.txt    
