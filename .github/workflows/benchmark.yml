@@ -45,7 +45,7 @@ jobs:
         if: steps.restore-main-benchmark.outputs.cache-hit != 'true'
       - name: Benchmark
         if: steps.restore-main-benchmark.outputs.cache-hit != 'true'
-        run: go test -timeout=9999999s -bench=. -benchmem -count=2  ./... | tee bench/main.txt
+        run: go test -timeout=9999999s -bench=. -benchmem -count=10  ./... | tee bench/main.txt
       - name: Save main benchmark
         if: steps.restore-main-benchmark.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
@@ -98,7 +98,7 @@ jobs:
         run: go build -v ./...
       - run: mkdir -p bench
       - name: Benchmark
-        run: go test -timeout=9999999s -bench=. -benchmem -count=2  ./... | tee bench/main.txt    
+        run: go test -timeout=9999999s -bench=. -benchmem -count=10  ./... | tee bench/main.txt    
       - name: Save main benchmark
         uses: actions/cache/save@v4
         with:
