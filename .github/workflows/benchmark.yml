@@ -11,7 +11,9 @@ on:
 
 jobs:
   benchmark:
-    runs-on: ubuntu-latest
+    runs-on:
+      group: ARM LINUX SHARED
+      labels: arm-8core-linux
     strategy:
       matrix:
         go-version: [ '1.24' ]
@@ -73,7 +75,9 @@ jobs:
 
   benchmark_main:
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on:
+      group: ARM LINUX SHARED
+      labels: arm-8core-linux
     strategy:
       matrix:
         go-version: [ '1.24' ]
