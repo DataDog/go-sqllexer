@@ -1066,7 +1066,7 @@ func TestLexerIdentifierWithDigits(t *testing.T) {
 	tests := []struct {
 		input          string
 		expectedTokens []TokenSpec
-		expectedDigits [][]int
+		expectedDigits []bool
 		lexerOpts      []lexerOption
 	}{
 		{
@@ -1074,8 +1074,8 @@ func TestLexerIdentifierWithDigits(t *testing.T) {
 			expectedTokens: []TokenSpec{
 				{IDENT, "abc123"},
 			},
-			expectedDigits: [][]int{
-				{3, 4, 5},
+			expectedDigits: []bool{
+				true,
 			},
 		},
 		{
@@ -1083,8 +1083,8 @@ func TestLexerIdentifierWithDigits(t *testing.T) {
 			expectedTokens: []TokenSpec{
 				{IDENT, "abc123def456"},
 			},
-			expectedDigits: [][]int{
-				{3, 4, 5, 9, 10, 11},
+			expectedDigits: []bool{
+				true,
 			},
 		},
 		{
@@ -1097,13 +1097,13 @@ func TestLexerIdentifierWithDigits(t *testing.T) {
 				{SPACE, " "},
 				{QUOTED_IDENT, `"c123ef"`},
 			},
-			expectedDigits: [][]int{
-				{3, 4, 5},
-				nil,
-				{2, 3, 5, 6, 7},
-				nil,
-				nil,
-				{2, 3, 4},
+			expectedDigits: []bool{
+				true,
+				false,
+				true,
+				false,
+				false,
+				true,
 			},
 		},
 	}
@@ -1136,21 +1136,8 @@ func TestLexerIdentifierWithDigits(t *testing.T) {
 				}
 
 				if i < len(tt.expectedDigits) {
-					digits := tt.expectedDigits[i]
-					if digits == nil {
-						if got.digits != nil {
-							t.Errorf("token[%d] got digits, want nil", i)
-						}
-					} else {
-						if len(got.digits) != len(digits) {
-							t.Errorf("token[%d] got %d digits, want %d", i, len(got.digits), len(digits))
-						} else {
-							for j, digit := range digits {
-								if got.digits[j] != digit {
-									t.Errorf("token[%d] got digit[%d] %d, want %d", i, j, got.digits[j], digit)
-								}
-							}
-						}
+					if got.hasDigits != tt.expectedDigits[i] {
+						t.Errorf("token[%d] got %v digits, want %v", i, got.hasDigits, tt.expectedDigits[i])
 					}
 				}
 
@@ -1240,7 +1227,7 @@ func TestLexerIdentifierWithQuotes(t *testing.T) {
 						}
 					} else {
 						if len(got.quotes) != len(quotes) {
-							t.Errorf("token[%d] got %d quotes, want %d", i, len(got.digits), len(quotes))
+							t.Errorf("token[%d] got %d quotes, want %d", i, len(got.quotes), len(quotes))
 						} else {
 							for j, quote := range quotes {
 								if got.quotes[j] != quote {
