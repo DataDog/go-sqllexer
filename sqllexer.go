@@ -41,8 +41,8 @@ const (
 type Token struct {
 	Type             TokenType
 	Value            string
-	isTableIndicator bool           // true if the token is a table indicator
-	digits           []int          // private - only used by replaceDigits
+	isTableIndicator bool // true if the token is a table indicator
+	hasDigits        bool
 	hasQuotes        bool           // private - only used by trimQuotes
 	lastValueToken   LastValueToken // private - internal state
 }
@@ -88,9 +88,9 @@ type Lexer struct {
 	start            int    // the start position of the current token
 	config           *LexerConfig
 	token            *Token
-	digits           []int // Indexes of digits in the token
-	hasQuotes        bool  // true if any quotes in token
-	isTableIndicator bool  // true if the token is a table indicator
+	hasQuotes        bool // true if any quotes in token
+	hasDigits        bool // true if the token has digits
+	isTableIndicator bool // true if the token is a table indicator
 }
 
 func New(input string, opts ...lexerOption) *Lexer {
@@ -349,14 +349,10 @@ func (s *Lexer) scanIdentifier(ch rune) *Token {
 	node := keywordRoot
 	pos := s.cursor
 
-	offset := s.start // offset is used to calculate the indexes of digits in the token value
-
 	// If first character is Unicode, skip trie lookup
 	if ch > 127 {
 		for isIdentifier(ch) {
-			if isDigit(ch) {
-				s.digits = append(s.digits, s.cursor-offset)
-			}
+			s.hasDigits = s.hasDigits || isDigit(ch)
 			ch = s.nextBy(utf8.RuneLen(ch))
 		}
 		if s.start == s.cursor {
@@ -397,9 +393,7 @@ func (s *Lexer) scanIdentifier(ch rune) *Token {
 
 	// Continue scanning identifier if no keyword match
 	for isIdentifier(ch) {
-		if isDigit(ch) {
-			s.digits = append(s.digits, s.cursor-offset)
-		}
+		s.hasDigits = s.hasDigits || isDigit(ch)
 		ch = s.nextBy(utf8.RuneLen(ch))
 	}
 
@@ -420,7 +414,6 @@ func (s *Lexer) scanDoubleQuotedIdentifier(delimiter rune) *Token {
 	}
 
 	s.start = s.cursor
-	offset := s.start // offset is used to calculate the indexes of quotes in the token value
 	s.hasQuotes = true
 	ch := s.next() // consume the opening quote
 	for {
@@ -429,7 +422,6 @@ func (s *Lexer) scanDoubleQuotedIdentifier(delimiter rune) *Token {
 		// e.g. postgres "foo"."bar"
 		// e.g. sqlserver [foo].[bar]
 		if ch == closingDelimiter {
-			s.hasQuotes = true
 			specialCase := []rune{closingDelimiter, '.', delimiter}
 			if s.matchAt([]rune(specialCase)) {
 				ch = s.nextBy(3) // consume the "."
@@ -441,9 +433,7 @@ func (s *Lexer) scanDoubleQuotedIdentifier(delimiter rune) *Token {
 			s.hasQuotes = false // if we hit EOF, we clear the quotes
 			return s.emit(ERROR)
 		}
-		if isDigit(ch) {
-			s.digits = append(s.digits, s.cursor-offset)
-		}
+		s.hasDigits = s.hasDigits || isDigit(ch)
 		ch = s.next()
 	}
 	s.next() // consume the closing quote
@@ -635,19 +625,13 @@ func (s *Lexer) emit(t TokenType) *Token {
 		lastValueToken:   lastValueToken,
 	}
 
-	if len(s.digits) > 0 {
-		tok.digits = s.digits
-	} else {
-		tok.digits = nil
-	}
-
+	tok.hasDigits = s.hasDigits
 	tok.hasQuotes = s.hasQuotes
 
 	// Reset lexer state
 	s.start = s.cursor
-	s.digits = nil
-	s.hasQuotes = false
 	s.isTableIndicator = false
+	s.hasDigits = false
 
 	return tok
 }
