@@ -227,8 +227,7 @@ func replaceDigits(token *Token, placeholder string) string {
 	replacedToken.Grow(len(token.Value))
 
 	var lastWasDigit bool
-	for i := 0; i < len(token.Value); i++ {
-		r := rune(token.Value[i])
+	for _, r := range token.Value {
 		if isDigit(r) {
 			if !lastWasDigit {
 				replacedToken.WriteString(placeholder)
