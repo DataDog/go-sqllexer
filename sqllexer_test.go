@@ -1151,7 +1151,7 @@ func TestLexerIdentifierWithQuotes(t *testing.T) {
 	tests := []struct {
 		input          string
 		expectedTokens []TokenSpec
-		expectedQuotes [][]int
+		expectedQuotes bool
 		lexerOpts      []lexerOption
 	}{
 		{
@@ -1159,27 +1159,21 @@ func TestLexerIdentifierWithQuotes(t *testing.T) {
 			expectedTokens: []TokenSpec{
 				{QUOTED_IDENT, `"abc"`},
 			},
-			expectedQuotes: [][]int{
-				{0, 4},
-			},
+			expectedQuotes: true,
 		},
 		{
 			input: `"abc"."def"`,
 			expectedTokens: []TokenSpec{
 				{QUOTED_IDENT, `"abc"."def"`},
 			},
-			expectedQuotes: [][]int{
-				{0, 4, 6, 10},
-			},
+			expectedQuotes: true,
 		},
 		{
 			input: `"fóo"."bar"`,
 			expectedTokens: []TokenSpec{
 				{QUOTED_IDENT, `"fóo"."bar"`},
 			},
-			expectedQuotes: [][]int{
-				{0, 5, 7, 11},
-			},
+			expectedQuotes: true,
 		},
 		{
 			input: `SELECT "fóo"."`,
@@ -1188,7 +1182,7 @@ func TestLexerIdentifierWithQuotes(t *testing.T) {
 				{SPACE, " "},
 				{ERROR, `"fóo"."`},
 			},
-			expectedQuotes: [][]int{},
+			expectedQuotes: false,
 		},
 	}
 
@@ -1219,23 +1213,8 @@ func TestLexerIdentifierWithQuotes(t *testing.T) {
 					t.Errorf("token[%d] got value %q, want %q", i, got.Value, want.Value)
 				}
 
-				if i < len(tt.expectedQuotes) {
-					quotes := tt.expectedQuotes[i]
-					if quotes == nil {
-						if got.quotes != nil {
-							t.Errorf("token[%d] got quotes, want nil", i)
-						}
-					} else {
-						if len(got.quotes) != len(quotes) {
-							t.Errorf("token[%d] got %d quotes, want %d", i, len(got.quotes), len(quotes))
-						} else {
-							for j, quote := range quotes {
-								if got.quotes[j] != quote {
-									t.Errorf("token[%d] got quote[%d] %d, want %d", i, j, got.quotes[j], quote)
-								}
-							}
-						}
-					}
+				if got.hasQuotes != tt.expectedQuotes {
+					t.Errorf("token[%d] got %v quotes, want %v", i, got.hasQuotes, tt.expectedQuotes)
 				}
 
 				i++
