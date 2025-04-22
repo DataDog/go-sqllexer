@@ -254,27 +254,16 @@ func replaceDigits(token *Token, placeholder string) string {
 
 func trimQuotes(token *Token) string {
 	var trimmedToken strings.Builder
-	trimmedToken.Grow(len(token.Value) - len(token.quotes))
+	trimmedToken.Grow(len(token.Value))
 
-	start := 0
-
-	// loop over token.quotes indexes, write start:token.quotes[i] to builder
-	// write start:token.End to builder
-	for i := 0; i < len(token.quotes); i++ {
-		if token.quotes[i] > len(token.Value) {
-			break
+	for _, r := range token.Value {
+		if isDoubleQuote(r) || r == '[' || r == ']' || r == '`' {
+			// trimmedToken.WriteString(placeholder)
+		} else {
+			trimmedToken.WriteRune(r)
 		}
-		if token.quotes[i]-start >= 1 {
-			trimmedToken.WriteString(token.Value[start:token.quotes[i]])
-		}
-		start = token.quotes[i] + 1
 	}
-
-	// write start:token.End to builder
-	if start < len(token.Value) {
-		trimmedToken.WriteString(token.Value[start:len(token.Value)])
-	}
-	token.quotes = nil
+	token.hasQuotes = false
 	return trimmedToken.String()
 }
 

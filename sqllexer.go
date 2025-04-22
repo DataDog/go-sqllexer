@@ -43,7 +43,7 @@ type Token struct {
 	Value            string
 	isTableIndicator bool           // true if the token is a table indicator
 	digits           []int          // private - only used by replaceDigits
-	quotes           []int          // private - only used by trimQuotes
+	hasQuotes        bool           // private - only used by trimQuotes
 	lastValueToken   LastValueToken // private - internal state
 }
 
@@ -89,7 +89,7 @@ type Lexer struct {
 	config           *LexerConfig
 	token            *Token
 	digits           []int // Indexes of digits in the token
-	quotes           []int // Indexes of quotes in the token
+	hasQuotes        bool  // true if any quotes in token
 	isTableIndicator bool  // true if the token is a table indicator
 }
 
@@ -420,26 +420,25 @@ func (s *Lexer) scanDoubleQuotedIdentifier(delimiter rune) *Token {
 	}
 
 	s.start = s.cursor
-	offset := s.start                            // offset is used to calculate the indexes of quotes in the token value
-	s.quotes = append(s.quotes, s.cursor-offset) // store the opening quote position
-	ch := s.next()                               // consume the opening quote
+	offset := s.start // offset is used to calculate the indexes of quotes in the token value
+	s.hasQuotes = true
+	ch := s.next() // consume the opening quote
 	for {
 		// encountered the closing quote
 		// BUT if it's followed by .", then we should keep going
 		// e.g. postgres "foo"."bar"
 		// e.g. sqlserver [foo].[bar]
 		if ch == closingDelimiter {
-			s.quotes = append(s.quotes, s.cursor-offset)
+			s.hasQuotes = true
 			specialCase := []rune{closingDelimiter, '.', delimiter}
 			if s.matchAt([]rune(specialCase)) {
-				s.quotes = append(s.quotes, s.cursor+2-offset)
 				ch = s.nextBy(3) // consume the "."
 				continue
 			}
 			break
 		}
 		if isEOF(ch) {
-			s.quotes = nil // if we hit EOF, we clear the quotes
+			s.hasQuotes = false // if we hit EOF, we clear the quotes
 			return s.emit(ERROR)
 		}
 		if isDigit(ch) {
@@ -642,16 +641,12 @@ func (s *Lexer) emit(t TokenType) *Token {
 		tok.digits = nil
 	}
 
-	if len(s.quotes) > 0 {
-		tok.quotes = s.quotes
-	} else {
-		tok.quotes = nil
-	}
+	tok.hasQuotes = s.hasQuotes
 
 	// Reset lexer state
 	s.start = s.cursor
 	s.digits = nil
-	s.quotes = nil
+	s.hasQuotes = false
 	s.isTableIndicator = false
 
 	return tok
