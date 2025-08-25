@@ -167,23 +167,19 @@ func obfuscateAndNormalizeSQL(input, dbms string, replaceDigits, replaceBoolean,
 }
 
 func tokenizeSQL(input, dbms string) (string, error) {
+	var lexer *sqllexer.Lexer
 	if dbms != "" {
-		lexer := sqllexer.New(input, sqllexer.WithDBMS(sqllexer.DBMSType(dbms)))
-		tokens := lexer.ScanAll()
-
-		var result strings.Builder
-		for _, token := range tokens {
-			result.WriteString(fmt.Sprintf("%s\n", token))
-		}
-
-		return result.String(), nil
+		lexer = sqllexer.New(input, sqllexer.WithDBMS(sqllexer.DBMSType(dbms)))
+	} else {
+		lexer = sqllexer.New(input)
 	}
 
-	lexer := sqllexer.New(input)
-	tokens := lexer.ScanAll()
-
 	var result strings.Builder
-	for _, token := range tokens {
+	for {
+		token := lexer.Scan()
+		if token.Type == sqllexer.EOF {
+			break
+		}
 		result.WriteString(fmt.Sprintf("%s\n", token))
 	}
 
@@ -197,7 +193,7 @@ Usage: sqllexer [flags]
 
 Flags:
   -mode string
-        Operation mode: obfuscate, normalize, tokenize (default "obfuscate")
+        Operation mode: obfuscate, normalize, tokenize, obfuscate_and_normalize (default "obfuscate_and_normalize")
   -input string
         Input file (default: stdin)
   -output string
