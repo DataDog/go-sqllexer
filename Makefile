@@ -39,6 +39,13 @@ clean:
 help:
 	@echo "Available targets:"
 	@echo "  build       - Build the binary for current platform"
+<<<<<<< HEAD
+=======
+	@echo "  build-all   - Build for Linux, macOS, and Windows"
+	@echo "  build-linux - Build for Linux"
+	@echo "  build-darwin- Build for macOS (Intel and Apple Silicon)"
+	@echo "  build-windows - Build for Windows"
+>>>>>>> 1efe276 (Run obfuscator from CLI.)
 	@echo "  install     - Install binary to GOPATH/bin"
 	@echo "  test        - Run tests"
 	@echo "  bench       - Run benchmarks"
