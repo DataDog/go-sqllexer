@@ -13,7 +13,7 @@ import (
 
 func main() {
 	var (
-		mode            = flag.String("mode", "obfuscate", "Operation mode: obfuscate, normalize, tokenize")
+		mode            = flag.String("mode", "obfuscate_and_normalize", "Operation mode: obfuscate, normalize, tokenize, obfuscate_and_normalize")
 		inputFile       = flag.String("input", "", "Input file (default: stdin)")
 		outputFile      = flag.String("output", "", "Output file (default: stdout)")
 		dbms            = flag.String("dbms", "", "Database type: mssql, postgresql, mysql, oracle, snowflake")
@@ -51,6 +51,8 @@ func main() {
 		result, err = normalizeSQL(input, *dbms, *collectComments, *collectCommands, *collectTables, *keepSQLAlias)
 	case "tokenize":
 		result, err = tokenizeSQL(input, *dbms)
+	case "obfuscate_and_normalize":
+		result, err = obfuscateAndNormalizeSQL(input, *dbms, *replaceDigits, *replaceBoolean, *replaceNull, *keepJsonPath, *collectComments, *collectCommands, *collectTables, *keepSQLAlias)
 	default:
 		fmt.Fprintf(os.Stderr, "Invalid mode: %s. Use -help for usage information.\n", *mode)
 		os.Exit(1)
@@ -142,6 +144,25 @@ func normalizeSQL(input, dbms string, collectComments, collectCommands, collectT
 	}
 
 	result, _, err := normalizer.Normalize(input)
+	return result, err
+}
+
+func obfuscateAndNormalizeSQL(input, dbms string, replaceDigits, replaceBoolean, replaceNull, keepJsonPath bool, collectComments, collectCommands, collectTables, keepSQLAlias bool) (string, error) {
+	obfuscator := sqllexer.NewObfuscator(
+		sqllexer.WithReplaceDigits(replaceDigits),
+		sqllexer.WithReplaceBoolean(replaceBoolean),
+		sqllexer.WithReplaceNull(replaceNull),
+		sqllexer.WithKeepJsonPath(keepJsonPath),
+	)
+
+	normalizer := sqllexer.NewNormalizer(
+		sqllexer.WithCollectComments(collectComments),
+		sqllexer.WithCollectCommands(collectCommands),
+		sqllexer.WithCollectTables(collectTables),
+		sqllexer.WithKeepSQLAlias(keepSQLAlias),
+	)
+
+	result, _, err := sqllexer.ObfuscateAndNormalize(input, obfuscator, normalizer, sqllexer.WithDBMS(sqllexer.DBMSType(dbms)))
 	return result, err
 }
 
