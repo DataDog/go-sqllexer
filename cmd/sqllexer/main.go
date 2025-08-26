@@ -13,11 +13,7 @@ import (
 
 func main() {
 	var (
-<<<<<<< HEAD
 		mode            = flag.String("mode", "obfuscate_and_normalize", "Operation mode: obfuscate, normalize, tokenize, obfuscate_and_normalize")
-=======
-		mode            = flag.String("mode", "obfuscate", "Operation mode: obfuscate, normalize, tokenize")
->>>>>>> 1efe276 (Run obfuscator from CLI.)
 		inputFile       = flag.String("input", "", "Input file (default: stdin)")
 		outputFile      = flag.String("output", "", "Output file (default: stdout)")
 		dbms            = flag.String("dbms", "", "Database type: mssql, postgresql, mysql, oracle, snowflake")
@@ -55,11 +51,8 @@ func main() {
 		result, err = normalizeSQL(input, *dbms, *collectComments, *collectCommands, *collectTables, *keepSQLAlias)
 	case "tokenize":
 		result, err = tokenizeSQL(input, *dbms)
-<<<<<<< HEAD
 	case "obfuscate_and_normalize":
 		result, err = obfuscateAndNormalizeSQL(input, *dbms, *replaceDigits, *replaceBoolean, *replaceNull, *keepJsonPath, *collectComments, *collectCommands, *collectTables, *keepSQLAlias)
-=======
->>>>>>> 1efe276 (Run obfuscator from CLI.)
 	default:
 		fmt.Fprintf(os.Stderr, "Invalid mode: %s. Use -help for usage information.\n", *mode)
 		os.Exit(1)
@@ -154,7 +147,6 @@ func normalizeSQL(input, dbms string, collectComments, collectCommands, collectT
 	return result, err
 }
 
-<<<<<<< HEAD
 func obfuscateAndNormalizeSQL(input, dbms string, replaceDigits, replaceBoolean, replaceNull, keepJsonPath bool, collectComments, collectCommands, collectTables, keepSQLAlias bool) (string, error) {
 	obfuscator := sqllexer.NewObfuscator(
 		sqllexer.WithReplaceDigits(replaceDigits),
@@ -192,27 +184,6 @@ func tokenizeSQL(input, dbms string) (string, error) {
 			break
 		}
 		result.WriteString(fmt.Sprintf("%s\n", token.Value))
-=======
-func tokenizeSQL(input, dbms string) (string, error) {
-	if dbms != "" {
-		lexer := sqllexer.New(input, sqllexer.WithDBMS(sqllexer.DBMSType(dbms)))
-		tokens := lexer.ScanAll()
-
-		var result strings.Builder
-		for _, token := range tokens {
-			result.WriteString(fmt.Sprintf("%s\n", token))
-		}
-
-		return result.String(), nil
-	}
-
-	lexer := sqllexer.New(input)
-	tokens := lexer.ScanAll()
-
-	var result strings.Builder
-	for _, token := range tokens {
-		result.WriteString(fmt.Sprintf("%s\n", token))
->>>>>>> 1efe276 (Run obfuscator from CLI.)
 	}
 
 	return result.String(), nil
@@ -225,11 +196,7 @@ Usage: sqllexer [flags]
 
 Flags:
   -mode string
-<<<<<<< HEAD
         Operation mode: obfuscate, normalize, tokenize, obfuscate_and_normalize (default "obfuscate_and_normalize")
-=======
-        Operation mode: obfuscate, normalize, tokenize (default "obfuscate")
->>>>>>> 1efe276 (Run obfuscator from CLI.)
   -input string
         Input file (default: stdin)
   -output string
@@ -269,10 +236,5 @@ Examples:
   sqllexer -mode tokenize -input query.sql
 
   # Obfuscate with custom options
-<<<<<<< HEAD
   sqllexer -replace-digits=false -keep-json-path=true -input query.sql`)
-=======
-  sqllexer -replace-digits=false -keep-json-path=true -input query.sql
-`)
->>>>>>> 1efe276 (Run obfuscator from CLI.)
 }
