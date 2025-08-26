@@ -160,6 +160,9 @@ func obfuscateAndNormalizeSQL(input, dbms string, replaceDigits, replaceBoolean,
 		sqllexer.WithCollectCommands(collectCommands),
 		sqllexer.WithCollectTables(collectTables),
 		sqllexer.WithKeepSQLAlias(keepSQLAlias),
+
+		// TODO: Make config param
+		sqllexer.WithKeepIdentifierQuotation(true),
 	)
 
 	result, _, err := sqllexer.ObfuscateAndNormalize(input, obfuscator, normalizer, sqllexer.WithDBMS(sqllexer.DBMSType(dbms)))
@@ -180,7 +183,7 @@ func tokenizeSQL(input, dbms string) (string, error) {
 		if token.Type == sqllexer.EOF {
 			break
 		}
-		result.WriteString(fmt.Sprintf("%s\n", token))
+		result.WriteString(fmt.Sprintf("%s\n", token.Value))
 	}
 
 	return result.String(), nil
@@ -233,6 +236,5 @@ Examples:
   sqllexer -mode tokenize -input query.sql
 
   # Obfuscate with custom options
-  sqllexer -replace-digits=false -keep-json-path=true -input query.sql
-`)
+  sqllexer -replace-digits=false -keep-json-path=true -input query.sql`)
 }
