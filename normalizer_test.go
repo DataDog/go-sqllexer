@@ -771,6 +771,24 @@ func TestNormalizeDeobfuscatedSQL(t *testing.T) {
 			},
 		},
 		{
+			input:    `SELECT * FROM public."users" WHERE id = ?`,
+			expected: `SELECT * FROM public."users" WHERE id = ?`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{`public."users"`},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       20,
+			},
+			normalizationConfig: &normalizerConfig{
+				CollectComments:         true,
+				CollectCommands:         true,
+				CollectTables:           true,
+				KeepSQLAlias:            true,
+				KeepIdentifierQuotation: true,
+			},
+		},
+		{
 			input:    `SELECT * FROM "users" WHERE id = ?`,
 			expected: `SELECT * FROM users WHERE id = ?`,
 			statementMetadata: StatementMetadata{
