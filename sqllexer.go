@@ -554,9 +554,10 @@ func (s *Lexer) scanDollarQuotedString() *Token {
 	}
 	s.next()                            // consume the closing dollar sign of the tag
 	tag := s.src[tagStart-1 : s.cursor] // include the opening and closing dollar sign e.g. $tag$
+	tagRune := []rune(tag)
 
 	for s.cursor < len(s.src) {
-		if s.matchAt([]rune(tag)) {
+		if s.matchAt(tagRune) {
 			s.nextBy(len(tag)) // consume the closing tag
 			if tag == "$func$" {
 				return s.emit(DOLLAR_QUOTED_FUNCTION)
