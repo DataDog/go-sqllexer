@@ -101,7 +101,7 @@ func readInput(inputFile string) (string, error) {
 
 func writeOutput(result, outputFile string) error {
 	if outputFile == "" {
-		fmt.Print(result)
+		fmt.Println(result)
 		return nil
 	}
 
