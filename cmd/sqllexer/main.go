@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -25,6 +26,7 @@ func main() {
 		collectCommands = flag.Bool("collect-commands", true, "Collect commands during normalization")
 		collectTables   = flag.Bool("collect-tables", true, "Collect table names during normalization")
 		keepSQLAlias    = flag.Bool("keep-sql-alias", false, "Keep SQL aliases during normalization")
+		withMetadata    = flag.Bool("with-metadata", false, "Output result with metadata as JSON (only for normalize and obfuscate_and_normalize modes)")
 		help            = flag.Bool("help", false, "Show help message")
 	)
 
@@ -48,11 +50,11 @@ func main() {
 	case "obfuscate":
 		result, err = obfuscateSQL(input, *dbms, *replaceDigits, *replaceBoolean, *replaceNull, *keepJsonPath)
 	case "normalize":
-		result, err = normalizeSQL(input, *dbms, *collectComments, *collectCommands, *collectTables, *keepSQLAlias)
+		result, err = normalizeSQL(input, *dbms, *collectComments, *collectCommands, *collectTables, *keepSQLAlias, *withMetadata)
 	case "tokenize":
 		result, err = tokenizeSQL(input, *dbms)
 	case "obfuscate_and_normalize":
-		result, err = obfuscateAndNormalizeSQL(input, *dbms, *replaceDigits, *replaceBoolean, *replaceNull, *keepJsonPath, *collectComments, *collectCommands, *collectTables, *keepSQLAlias)
+		result, err = obfuscateAndNormalizeSQL(input, *dbms, *replaceDigits, *replaceBoolean, *replaceNull, *keepJsonPath, *collectComments, *collectCommands, *collectTables, *keepSQLAlias, *withMetadata)
 	default:
 		fmt.Fprintf(os.Stderr, "Invalid mode: %s. Use -help for usage information.\n", *mode)
 		os.Exit(1)
@@ -113,6 +115,25 @@ func writeOutput(result, outputFile string) error {
 	return err
 }
 
+type OutputWithMetadata struct {
+	SQL      string                      `json:"sql"`
+	Metadata *sqllexer.StatementMetadata `json:"metadata"`
+}
+
+func formatWithMetadata(sql string, metadata *sqllexer.StatementMetadata) (string, error) {
+	output := OutputWithMetadata{
+		SQL:      sql,
+		Metadata: metadata,
+	}
+
+	jsonBytes, err := json.MarshalIndent(output, "", "  ")
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal output: %w", err)
+	}
+
+	return string(jsonBytes), nil
+}
+
 func obfuscateSQL(input, dbms string, replaceDigits, replaceBoolean, replaceNull, keepJsonPath bool) (string, error) {
 	obfuscator := sqllexer.NewObfuscator(
 		sqllexer.WithReplaceDigits(replaceDigits),
@@ -130,7 +151,7 @@ func obfuscateSQL(input, dbms string, replaceDigits, replaceBoolean, replaceNull
 	return result, nil
 }
 
-func normalizeSQL(input, dbms string, collectComments, collectCommands, collectTables, keepSQLAlias bool) (string, error) {
+func normalizeSQL(input, dbms string, collectComments, collectCommands, collectTables, keepSQLAlias, withMetadata bool) (string, error) {
 	normalizer := sqllexer.NewNormalizer(
 		sqllexer.WithCollectComments(collectComments),
 		sqllexer.WithCollectCommands(collectCommands),
@@ -138,16 +159,28 @@ func normalizeSQL(input, dbms string, collectComments, collectCommands, collectT
 		sqllexer.WithKeepSQLAlias(keepSQLAlias),
 	)
 
+	var result string
+	var metadata *sqllexer.StatementMetadata
+	var err error
+
 	if dbms != "" {
-		result, _, err := normalizer.Normalize(input, sqllexer.WithDBMS(sqllexer.DBMSType(dbms)))
-		return result, err
+		result, metadata, err = normalizer.Normalize(input, sqllexer.WithDBMS(sqllexer.DBMSType(dbms)))
+	} else {
+		result, metadata, err = normalizer.Normalize(input)
 	}
 
-	result, _, err := normalizer.Normalize(input)
-	return result, err
+	if err != nil {
+		return "", err
+	}
+
+	if withMetadata {
+		return formatWithMetadata(result, metadata)
+	}
+
+	return result, nil
 }
 
-func obfuscateAndNormalizeSQL(input, dbms string, replaceDigits, replaceBoolean, replaceNull, keepJsonPath bool, collectComments, collectCommands, collectTables, keepSQLAlias bool) (string, error) {
+func obfuscateAndNormalizeSQL(input, dbms string, replaceDigits, replaceBoolean, replaceNull, keepJsonPath bool, collectComments, collectCommands, collectTables, keepSQLAlias, withMetadata bool) (string, error) {
 	obfuscator := sqllexer.NewObfuscator(
 		sqllexer.WithReplaceDigits(replaceDigits),
 		sqllexer.WithReplaceBoolean(replaceBoolean),
@@ -165,8 +198,16 @@ func obfuscateAndNormalizeSQL(input, dbms string, replaceDigits, replaceBoolean,
 		sqllexer.WithKeepIdentifierQuotation(true),
 	)
 
-	result, _, err := sqllexer.ObfuscateAndNormalize(input, obfuscator, normalizer, sqllexer.WithDBMS(sqllexer.DBMSType(dbms)))
-	return result, err
+	result, metadata, err := sqllexer.ObfuscateAndNormalize(input, obfuscator, normalizer, sqllexer.WithDBMS(sqllexer.DBMSType(dbms)))
+	if err != nil {
+		return "", err
+	}
+
+	if withMetadata {
+		return formatWithMetadata(result, metadata)
+	}
+
+	return result, nil
 }
 
 func tokenizeSQL(input, dbms string) (string, error) {
@@ -219,6 +260,8 @@ Flags:
         Collect table names during normalization (default true)
   -keep-sql-alias
         Keep SQL aliases during normalization (default false)
+  -with-metadata
+        Output result with metadata as JSON (only for normalize and obfuscate_and_normalize modes) (default false)
   -help
         Show this help message
 
@@ -231,6 +274,9 @@ Examples:
 
   # Normalize SQL for PostgreSQL
   sqllexer -mode normalize -dbms postgresql -input query.sql
+
+  # Obfuscate and normalize with metadata as JSON
+  sqllexer -with-metadata -dbms postgresql -input query.sql
 
   # Tokenize SQL
   sqllexer -mode tokenize -input query.sql
