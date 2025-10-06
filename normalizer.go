@@ -156,12 +156,7 @@ func (n *Normalizer) normalizeToken(lexer *Lexer, normalizedSQLBuilder *strings.
 
 	var groupablePlaceholder groupablePlaceholder
 	var headState headState
-	var ctes map[string]bool
-
-	// Only allocate CTEs map if collecting tables
-	if n.config.CollectTables {
-		ctes = make(map[string]bool, 2)
-	}
+	var ctes map[string]bool // Lazily initialized when first CTE is encountered
 
 	var lastValueToken *LastValueToken
 
@@ -238,6 +233,10 @@ func (n *Normalizer) collectMetadata(token *Token, lastValueToken *LastValueToke
 			}
 		}
 		if lastValueToken != nil && lastValueToken.Type == CTE_INDICATOR {
+			// Lazily initialize the ctes map when we encounter the first CTE
+			if ctes == nil {
+				ctes = make(map[string]bool, 2) // We initialize with a small capacity since typically we'd only have a few CTEs per query
+			}
 			ctes[tokenVal] = true
 		} else if n.config.CollectTables && lastValueToken != nil && lastValueToken.isTableIndicator {
 			if _, ok := ctes[tokenVal]; !ok {

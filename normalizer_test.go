@@ -1237,6 +1237,55 @@ func ExampleNormalizer() {
 	// &{34 [users] [/* this is a comment */] [SELECT] []}
 }
 
+func TestNormalizerCTEWithoutCollectTables(t *testing.T) {
+	// This test is to ensure that the normalizer can normalize SQL with CTEs
+	// even when CollectTables is disabled.
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{
+			input: `
+				WITH cte AS (
+					SELECT id, name, age
+					FROM person
+					WHERE age > ?
+				)
+				SELECT * FROM cte
+			`,
+			expected: "WITH cte AS ( SELECT id, name, age FROM person WHERE age > ? ) SELECT * FROM cte",
+		},
+		{
+			input: `
+				WITH updates AS (
+					UPDATE metrics_metadata
+					SET metric_type = ?
+					WHERE metric_key = ?
+					RETURNING ?
+				)
+				INSERT INTO metrics_metadata ( org_id, metric_key )
+				SELECT ? WHERE NOT EXISTS ( SELECT ? FROM updates )
+			`,
+			expected: "WITH updates AS ( UPDATE metrics_metadata SET metric_type = ? WHERE metric_key = ? RETURNING ? ) INSERT INTO metrics_metadata ( org_id, metric_key ) SELECT ? WHERE NOT EXISTS ( SELECT ? FROM updates )",
+		},
+	}
+
+	// Create normalizer WITHOUT CollectTables enabled
+	normalizer := NewNormalizer(
+		WithCollectComments(true),
+		WithCollectCommands(true),
+		WithCollectTables(false),
+	)
+
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			got, _, err := normalizer.Normalize(test.input)
+			assert.NoError(t, err)
+			assert.Equal(t, test.expected, got)
+		})
+	}
+}
+
 func assertStatementMetadataEqual(t *testing.T, expected, actual *StatementMetadata) {
 	assert.Equal(t, expected.Size, actual.Size)
 	assert.Equal(t, expected.Tables, actual.Tables)
