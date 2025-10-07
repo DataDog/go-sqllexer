@@ -4,7 +4,7 @@ retract v0.1.0 // This version had memory leaks and should not be used
 
 go 1.21
 
-require github.com/stretchr/testify v1.8.4
+require github.com/stretchr/testify v1.11.1
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
