@@ -156,12 +156,7 @@ func (n *Normalizer) normalizeToken(lexer *Lexer, normalizedSQLBuilder *strings.
 
 	var groupablePlaceholder groupablePlaceholder
 	var headState headState
-	var ctes map[string]bool
-
-	// Only allocate CTEs map if collecting tables
-	if n.config.CollectTables {
-		ctes = make(map[string]bool, 2)
-	}
+	var ctes map[string]bool // Lazily initialized when first CTE is encountered
 
 	var lastValueToken *LastValueToken
 
@@ -172,7 +167,7 @@ func (n *Normalizer) normalizeToken(lexer *Lexer, normalizedSQLBuilder *strings.
 			preProcessToken(token, lastValueToken)
 		}
 		if n.shouldCollectMetadata() {
-			n.collectMetadata(token, lastValueToken, meta, statementMetadata, ctes)
+			n.collectMetadata(token, lastValueToken, meta, statementMetadata, &ctes)
 		}
 		n.normalizeSQL(token, lastValueToken, normalizedSQLBuilder, &groupablePlaceholder, &headState, lexerOpts...)
 		if token.Type == EOF {
@@ -218,7 +213,7 @@ func (n *Normalizer) shouldCollectMetadata() bool {
 	return n.config.CollectTables || n.config.CollectCommands || n.config.CollectComments || n.config.CollectProcedure
 }
 
-func (n *Normalizer) collectMetadata(token *Token, lastValueToken *LastValueToken, meta *metadataSet, statementMetadata *StatementMetadata, ctes map[string]bool) {
+func (n *Normalizer) collectMetadata(token *Token, lastValueToken *LastValueToken, meta *metadataSet, statementMetadata *StatementMetadata, ctes *map[string]bool) {
 	if n.config.CollectComments && (token.Type == COMMENT || token.Type == MULTILINE_COMMENT) {
 		comment := token.Value
 		meta.addMetadata(comment, meta.commentsSet, &statementMetadata.Comments)
@@ -237,14 +232,25 @@ func (n *Normalizer) collectMetadata(token *Token, lastValueToken *LastValueToke
 				token.Type = IDENT
 			}
 		}
-		if lastValueToken != nil && lastValueToken.Type == CTE_INDICATOR {
-			ctes[tokenVal] = true
-		} else if n.config.CollectTables && lastValueToken != nil && lastValueToken.isTableIndicator {
-			if _, ok := ctes[tokenVal]; !ok {
-				meta.addMetadata(tokenVal, meta.tablesSet, &statementMetadata.Tables)
+
+		// Only collect metadata if we have context from the previous token
+		if lastValueToken != nil {
+			// Track CTE names so we can exclude them from the tables list
+			if lastValueToken.Type == CTE_INDICATOR {
+				if *ctes == nil {
+					*ctes = make(map[string]bool, 2)
+				}
+				(*ctes)[tokenVal] = true
+			} else if n.config.CollectTables && lastValueToken.isTableIndicator {
+				// Collect table names, excluding any CTEs
+				isCTE := *ctes != nil && (*ctes)[tokenVal]
+				if !isCTE {
+					meta.addMetadata(tokenVal, meta.tablesSet, &statementMetadata.Tables)
+				}
+			} else if n.config.CollectProcedure && lastValueToken.Type == PROC_INDICATOR {
+				// Collect procedure names
+				meta.addMetadata(tokenVal, meta.proceduresSet, &statementMetadata.Procedures)
 			}
-		} else if n.config.CollectProcedure && lastValueToken != nil && lastValueToken.Type == PROC_INDICATOR {
-			meta.addMetadata(tokenVal, meta.proceduresSet, &statementMetadata.Procedures)
 		}
 	}
 }
