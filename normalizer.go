@@ -128,6 +128,7 @@ type headState struct {
 	foundLeadingExpressionInParentheses bool
 	standaloneExpressionInParentheses   bool
 	expressionInParentheses             strings.Builder
+	hasCommandInLeadingParentheses      bool
 }
 
 type Normalizer struct {
@@ -275,7 +276,13 @@ func (n *Normalizer) normalizeSQL(token *Token, lastValueToken *LastValueToken, 
 			}
 			return
 		} else if headState.foundLeadingExpressionInParentheses {
+			// If the leading parentheses contained a SQL command (like SELECT),
+			// it's a SQL statement, not a parameter declaration, so write it out
+			if headState.hasCommandInLeadingParentheses {
+				normalizedSQLBuilder.WriteString(headState.expressionInParentheses.String())
+			}
 			headState.standaloneExpressionInParentheses = false
+			headState.foundLeadingExpressionInParentheses = false
 		}
 
 		if token.Type == DOLLAR_QUOTED_FUNCTION && token.Value != StringPlaceholder {
@@ -323,6 +330,10 @@ func (n *Normalizer) normalizeSQL(token *Token, lastValueToken *LastValueToken, 
 		if headState.inLeadingParenthesesExpression {
 			n.appendSpace(token, lastValueToken, &headState.expressionInParentheses)
 			n.writeToken(token.Type, token.Value, &headState.expressionInParentheses)
+			// Track if we find a SQL command in the leading parentheses
+			if token.Type == COMMAND {
+				headState.hasCommandInLeadingParentheses = true
+			}
 			if token.Type == PUNCTUATION && token.Value == ")" {
 				headState.inLeadingParenthesesExpression = false
 				headState.foundLeadingExpressionInParentheses = true
