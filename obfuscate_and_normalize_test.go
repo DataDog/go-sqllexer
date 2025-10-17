@@ -561,6 +561,21 @@ multiline comment */
 				WithDBMS("postgres"),
 			},
 		},
+		{
+			// Test for parallel range-partitioned UNION ALL query
+			input:    `(SELECT * FROM dbm_user WHERE (id >= 0 AND id < 10000)) UNION ALL (SELECT * FROM dbm_user WHERE (id >= 10000 AND id < 20000)) UNION ALL (SELECT * FROM dbm_user WHERE (id >= 20000 AND id < 30000)) UNION ALL (SELECT * FROM dbm_user WHERE (id >= 30000 AND id < 40000)) UNION ALL (SELECT * FROM dbm_user WHERE (id >= 40000 AND id < 50000)) ORDER BY id;`,
+			expected: `( SELECT * FROM dbm_user WHERE ( id >= ? AND id < ? ) ) UNION ALL ( SELECT * FROM dbm_user WHERE ( id >= ? AND id < ? ) ) UNION ALL ( SELECT * FROM dbm_user WHERE ( id >= ? AND id < ? ) ) UNION ALL ( SELECT * FROM dbm_user WHERE ( id >= ? AND id < ? ) ) UNION ALL ( SELECT * FROM dbm_user WHERE ( id >= ? AND id < ? ) ) ORDER BY id`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"dbm_user"},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       14,
+			},
+			lexerOpts: []lexerOption{
+				WithDBMS(DBMSMySQL),
+			},
+		},
 	}
 
 	obfuscator := NewObfuscator(
