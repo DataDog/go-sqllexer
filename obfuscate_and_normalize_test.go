@@ -92,7 +92,7 @@ func TestObfuscationAndNormalization(t *testing.T) {
 		},
 		{
 			input: `
-			/* this is a 
+			/* this is a ` + `
 multiline comment */
 			SELECT * FROM users /* comment comment */ WHERE id = 'XXX'
 			-- this is another comment
@@ -571,6 +571,20 @@ multiline comment */
 				Commands:   []string{"SELECT"},
 				Procedures: []string{},
 				Size:       14,
+			},
+			lexerOpts: []lexerOption{
+				WithDBMS(DBMSMySQL),
+			},
+		},
+		{
+			input:    `select * from dbmorders.dbm_user where nickname = "foo";`,
+			expected: `select * from dbmorders.dbm_user where nickname = ?`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"dbmorders.dbm_user"},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       24,
 			},
 			lexerOpts: []lexerOption{
 				WithDBMS(DBMSMySQL),
