@@ -548,6 +548,20 @@ multiline comment */
 			},
 		},
 		{
+			input:    `( @p1 varchar(50) ) SELECT * from dbm_user WHERE name = @p1`,
+			expected: `SELECT * from dbm_user WHERE name = @p1`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"dbm_user"},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       14,
+			},
+			lexerOpts: []lexerOption{
+				WithDBMS(DBMSSQLServer),
+			},
+		},
+		{
 			input:    `SELECT pk, updatedAt, createdAt, name, description, isAutoCreated, autoCreatedFeaturePk FROM FeatureStrategyGroup WHERE FeatureStrategyGroup.autoCreatedFeaturePk IN ( ? )`,
 			expected: `SELECT pk, updatedAt, createdAt, name, description, isAutoCreated, autoCreatedFeaturePk FROM FeatureStrategyGroup WHERE FeatureStrategyGroup.autoCreatedFeaturePk IN ( ? )`,
 			statementMetadata: StatementMetadata{

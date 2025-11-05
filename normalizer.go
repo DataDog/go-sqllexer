@@ -129,6 +129,7 @@ type headState struct {
 	standaloneExpressionInParentheses   bool
 	expressionInParentheses             strings.Builder
 	hasCommandInLeadingParentheses      bool
+	parenthesesDepth                    int
 }
 
 type Normalizer struct {
@@ -268,6 +269,11 @@ func (n *Normalizer) normalizeSQL(token *Token, lastValueToken *LastValueToken, 
 			if token.Type == PUNCTUATION && token.Value == "(" {
 				headState.inLeadingParenthesesExpression = true
 				headState.standaloneExpressionInParentheses = true
+				headState.parenthesesDepth = 1
+				// Write the opening parenthesis to the buffer and return
+				// to avoid double-processing it in the inLeadingParenthesesExpression block below
+				headState.expressionInParentheses.WriteString(token.Value)
+				return
 			}
 		}
 		if token.Type == EOF {
@@ -334,9 +340,14 @@ func (n *Normalizer) normalizeSQL(token *Token, lastValueToken *LastValueToken, 
 			if token.Type == COMMAND {
 				headState.hasCommandInLeadingParentheses = true
 			}
-			if token.Type == PUNCTUATION && token.Value == ")" {
-				headState.inLeadingParenthesesExpression = false
-				headState.foundLeadingExpressionInParentheses = true
+			if token.Type == PUNCTUATION && token.Value == "(" {
+				headState.parenthesesDepth++
+			} else if token.Type == PUNCTUATION && token.Value == ")" {
+				headState.parenthesesDepth--
+				if headState.parenthesesDepth == 0 {
+					headState.inLeadingParenthesesExpression = false
+					headState.foundLeadingExpressionInParentheses = true
+				}
 			}
 		} else {
 			n.appendSpace(token, lastValueToken, normalizedSQLBuilder)
