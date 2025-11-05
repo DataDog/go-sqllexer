@@ -126,12 +126,18 @@ func formatWithMetadata(sql string, metadata *sqllexer.StatementMetadata) (strin
 		Metadata: metadata,
 	}
 
-	jsonBytes, err := json.MarshalIndent(output, "", "  ")
-	if err != nil {
+	var buf strings.Builder
+	encoder := json.NewEncoder(&buf)
+	encoder.SetEscapeHTML(false)
+	encoder.SetIndent("", "  ")
+
+	if err := encoder.Encode(output); err != nil {
 		return "", fmt.Errorf("failed to marshal output: %w", err)
 	}
 
-	return string(jsonBytes), nil
+	// Encoder.Encode adds a trailing newline, remove it for consistency
+	result := buf.String()
+	return strings.TrimSuffix(result, "\n"), nil
 }
 
 func obfuscateSQL(input, dbms string, replaceDigits, replaceBoolean, replaceNull, keepJsonPath bool) (string, error) {
