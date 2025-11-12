@@ -1,0 +1,21 @@
+{
+  "input": "SELECT customer_id AS \"customer-id\", SUM(amount) FILTER (WHERE status = 'paid') AS \"paid$total\" FROM billing.invoices GROUP BY customer_id;",
+  "outputs": [
+    {
+      "normalizer_config": {
+        "collect_comments": true,
+        "collect_commands": true,
+        "collect_tables": true,
+        "keep_sql_alias": true
+      },
+      "expected": "SELECT customer_id AS \"customer-id\", SUM ( amount ) FILTER ( WHERE status = ? ) AS \"paid$total\" FROM billing.invoices GROUP BY customer_id",
+      "statement_metadata": {
+        "size": 22,
+        "tables": ["billing.invoices"],
+        "commands": ["SELECT"],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}

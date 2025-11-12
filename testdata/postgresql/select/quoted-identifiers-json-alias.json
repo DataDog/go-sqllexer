@@ -1,0 +1,21 @@
+{
+  "input": "SELECT payload->>'user' AS \"user:name\" FROM audit.events;",
+  "outputs": [
+    {
+      "normalizer_config": {
+        "collect_comments": true,
+        "collect_commands": true,
+        "collect_tables": true,
+        "keep_sql_alias": true
+      },
+      "expected": "SELECT payload ->> ? AS \"user:name\" FROM audit.events",
+      "statement_metadata": {
+        "size": 18,
+        "tables": ["audit.events"],
+        "commands": ["SELECT"],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}
