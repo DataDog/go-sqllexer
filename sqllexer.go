@@ -94,7 +94,7 @@ type Lexer struct {
 	hasQuotes          bool // true if any quotes in token
 	hasDigits          bool // true if the token has digits
 	isTableIndicator   bool // true if the token is a table indicator
-	isSimpleIdentifier bool
+	isSimpleIdentifier bool // true if current quoted ident started with a letter and only used alphanumerics afterwards
 }
 
 func New(input string, opts ...lexerOption) *Lexer {
