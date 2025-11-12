@@ -260,9 +260,8 @@ func (n *Normalizer) collectMetadata(token *Token, lastValueToken *LastValueToke
 func (n *Normalizer) normalizeSQL(token *Token, lastValueToken *LastValueToken, normalizedSQLBuilder *strings.Builder, groupablePlaceholder *groupablePlaceholder, headState *headState, lexerOpts ...lexerOption) {
 	if token.Type != SPACE && token.Type != COMMENT && token.Type != MULTILINE_COMMENT {
 		if token.Type == QUOTED_IDENT && !n.config.KeepIdentifierQuotation {
-			unquoted := trimQuotes(token)
 			if n.shouldStripIdentifierQuotes(token, lastValueToken) {
-				token.Value = unquoted
+				token.Value = trimQuotes(token)
 			}
 		}
 
