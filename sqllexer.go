@@ -43,8 +43,8 @@ type Token struct {
 	Value              string
 	isTableIndicator   bool // true if the token is a table indicator
 	hasDigits          bool
-	hasQuotes          bool // private - only used by trimQuotes
-	isSimpleIdentifier bool
+	hasQuotes          bool           // private - only used by trimQuotes
+	isSimpleIdentifier bool           // true if quoted ident started with a letter and only used alphanumerics afterwards
 	lastValueToken     LastValueToken // private - internal state
 }
 
