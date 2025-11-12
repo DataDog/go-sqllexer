@@ -1,0 +1,21 @@
+{
+  "input": "SELECT dense_rank() OVER (PARTITION BY region ORDER BY revenue DESC) AS \"rank#by-region\" FROM sales_by_region;",
+  "outputs": [
+    {
+      "normalizer_config": {
+        "collect_comments": true,
+        "collect_commands": true,
+        "collect_tables": true,
+        "keep_sql_alias": true
+      },
+      "expected": "SELECT dense_rank ( ) OVER ( PARTITION BY region ORDER BY revenue DESC ) AS \"rank#by-region\" FROM sales_by_region",
+      "statement_metadata": {
+        "size": 21,
+        "tables": ["sales_by_region"],
+        "commands": ["SELECT"],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}

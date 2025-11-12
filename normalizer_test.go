@@ -807,6 +807,24 @@ func TestNormalizeDeobfuscatedSQL(t *testing.T) {
 			},
 		},
 		{
+			input:    `SELECT mytable.mycol AS "mytable.mycol" FROM mytable`,
+			expected: `SELECT mytable.mycol AS "mytable.mycol" FROM mytable`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{`mytable`},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       13,
+			},
+			normalizationConfig: &normalizerConfig{
+				CollectComments:         true,
+				CollectCommands:         true,
+				CollectTables:           true,
+				KeepSQLAlias:            true,
+				KeepIdentifierQuotation: false,
+			},
+		},
+		{
 			input:    `SELECT * FROM "public"."users" WHERE id = ?`,
 			expected: `SELECT * FROM public.users WHERE id = ?`,
 			statementMetadata: StatementMetadata{

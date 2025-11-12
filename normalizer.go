@@ -228,7 +228,7 @@ func (n *Normalizer) collectMetadata(token *Token, lastValueToken *LastValueToke
 		tokenVal := token.Value
 		if token.Type == QUOTED_IDENT {
 			tokenVal = trimQuotes(token)
-			if !n.config.KeepIdentifierQuotation {
+			if n.shouldStripIdentifierQuotes(token, lastValueToken) {
 				// trim quotes and set the token type to IDENT
 				token.Value = tokenVal
 				token.Type = IDENT
@@ -260,7 +260,9 @@ func (n *Normalizer) collectMetadata(token *Token, lastValueToken *LastValueToke
 func (n *Normalizer) normalizeSQL(token *Token, lastValueToken *LastValueToken, normalizedSQLBuilder *strings.Builder, groupablePlaceholder *groupablePlaceholder, headState *headState, lexerOpts ...lexerOption) {
 	if token.Type != SPACE && token.Type != COMMENT && token.Type != MULTILINE_COMMENT {
 		if token.Type == QUOTED_IDENT && !n.config.KeepIdentifierQuotation {
-			token.Value = trimQuotes(token)
+			if n.shouldStripIdentifierQuotes(token, lastValueToken) {
+				token.Value = trimQuotes(token)
+			}
 		}
 
 		// handle leading expression in parentheses
@@ -354,6 +356,23 @@ func (n *Normalizer) normalizeSQL(token *Token, lastValueToken *LastValueToken, 
 			n.writeToken(token.Type, token.Value, normalizedSQLBuilder)
 		}
 	}
+}
+
+func (n *Normalizer) shouldStripIdentifierQuotes(token *Token, lastValueToken *LastValueToken) bool {
+	if n.config.KeepIdentifierQuotation {
+		return false
+	}
+	if token == nil {
+		return true
+	}
+	if isAliasContext(lastValueToken) && !token.isSimpleIdentifier {
+		return false
+	}
+	return true
+}
+
+func isAliasContext(lastValueToken *LastValueToken) bool {
+	return lastValueToken != nil && lastValueToken.Type == ALIAS_INDICATOR
 }
 
 func (n *Normalizer) writeToken(tokenType TokenType, tokenValue string, normalizedSQLBuilder *strings.Builder) {
