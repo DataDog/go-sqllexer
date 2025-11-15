@@ -142,30 +142,42 @@ func (s *Lexer) Scan() *Token {
 	case isWildcard(ch):
 		return s.scanWildcard()
 	case ch == '$':
-		if isDigit(s.lookAhead(1)) {
-			// if the dollar sign is followed by a digit, then it's a numbered parameter
-			return s.scanPositionalParameter()
+		nextCh := s.lookAhead(1)
+		if isDigit(nextCh) {
+			// Prefix length 2: consume '$' plus the first digit of SQLite bind parameters that use $VVV,
+			// where V may be numeric (e.g. $1, $12). Refer to scanSQLiteBindParameter for details
+			return s.scanNumericParameter(2)
 		}
-		if s.config.DBMS == DBMSSQLServer && isLetter(s.lookAhead(1)) {
+		if s.config.DBMS == DBMSSQLite && isAlphaNumeric(nextCh) {
+			return s.scanBindParameter()
+		}
+		if s.config.DBMS == DBMSSQLServer && isLetter(nextCh) {
 			return s.scanIdentifier(ch)
 		}
 		return s.scanDollarQuotedString()
 	case ch == ':':
-		if s.config.DBMS == DBMSOracle && isAlphaNumeric(s.lookAhead(1)) {
+		if (s.config.DBMS == DBMSOracle || s.config.DBMS == DBMSSQLite) && isAlphaNumeric(s.lookAhead(1)) {
 			return s.scanBindParameter()
 		}
 		return s.scanOperator(ch)
 	case ch == '`':
-		if s.config.DBMS == DBMSMySQL {
+		if s.config.DBMS == DBMSMySQL || s.config.DBMS == DBMSSQLite {
 			return s.scanDoubleQuotedIdentifier('`')
 		}
-		return s.scanUnknown() // backtick is only valid in mysql
+		return s.scanUnknown() // backtick is only valid in mysql and sqlite
 	case ch == '#':
 		if s.config.DBMS == DBMSSQLServer {
 			return s.scanIdentifier(ch)
 		} else if s.config.DBMS == DBMSMySQL {
 			// MySQL treats # as a comment
 			return s.scanSingleLineComment(ch)
+		}
+		return s.scanOperator(ch)
+	case ch == '?':
+		if s.config.DBMS == DBMSSQLite {
+			// Prefix length 1: consume '?' before scanning optional digits of SQLite ?NNN parameters
+			// SQLite treats bare '?' and '?NNN' as positional parameters (see scanSQLiteBindParameter)
+			return s.scanNumericParameter(1)
 		}
 		return s.scanOperator(ch)
 	case ch == '@':
@@ -192,7 +204,7 @@ func (s *Lexer) Scan() *Token {
 	case isOperator(ch):
 		return s.scanOperator(ch)
 	case isPunctuation(ch):
-		if ch == '[' && s.config.DBMS == DBMSSQLServer {
+		if ch == '[' && (s.config.DBMS == DBMSSQLServer || s.config.DBMS == DBMSSQLite) {
 			return s.scanDoubleQuotedIdentifier('[')
 		}
 		return s.scanPunctuation()
@@ -595,13 +607,10 @@ func (s *Lexer) scanDollarQuotedString() *Token {
 	return s.emit(ERROR)
 }
 
-func (s *Lexer) scanPositionalParameter() *Token {
+func (s *Lexer) scanNumericParameter(prefixLen int) *Token {
 	s.start = s.cursor
-	ch := s.nextBy(2) // consume the dollar sign and the number
-	for {
-		if !isDigit(ch) {
-			break
-		}
+	ch := s.nextBy(prefixLen)
+	for isDigit(ch) {
 		ch = s.next()
 	}
 	return s.emit(POSITIONAL_PARAMETER)
@@ -609,7 +618,11 @@ func (s *Lexer) scanPositionalParameter() *Token {
 
 func (s *Lexer) scanBindParameter() *Token {
 	s.start = s.cursor
-	ch := s.nextBy(2) // consume the (colon|at sign) and the char
+	if s.config.DBMS == DBMSSQLite {
+		// SQLite allows named bind parameters prefixed with :, @, or $, so use the SQLite-specific scanner
+		return s.scanSQLiteBindParameter()
+	}
+	ch := s.nextBy(2) // consume the (colon|at sign|dollar sign) and the char
 	for {
 		if !isAlphaNumeric(ch) {
 			break
@@ -617,6 +630,55 @@ func (s *Lexer) scanBindParameter() *Token {
 		ch = s.next()
 	}
 	return s.emit(BIND_PARAMETER)
+}
+
+// https://sqlite.org/c3ref/bind_blob.html
+func (s *Lexer) scanSQLiteBindParameter() *Token {
+	s.next() // consume the prefix character (:, @, or $)
+	s.consumeSQLiteIdentifier()
+
+	for {
+		if s.peek() == ':' && s.lookAhead(1) == ':' {
+			s.nextBy(2) // consume '::'
+			s.consumeSQLiteIdentifier()
+			continue
+		}
+		break
+	}
+
+	if s.peek() == '(' {
+		s.consumeSQLiteParameterSuffix()
+	}
+
+	return s.emit(BIND_PARAMETER)
+}
+
+func (s *Lexer) consumeSQLiteIdentifier() {
+	for {
+		ch := s.peek()
+		if ch == '_' || isAlphaNumeric(ch) {
+			s.next()
+			continue
+		}
+		break
+	}
+}
+
+func (s *Lexer) consumeSQLiteParameterSuffix() {
+	s.next() // consume '('
+	depth := 1
+	for depth > 0 {
+		ch := s.peek()
+		if isEOF(ch) {
+			break
+		}
+		s.next()
+		if ch == '(' {
+			depth++
+		} else if ch == ')' {
+			depth--
+		}
+	}
 }
 
 func (s *Lexer) scanSystemVariable() *Token {

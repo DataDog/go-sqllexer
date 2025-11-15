@@ -1,0 +1,15 @@
+{
+  "input": "PRAGMA table_info('users');",
+  "outputs": [
+    {
+      "expected": "PRAGMA table_info ( ? )",
+      "statement_metadata": {
+        "size": 6,
+        "tables": [],
+        "commands": ["PRAGMA"],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}

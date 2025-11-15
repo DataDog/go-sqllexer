@@ -1,0 +1,15 @@
+{
+  "input": "INSERT OR REPLACE INTO kv_store(key, value) VALUES('theme', json_extract($payload, '$.value'));",
+  "outputs": [
+    {
+      "expected": "INSERT OR REPLACE INTO kv_store ( key, value ) VALUES ( ?, json_extract ( $payload, ) )",
+      "statement_metadata": {
+        "size": 14,
+        "tables": ["kv_store"],
+        "commands": ["INSERT"],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}

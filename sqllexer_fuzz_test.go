@@ -147,6 +147,17 @@ func addComplexTestCases(f *testing.F) {
 		`SELECT $1, $2 FROM @mystage/file.csv`,
 	}
 
+	// SQLite specific patterns
+	sqlitePatterns := []string{
+		`SELECT * FROM pragma_table_info('users')`,
+		`INSERT OR REPLACE INTO kv_store(key, value) VALUES(:key, json_extract($payload, '$.value'))`,
+		`INSERT INTO logs VALUES($ns::var, $env(config), $ns::name(sub))`,
+		"CREATE TABLE IF NOT EXISTS logs (id INTEGER PRIMARY KEY, payload TEXT) WITHOUT ROWID",
+		"WITH ranked AS (SELECT *, row_number() OVER (PARTITION BY type ORDER BY created_at DESC) AS rn FROM events) SELECT * FROM ranked WHERE rn = 1",
+		"SELECT [user] FROM [main].[table] WHERE [id] = 1",
+		"ATTACH DATABASE 'archive.db' AS archive; DETACH DATABASE archive",
+	}
+
 	// Common edge cases across all DBMS
 	commonEdgeCases := []string{
 		// Nested subqueries
@@ -181,6 +192,7 @@ func addComplexTestCases(f *testing.F) {
 	patterns = append(patterns, oraclePatterns...)
 	patterns = append(patterns, snowflakePatterns...)
 	patterns = append(patterns, commonEdgeCases...)
+	patterns = append(patterns, sqlitePatterns...)
 
 	// Add each pattern with different DBMS types
 	dbmsTypes := []string{
@@ -189,6 +201,7 @@ func addComplexTestCases(f *testing.F) {
 		string(DBMSMySQL),
 		string(DBMSOracle),
 		string(DBMSSnowflake),
+		string(DBMSSQLite),
 	}
 
 	for _, pattern := range patterns {
@@ -257,6 +270,15 @@ func addObfuscationTestCases(f *testing.F) {
 		`SELECT TO_GEOGRAPHY('POINT(-122.35 37.55)')`,
 		// Stage references
 		`SELECT $1, $2, $3 FROM @mystage`,
+	}
+
+	// SQLite specific obfuscation patterns
+	sqlitePatterns := []string{
+		`SELECT * FROM logs WHERE id = ?5 AND tag = @tag`,
+		`SELECT * FROM users WHERE email = :email OR email = $email`,
+		`SELECT $ns::var, $env(config), $ns::name(sub)`,
+		`SELECT [user] FROM [main].[table] WHERE [id] = 1`,
+		`PRAGMA table_info('users')`,
 	}
 
 	// Common obfuscation patterns for all DBMS
@@ -331,6 +353,11 @@ func addObfuscationTestCases(f *testing.F) {
 		f.Add(pattern, string(DBMSSnowflake))
 	}
 
+	// Add SQLite patterns with SQLite DBMS
+	for _, pattern := range sqlitePatterns {
+		f.Add(pattern, string(DBMSSQLite))
+	}
+
 	// Add common patterns and quote edge cases with all DBMS types
 	dbmsTypes := []string{
 		string(DBMSPostgres),
@@ -338,6 +365,7 @@ func addObfuscationTestCases(f *testing.F) {
 		string(DBMSMySQL),
 		string(DBMSOracle),
 		string(DBMSSnowflake),
+		string(DBMSSQLite),
 	}
 
 	for _, pattern := range append(commonPatterns, quoteEdgeCases...) {

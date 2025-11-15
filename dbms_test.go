@@ -39,6 +39,7 @@ func TestQueriesPerDBMS(t *testing.T) {
 		DBMSSQLServer,
 		DBMSMySQL,
 		DBMSSnowflake,
+		DBMSSQLite,
 	}
 
 	for _, dbms := range dbmsTypes {

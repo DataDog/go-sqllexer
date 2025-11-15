@@ -1,0 +1,15 @@
+{
+  "input": "SELECT rowid, snippet(docs, 1, '<b>', '</b>', '...', 10) FROM docs WHERE docs MATCH 'sqlite NEAR/5 performance';",
+  "outputs": [
+    {
+      "expected": "SELECT rowid, snippet ( docs, ?, ?, ?, ?, ? ) FROM docs WHERE docs MATCH ?",
+      "statement_metadata": {
+        "size": 10,
+        "tables": ["docs"],
+        "commands": ["SELECT"],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}

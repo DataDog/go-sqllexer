@@ -17,7 +17,7 @@ func main() {
 		mode                 = flag.String("mode", "obfuscate_and_normalize", "Operation mode: obfuscate, normalize, tokenize, obfuscate_and_normalize")
 		inputFile            = flag.String("input", "", "Input file (default: stdin)")
 		outputFile           = flag.String("output", "", "Output file (default: stdout)")
-		dbms                 = flag.String("dbms", "", "Database type: mssql, postgresql, mysql, oracle, snowflake")
+		dbms                 = flag.String("dbms", "", "Database type: mssql, postgresql, mysql, oracle, snowflake, sqlite")
 		replaceDigits        = flag.Bool("replace-digits", true, "Replace digits with placeholders")
 		replaceBoolean       = flag.Bool("replace-boolean", true, "Replace boolean values with placeholders")
 		replaceNull          = flag.Bool("replace-null", true, "Replace null values with placeholders")
@@ -252,7 +252,7 @@ Flags:
   -output string
         Output file (default: stdout)
   -dbms string
-        Database type: mssql, postgresql, mysql, oracle, snowflake
+        Database type: mssql, postgresql, mysql, oracle, snowflake, sqlite
   -replace-digits
         Replace digits with placeholders (default true)
   -replace-boolean

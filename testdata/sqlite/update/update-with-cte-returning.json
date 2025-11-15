@@ -1,0 +1,15 @@
+{
+  "input": "WITH expired AS (\n  SELECT session_id FROM sessions WHERE expires_at < datetime('now')\n)\nUPDATE users\nSET active_session = NULL\nWHERE session_id IN (SELECT session_id FROM expired)\nRETURNING id;",
+  "outputs": [
+    {
+      "expected": "WITH expired AS ( SELECT session_id FROM sessions WHERE expires_at < datetime ( ? ) ) UPDATE users SET active_session = ? WHERE session_id IN ( SELECT session_id FROM expired ) RETURNING id",
+      "statement_metadata": {
+        "size": 25,
+        "tables": ["sessions", "users"],
+        "commands": ["SELECT", "UPDATE"],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}

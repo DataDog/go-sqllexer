@@ -1,0 +1,15 @@
+{
+  "input": "SELECT e.id,\n       json_extract(e.payload, '$.user.name') AS user_name,\n       tags.value\nFROM events e\nJOIN json_each(e.tags) AS tags\nWHERE json_type(e.payload, '$.active') = 'true';",
+  "outputs": [
+    {
+      "expected": "SELECT e.id, json_extract ( e.payload, ? ), tags.value FROM events e JOIN json_each ( e.tags ) WHERE json_type ( e.payload, ? ) = ?",
+      "statement_metadata": {
+        "size": 25,
+        "tables": ["events", "json_each"],
+        "commands": ["SELECT", "JOIN"],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}

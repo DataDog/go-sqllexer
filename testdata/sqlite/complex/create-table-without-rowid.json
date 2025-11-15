@@ -1,0 +1,15 @@
+{
+  "input": "CREATE TABLE IF NOT EXISTS events (\n  id TEXT PRIMARY KEY,\n  payload BLOB NOT NULL,\n  created_at INTEGER DEFAULT (unixepoch()),\n  UNIQUE(id, created_at)\n) WITHOUT ROWID;",
+  "outputs": [
+    {
+      "expected": "CREATE TABLE IF NOT EXISTS events ( id TEXT PRIMARY KEY, payload BLOB NOT ?, created_at INTEGER DEFAULT ( unixepoch ( ) ), UNIQUE ( id, created_at ) ) WITHOUT ROWID",
+      "statement_metadata": {
+        "size": 12,
+        "tables": ["events"],
+        "commands": ["CREATE"],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}
