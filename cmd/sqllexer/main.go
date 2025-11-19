@@ -14,20 +14,21 @@ import (
 
 func main() {
 	var (
-		mode            = flag.String("mode", "obfuscate_and_normalize", "Operation mode: obfuscate, normalize, tokenize, obfuscate_and_normalize")
-		inputFile       = flag.String("input", "", "Input file (default: stdin)")
-		outputFile      = flag.String("output", "", "Output file (default: stdout)")
-		dbms            = flag.String("dbms", "", "Database type: mssql, postgresql, mysql, oracle, snowflake")
-		replaceDigits   = flag.Bool("replace-digits", true, "Replace digits with placeholders")
-		replaceBoolean  = flag.Bool("replace-boolean", true, "Replace boolean values with placeholders")
-		replaceNull     = flag.Bool("replace-null", true, "Replace null values with placeholders")
-		keepJsonPath    = flag.Bool("keep-json-path", false, "Keep JSON path expressions")
-		collectComments = flag.Bool("collect-comments", true, "Collect comments during normalization")
-		collectCommands = flag.Bool("collect-commands", true, "Collect commands during normalization")
-		collectTables   = flag.Bool("collect-tables", true, "Collect table names during normalization")
-		keepSQLAlias    = flag.Bool("keep-sql-alias", false, "Keep SQL aliases during normalization")
-		withMetadata    = flag.Bool("with-metadata", false, "Output result with metadata as JSON (only for normalize and obfuscate_and_normalize modes)")
-		help            = flag.Bool("help", false, "Show help message")
+		mode                 = flag.String("mode", "obfuscate_and_normalize", "Operation mode: obfuscate, normalize, tokenize, obfuscate_and_normalize")
+		inputFile            = flag.String("input", "", "Input file (default: stdin)")
+		outputFile           = flag.String("output", "", "Output file (default: stdout)")
+		dbms                 = flag.String("dbms", "", "Database type: mssql, postgresql, mysql, oracle, snowflake")
+		replaceDigits        = flag.Bool("replace-digits", true, "Replace digits with placeholders")
+		replaceBoolean       = flag.Bool("replace-boolean", true, "Replace boolean values with placeholders")
+		replaceNull          = flag.Bool("replace-null", true, "Replace null values with placeholders")
+		replaceBindParameter = flag.Bool("replace-bind-parameter", false, "Replace bind parameters with placeholders")
+		keepJsonPath         = flag.Bool("keep-json-path", false, "Keep JSON path expressions")
+		collectComments      = flag.Bool("collect-comments", true, "Collect comments during normalization")
+		collectCommands      = flag.Bool("collect-commands", true, "Collect commands during normalization")
+		collectTables        = flag.Bool("collect-tables", true, "Collect table names during normalization")
+		keepSQLAlias         = flag.Bool("keep-sql-alias", false, "Keep SQL aliases during normalization")
+		withMetadata         = flag.Bool("with-metadata", false, "Output result with metadata as JSON (only for normalize and obfuscate_and_normalize modes)")
+		help                 = flag.Bool("help", false, "Show help message")
 	)
 
 	flag.Parse()
@@ -48,13 +49,13 @@ func main() {
 	var result string
 	switch *mode {
 	case "obfuscate":
-		result, err = obfuscateSQL(input, *dbms, *replaceDigits, *replaceBoolean, *replaceNull, *keepJsonPath)
+		result, err = obfuscateSQL(input, *dbms, *replaceDigits, *replaceBoolean, *replaceNull, *replaceBindParameter, *keepJsonPath)
 	case "normalize":
 		result, err = normalizeSQL(input, *dbms, *collectComments, *collectCommands, *collectTables, *keepSQLAlias, *withMetadata)
 	case "tokenize":
 		result, err = tokenizeSQL(input, *dbms)
 	case "obfuscate_and_normalize":
-		result, err = obfuscateAndNormalizeSQL(input, *dbms, *replaceDigits, *replaceBoolean, *replaceNull, *keepJsonPath, *collectComments, *collectCommands, *collectTables, *keepSQLAlias, *withMetadata)
+		result, err = obfuscateAndNormalizeSQL(input, *dbms, *replaceDigits, *replaceBoolean, *replaceNull, *replaceBindParameter, *keepJsonPath, *collectComments, *collectCommands, *collectTables, *keepSQLAlias, *withMetadata)
 	default:
 		fmt.Fprintf(os.Stderr, "Invalid mode: %s. Use -help for usage information.\n", *mode)
 		os.Exit(1)
@@ -140,11 +141,12 @@ func formatWithMetadata(sql string, metadata *sqllexer.StatementMetadata) (strin
 	return strings.TrimSuffix(result, "\n"), nil
 }
 
-func obfuscateSQL(input, dbms string, replaceDigits, replaceBoolean, replaceNull, keepJsonPath bool) (string, error) {
+func obfuscateSQL(input, dbms string, replaceDigits, replaceBoolean, replaceNull, replaceBindParameter, keepJsonPath bool) (string, error) {
 	obfuscator := sqllexer.NewObfuscator(
 		sqllexer.WithReplaceDigits(replaceDigits),
 		sqllexer.WithReplaceBoolean(replaceBoolean),
 		sqllexer.WithReplaceNull(replaceNull),
+		sqllexer.WithReplaceBindParameter(replaceBindParameter),
 		sqllexer.WithKeepJsonPath(keepJsonPath),
 	)
 
@@ -186,11 +188,12 @@ func normalizeSQL(input, dbms string, collectComments, collectCommands, collectT
 	return result, nil
 }
 
-func obfuscateAndNormalizeSQL(input, dbms string, replaceDigits, replaceBoolean, replaceNull, keepJsonPath bool, collectComments, collectCommands, collectTables, keepSQLAlias, withMetadata bool) (string, error) {
+func obfuscateAndNormalizeSQL(input, dbms string, replaceDigits, replaceBoolean, replaceNull, replaceBindParameter, keepJsonPath bool, collectComments, collectCommands, collectTables, keepSQLAlias, withMetadata bool) (string, error) {
 	obfuscator := sqllexer.NewObfuscator(
 		sqllexer.WithReplaceDigits(replaceDigits),
 		sqllexer.WithReplaceBoolean(replaceBoolean),
 		sqllexer.WithReplaceNull(replaceNull),
+		sqllexer.WithReplaceBindParameter(replaceBindParameter),
 		sqllexer.WithKeepJsonPath(keepJsonPath),
 	)
 
@@ -256,6 +259,8 @@ Flags:
         Replace boolean values with placeholders (default true)
   -replace-null
         Replace null values with placeholders (default true)
+  -replace-bind-parameter
+        Replace bind parameters with placeholders (default false)
   -keep-json-path
         Keep JSON path expressions (default false)
   -collect-comments
@@ -288,5 +293,8 @@ Examples:
   sqllexer -mode tokenize -input query.sql
 
   # Obfuscate with custom options
-  sqllexer -replace-digits=false -keep-json-path=true -input query.sql`)
+  sqllexer -replace-digits=false -keep-json-path=true -input query.sql
+
+  # Obfuscate with bind parameter replacement
+  sqllexer -replace-bind-parameter=true -dbms sqlserver -input query.sql`)
 }
