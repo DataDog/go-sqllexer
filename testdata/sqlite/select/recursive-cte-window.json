@@ -1,0 +1,15 @@
+{
+  "input": "WITH RECURSIVE nums(x) AS (\n  SELECT 1\n  UNION ALL\n  SELECT x + 1 FROM nums WHERE x < 5\n)\nSELECT user_id,\n       SUM(amount) OVER (PARTITION BY user_id ORDER BY created_at ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS running_total\nFROM payments\nJOIN nums ON nums.x = payments.user_id;",
+  "outputs": [
+    {
+      "expected": "WITH RECURSIVE nums ( x ) AS ( SELECT ? UNION ALL SELECT x + ? FROM nums WHERE x < ? ) SELECT user_id, SUM ( amount ) OVER ( PARTITION BY user_id ORDER BY created_at ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW ) FROM payments JOIN nums ON nums.x = payments.user_id",
+      "statement_metadata": {
+        "size": 22,
+        "tables": ["nums", "payments"],
+        "commands": ["SELECT", "JOIN"],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}

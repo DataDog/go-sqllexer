@@ -21,12 +21,16 @@ const (
 	DBMSOracle DBMSType = "oracle"
 	// DBMSSnowflake is a Snowflake Server
 	DBMSSnowflake DBMSType = "snowflake"
+	// DBMSSQLite is a SQLite database
+	DBMSSQLite       DBMSType = "sqlite"
+	DBMSSQLiteAlias1 DBMSType = "sqlite3"
 )
 
 var dbmsAliases = map[DBMSType]DBMSType{
 	DBMSSQLServerAlias1: DBMSSQLServer,
 	DBMSSQLServerAlias2: DBMSSQLServer,
 	DBMSPostgresAlias1:  DBMSPostgres,
+	DBMSSQLiteAlias1:    DBMSSQLite,
 }
 
 func getDBMSFromAlias(alias DBMSType) DBMSType {
@@ -57,6 +61,10 @@ var commands = []string{
 	"STRAIGHT_JOIN",
 	"USE",
 	"CLONE",
+	"PRAGMA",
+	"ATTACH",
+	"DETACH",
+	"VACUUM",
 }
 
 var tableIndicatorCommands = []string{
@@ -134,6 +142,7 @@ var keywords = []string{
 	"ROLLUP",
 	"LITERAL",
 	"WINDOW",
+	"VACUUM",
 	"VACCUM",
 	"ANALYZE",
 	"ILIKE",

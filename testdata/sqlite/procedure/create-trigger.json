@@ -1,0 +1,15 @@
+{
+  "input": "CREATE TRIGGER log_changes\nAFTER UPDATE ON accounts\nBEGIN\n  INSERT INTO audit(account_id, changed_at)\n  VALUES (NEW.id, CURRENT_TIMESTAMP);\nEND;",
+  "outputs": [
+    {
+      "expected": "CREATE TRIGGER log_changes AFTER UPDATE ON accounts BEGIN INSERT INTO audit ( account_id, changed_at ) VALUES ( NEW.id, CURRENT_TIMESTAMP ); END",
+      "statement_metadata": {
+        "size": 28,
+        "tables": ["audit"],
+        "commands": ["CREATE", "UPDATE", "BEGIN", "INSERT"],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}

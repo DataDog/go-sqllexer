@@ -1,0 +1,19 @@
+{
+	"input": "DELETE FROM logs WHERE created_at < datetime('now','-7 days') RETURNING rowid, message;",
+	"outputs": [
+		{
+			"expected": "DELETE FROM logs WHERE created_at < datetime ( ? ) RETURNING rowid, message",
+			"statement_metadata": {
+				"size": 10,
+				"tables": [
+					"logs"
+				],
+				"commands": [
+					"DELETE"
+				],
+				"comments": [],
+				"procedures": []
+			}
+		}
+	]
+}

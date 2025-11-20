@@ -1,0 +1,15 @@
+{
+  "input": "INSERT INTO inventory(id, qty) VALUES (1, 5) ON CONFLICT(id) DO UPDATE SET qty = excluded.qty + 1 RETURNING id, qty;",
+  "outputs": [
+    {
+      "expected": "INSERT INTO inventory ( id, qty ) VALUES ( ? ) ON CONFLICT ( id ) DO UPDATE SET qty = excluded.qty + ? RETURNING id, qty",
+      "statement_metadata": {
+        "size": 21,
+        "tables": ["inventory"],
+        "commands": ["INSERT", "UPDATE"],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "input": "SELECT * FROM sessions WHERE id = ?5 AND owner = :owner AND label = $label AND tag = @tag AND alias = ?;",
+  "outputs": [
+    {
+      "expected": "SELECT * FROM sessions WHERE id = ? AND owner = :owner AND label = $label AND tag = @tag AND alias = ?",
+      "statement_metadata": {
+        "size": 14,
+        "tables": ["sessions"],
+        "commands": ["SELECT"],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}

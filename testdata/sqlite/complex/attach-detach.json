@@ -1,0 +1,15 @@
+{
+  "input": "ATTACH DATABASE 'archive.db' AS archive; DETACH DATABASE archive;",
+  "outputs": [
+    {
+      "expected": "ATTACH DATABASE ?; DETACH DATABASE archive",
+      "statement_metadata": {
+        "size": 12,
+        "tables": [],
+        "commands": ["ATTACH", "DETACH"],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "input": "PRAGMA journal_mode=WAL;",
+  "outputs": [
+    {
+      "expected": "PRAGMA journal_mode = WAL",
+      "statement_metadata": {
+        "size": 6,
+        "tables": [],
+        "commands": ["PRAGMA"],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}
