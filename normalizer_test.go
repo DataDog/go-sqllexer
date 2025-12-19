@@ -1304,6 +1304,179 @@ func TestNormalizerCTEWithoutCollectTables(t *testing.T) {
 	}
 }
 
+func TestNormalizerOracleBindVariables(t *testing.T) {
+	// This test is to ensure that Oracle bind variables with colons are normalized correctly
+	// without adding unwanted spaces between the colon and the parameter name.
+	// The key issue was that :"SYS_B_0" would be normalized to : "SYS_B_0" (with an extra space)
+	tests := []struct {
+		name              string
+		input             string
+		expected          string
+		statementMetadata StatementMetadata
+	}{
+		{
+			name:     "Oracle bind variable with quoted identifier",
+			input:    `select foo from bar where foo = :"SYS_B_0";`,
+			expected: `select foo from bar where foo = :SYS_B_0`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"bar"},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       9,
+			},
+		},
+		{
+			name:     "Oracle bind variable with simple identifier (Oracle lexer)",
+			input:    `select foo from bar where foo = :param1`,
+			expected: `select foo from bar where foo = :param1`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"bar"},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       9,
+			},
+		},
+		{
+			name:     "Multiple Oracle bind variables",
+			input:    `select foo from bar where foo = :param1 and baz = :"SYS_B_1"`,
+			expected: `select foo from bar where foo = :param1 and baz = :SYS_B_1`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"bar"},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       9,
+			},
+		},
+		{
+			name:     "Oracle bind variable in INSERT",
+			input:    `INSERT INTO users (name, age) VALUES (:"name_param", :age_param)`,
+			expected: `INSERT INTO users ( name, age ) VALUES ( :name_param, :age_param )`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"users"},
+				Comments:   []string{},
+				Commands:   []string{"INSERT"},
+				Procedures: []string{},
+				Size:       11,
+			},
+		},
+		{
+			name:     "Oracle bind variable in UPDATE",
+			input:    `UPDATE users SET name = :"new_name", age = :new_age WHERE id = :user_id`,
+			expected: `UPDATE users SET name = :new_name, age = :new_age WHERE id = :user_id`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"users"},
+				Comments:   []string{},
+				Commands:   []string{"UPDATE"},
+				Procedures: []string{},
+				Size:       11,
+			},
+		},
+		{
+			name:     "Oracle bind variable with complex query",
+			input:    `SELECT * FROM orders WHERE customer_id = :"CUST_ID" AND status IN (:status1, :status2)`,
+			expected: `SELECT * FROM orders WHERE customer_id = :CUST_ID AND status IN ( :status1, :status2 )`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"orders"},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       12,
+			},
+		},
+		{
+			name:     "Oracle bind variable with JOIN",
+			input:    `SELECT u.name, o.total FROM users u JOIN orders o ON u.id = o.user_id WHERE u.id = :"USER_ID"`,
+			expected: `SELECT u.name, o.total FROM users u JOIN orders o ON u.id = o.user_id WHERE u.id = :USER_ID`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"users", "orders"},
+				Comments:   []string{},
+				Commands:   []string{"SELECT", "JOIN"},
+				Procedures: []string{},
+				Size:       21,
+			},
+		},
+	}
+
+	normalizer := NewNormalizer(
+		WithCollectComments(true),
+		WithCollectCommands(true),
+		WithCollectTables(true),
+		WithKeepSQLAlias(false),
+	)
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, statementMetadata, err := normalizer.Normalize(test.input)
+			assert.NoError(t, err)
+			assert.Equal(t, test.expected, got)
+			assertStatementMetadataEqual(t, &test.statementMetadata, statementMetadata)
+		})
+	}
+}
+
+func TestNormalizerColonPrefixNegativeCases(t *testing.T) {
+	// Negative test cases to ensure the colon fix doesn't break other colon usages
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "PostgreSQL type cast with colon-colon",
+			input:    `SELECT timestamp '?' :: timestamp`,
+			expected: `SELECT timestamp '?' :: timestamp`,
+		},
+		{
+			name:     "PostgreSQL assignment with colon-equals",
+			input:    `UPDATE metrics_metadata SET updated := ? WHERE id = ?`,
+			expected: `UPDATE metrics_metadata SET updated := ? WHERE id = ?`,
+		},
+		{
+			name:     "Regular colon in JSON operator",
+			input:    `SELECT data->'key' FROM jsonb_table WHERE id = ?`,
+			expected: `SELECT data -> 'key' FROM jsonb_table WHERE id = ?`,
+		},
+		{
+			name:     "Colon in label",
+			input:    `SELECT * FROM users WHERE id = ?`,
+			expected: `SELECT * FROM users WHERE id = ?`,
+		},
+		{
+			name:     "Multiple bind variables mixed with other operators",
+			input:    `SELECT * FROM t WHERE a = :p1 AND b IN (?, ?) OR c = :p2`,
+			expected: `SELECT * FROM t WHERE a = :p1 AND b IN ( ? ) OR c = :p2`,
+		},
+		{
+			name:     "Bind variable at different positions",
+			input:    `INSERT INTO t VALUES (:a, :b, :c)`,
+			expected: `INSERT INTO t VALUES ( :a, :b, :c )`,
+		},
+		{
+			name:     "Named parameter followed by operator",
+			input:    `SELECT * FROM users WHERE age > :min_age`,
+			expected: `SELECT * FROM users WHERE age > :min_age`,
+		},
+	}
+
+	normalizer := NewNormalizer(
+		WithCollectComments(true),
+		WithCollectCommands(true),
+		WithCollectTables(true),
+		WithKeepSQLAlias(false),
+	)
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, _, err := normalizer.Normalize(test.input)
+			assert.NoError(t, err)
+			assert.Equal(t, test.expected, got, "Test case: %s", test.name)
+		})
+	}
+}
+
 func assertStatementMetadataEqual(t *testing.T, expected, actual *StatementMetadata) {
 	assert.Equal(t, expected.Size, actual.Size)
 	assert.Equal(t, expected.Tables, actual.Tables)
