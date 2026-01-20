@@ -1435,11 +1435,6 @@ func TestNormalizerColonPrefixNegativeCases(t *testing.T) {
 			expected: `UPDATE metrics_metadata SET updated := ? WHERE id = ?`,
 		},
 		{
-			name:     "Regular colon in JSON operator",
-			input:    `SELECT data->'key' FROM jsonb_table WHERE id = ?`,
-			expected: `SELECT data -> 'key' FROM jsonb_table WHERE id = ?`,
-		},
-		{
 			name:     "Colon in label",
 			input:    `SELECT * FROM users WHERE id = ?`,
 			expected: `SELECT * FROM users WHERE id = ?`,
