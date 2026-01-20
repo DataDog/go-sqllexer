@@ -1436,7 +1436,7 @@ func TestNormalizerColonPrefixNegativeCases(t *testing.T) {
 		},
 		{
 			name:     "Colon in label",
-			input:    `SELECT * FROM users WHERE id = ?`,
+			input:    `/* label:get_users */ SELECT * FROM users WHERE id = ?`,
 			expected: `SELECT * FROM users WHERE id = ?`,
 		},
 		{
