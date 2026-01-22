@@ -576,3 +576,14 @@ func ExampleObfuscator() {
 	fmt.Println(obfuscated)
 	// Output: SELECT * FROM users WHERE id = ?
 }
+
+// TestObfuscatorDoesNotPinLargeBackingArrays verifies that the Obfuscate function
+// returns a string that doesn't hold a reference to an excessively large backing array.
+func TestObfuscatorDoesNotPinLargeBackingArrays(t *testing.T) {
+	obfuscator := NewObfuscator()
+
+	RunBackingArrayTests(t, "Obfuscate", func(input string) (BackingArrayTestResult, error) {
+		sql := obfuscator.Obfuscate(input)
+		return BackingArrayTestResult{SQL: sql, Metadata: nil}, nil
+	})
+}

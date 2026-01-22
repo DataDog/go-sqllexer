@@ -631,3 +631,20 @@ multiline comment */
 		})
 	}
 }
+
+// TestObfuscateAndNormalizeDoesNotPinLargeBackingArrays verifies that the ObfuscateAndNormalize
+// function returns strings that don't hold references to excessively large backing arrays.
+func TestObfuscateAndNormalizeDoesNotPinLargeBackingArrays(t *testing.T) {
+	obfuscator := NewObfuscator()
+	normalizer := NewNormalizer(
+		WithCollectComments(true),
+		WithCollectCommands(true),
+		WithCollectTables(true),
+		WithCollectProcedures(true),
+	)
+
+	RunBackingArrayTests(t, "ObfuscateAndNormalize", func(input string) (BackingArrayTestResult, error) {
+		sql, metadata, err := ObfuscateAndNormalize(input, obfuscator, normalizer)
+		return BackingArrayTestResult{SQL: sql, Metadata: metadata}, err
+	})
+}

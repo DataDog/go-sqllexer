@@ -1312,3 +1312,19 @@ func assertStatementMetadataEqual(t *testing.T, expected, actual *StatementMetad
 	assert.Equal(t, expected.Commands, actual.Commands)
 	assert.Equal(t, expected.Procedures, actual.Procedures)
 }
+
+// TestNormalizerDoesNotPinLargeBackingArrays verifies that the Normalize function
+// returns strings that don't hold references to excessively large backing arrays.
+func TestNormalizerDoesNotPinLargeBackingArrays(t *testing.T) {
+	normalizer := NewNormalizer(
+		WithCollectComments(true),
+		WithCollectCommands(true),
+		WithCollectTables(true),
+		WithCollectProcedures(true),
+	)
+
+	RunBackingArrayTests(t, "Normalize", func(input string) (BackingArrayTestResult, error) {
+		sql, metadata, err := normalizer.Normalize(input)
+		return BackingArrayTestResult{SQL: sql, Metadata: metadata}, err
+	})
+}
