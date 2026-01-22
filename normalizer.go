@@ -109,11 +109,14 @@ type metadataSet struct {
 	proceduresSet map[string]struct{}
 }
 
-// addMetadata adds a value to a metadata slice if it doesn't exist in the set
+// addMetadata adds a value to a metadata slice if it doesn't exist in the set.
+// The value is cloned to prevent retaining references to the original input string's
+// backing array, which could cause memory retention issues if the caller holds on to the result.
 func (m *metadataSet) addMetadata(value string, set map[string]struct{}, slice *[]string) {
 	if _, exists := set[value]; !exists {
-		set[value] = struct{}{}
-		*slice = append(*slice, value)
+		cloned := strings.Clone(value)
+		set[cloned] = struct{}{}
+		*slice = append(*slice, cloned)
 		m.size += len(value)
 	}
 }
@@ -212,7 +215,7 @@ func (n *Normalizer) normalize(input string, preProcessToken func(*Token, *LastV
 		return "", nil, err
 	}
 
-	normalizedSQL = normalizedSQLBuilder.String()
+	normalizedSQL = strings.Clone(normalizedSQLBuilder.String())
 	statementMetadata.Size = meta.size
 	return n.trimNormalizedSQL(normalizedSQL), statementMetadata, nil
 }
