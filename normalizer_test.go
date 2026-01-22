@@ -78,7 +78,8 @@ func TestNormalizer(t *testing.T) {
 		},
 		{
 			input: `
-					/* this is a 
+					/* this is a ` + `
+multiline comment */
 multiline comment */
 					SELECT * FROM users /* comment comment */ WHERE id = ?
 					-- this is another comment
