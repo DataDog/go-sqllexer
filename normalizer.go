@@ -184,6 +184,12 @@ func (n *Normalizer) normalizeToken(lexer *Lexer, normalizedSQLBuilder *strings.
 }
 
 func (n *Normalizer) Normalize(input string, lexerOpts ...lexerOption) (normalizedSQL string, statementMetadata *StatementMetadata, err error) {
+	return n.normalize(input, nil, lexerOpts...)
+}
+
+// normalize is the internal implementation that handles the common normalization logic.
+// preProcessToken is an optional function to process tokens before normalization (e.g., obfuscation).
+func (n *Normalizer) normalize(input string, preProcessToken func(*Token, *LastValueToken), lexerOpts ...lexerOption) (normalizedSQL string, statementMetadata *StatementMetadata, err error) {
 	lexer := New(input, lexerOpts...)
 	var normalizedSQLBuilder strings.Builder
 	normalizedSQLBuilder.Grow(len(input))
@@ -202,7 +208,7 @@ func (n *Normalizer) Normalize(input string, lexerOpts ...lexerOption) (normaliz
 		Procedures: []string{},
 	}
 
-	if err = n.normalizeToken(lexer, &normalizedSQLBuilder, meta, statementMetadata, nil, lexerOpts...); err != nil {
+	if err = n.normalizeToken(lexer, &normalizedSQLBuilder, meta, statementMetadata, preProcessToken, lexerOpts...); err != nil {
 		return "", nil, err
 	}
 
