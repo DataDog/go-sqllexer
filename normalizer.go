@@ -118,6 +118,13 @@ func (m *metadataSet) addMetadata(value string, set map[string]struct{}, slice *
 	}
 }
 
+type colonContext struct {
+	// Track the token type before a colon operator to distinguish between
+	// Oracle bind variables (:param) vs MySQL labels (label:) vs Snowflake semi-structured (obj:field)
+	tokenTypeBeforeColon TokenType
+	hasColon             bool
+}
+
 type groupablePlaceholder struct {
 	groupable bool
 }
@@ -158,6 +165,7 @@ func (n *Normalizer) normalizeToken(lexer *Lexer, normalizedSQLBuilder *strings.
 
 	var groupablePlaceholder groupablePlaceholder
 	var headState headState
+	var colonCtx colonContext
 	var ctes map[string]bool // Lazily initialized when first CTE is encountered
 
 	var lastValueToken *LastValueToken
@@ -171,7 +179,7 @@ func (n *Normalizer) normalizeToken(lexer *Lexer, normalizedSQLBuilder *strings.
 		if n.shouldCollectMetadata() {
 			n.collectMetadata(token, lastValueToken, meta, statementMetadata, &ctes)
 		}
-		n.normalizeSQL(token, lastValueToken, normalizedSQLBuilder, &groupablePlaceholder, &headState, lexerOpts...)
+		n.normalizeSQL(token, lastValueToken, normalizedSQLBuilder, &groupablePlaceholder, &headState, &colonCtx, lexerOpts...)
 		if token.Type == EOF {
 			break
 		}
@@ -257,7 +265,7 @@ func (n *Normalizer) collectMetadata(token *Token, lastValueToken *LastValueToke
 	}
 }
 
-func (n *Normalizer) normalizeSQL(token *Token, lastValueToken *LastValueToken, normalizedSQLBuilder *strings.Builder, groupablePlaceholder *groupablePlaceholder, headState *headState, lexerOpts ...lexerOption) {
+func (n *Normalizer) normalizeSQL(token *Token, lastValueToken *LastValueToken, normalizedSQLBuilder *strings.Builder, groupablePlaceholder *groupablePlaceholder, headState *headState, colonCtx *colonContext, lexerOpts ...lexerOption) {
 	if token.Type != SPACE && token.Type != COMMENT && token.Type != MULTILINE_COMMENT {
 		if token.Type == QUOTED_IDENT && !n.config.KeepIdentifierQuotation {
 			if n.shouldStripIdentifierQuotes(token, lastValueToken) {
@@ -323,7 +331,7 @@ func (n *Normalizer) normalizeSQL(token *Token, lastValueToken *LastValueToken, 
 					// if the last token is AS and the current token is not IDENT,
 					// this could be a CTE like WITH ... AS (...),
 					// so we do not discard the current token
-					n.appendSpace(token, lastValueToken, normalizedSQLBuilder)
+					n.appendSpace(token, lastValueToken, normalizedSQLBuilder, colonCtx)
 					n.writeToken(lastValueToken.Type, lastValueToken.Value, normalizedSQLBuilder)
 				}
 			}
@@ -336,7 +344,7 @@ func (n *Normalizer) normalizeSQL(token *Token, lastValueToken *LastValueToken, 
 		}
 
 		if headState.inLeadingParenthesesExpression {
-			n.appendSpace(token, lastValueToken, &headState.expressionInParentheses)
+			n.appendSpace(token, lastValueToken, &headState.expressionInParentheses, colonCtx)
 			n.writeToken(token.Type, token.Value, &headState.expressionInParentheses)
 			// Track if we find a SQL command in the leading parentheses
 			if token.Type == COMMAND {
@@ -352,8 +360,22 @@ func (n *Normalizer) normalizeSQL(token *Token, lastValueToken *LastValueToken, 
 				}
 			}
 		} else {
-			n.appendSpace(token, lastValueToken, normalizedSQLBuilder)
+			n.appendSpace(token, lastValueToken, normalizedSQLBuilder, colonCtx)
 			n.writeToken(token.Type, token.Value, normalizedSQLBuilder)
+		}
+
+		// Track colon context for next token
+		if token.Value == ":" {
+			colonCtx.hasColon = true
+			if lastValueToken != nil {
+				colonCtx.tokenTypeBeforeColon = lastValueToken.Type
+			} else {
+				colonCtx.tokenTypeBeforeColon = EOF // Use EOF as "no token"
+			}
+		} else if colonCtx.hasColon {
+			// Reset after processing the token following the colon
+			colonCtx.hasColon = false
+			colonCtx.tokenTypeBeforeColon = EOF
 		}
 	}
 }
@@ -420,7 +442,7 @@ func (n *Normalizer) isObfuscatedValueGroupable(token *Token, lastValueToken *La
 	return false
 }
 
-func (n *Normalizer) appendSpace(token *Token, lastValueToken *LastValueToken, normalizedSQLBuilder *strings.Builder) {
+func (n *Normalizer) appendSpace(token *Token, lastValueToken *LastValueToken, normalizedSQLBuilder *strings.Builder, colonCtx *colonContext) {
 	// do not add a space between parentheses if RemoveSpaceBetweenParentheses is true
 	if n.config.RemoveSpaceBetweenParentheses && lastValueToken != nil && (lastValueToken.Type == FUNCTION || lastValueToken.Value == "(" || lastValueToken.Value == "[") {
 		return
@@ -428,6 +450,16 @@ func (n *Normalizer) appendSpace(token *Token, lastValueToken *LastValueToken, n
 
 	if n.config.RemoveSpaceBetweenParentheses && (token.Value == ")" || token.Value == "]") {
 		return
+	}
+
+	// do not add a space after a colon when followed by an identifier or quoted identifier,
+	// BUT only if the token before the colon was NOT an identifier (to preserve MySQL labels and Snowflake semi-structured access)
+	// This handles Oracle bind variables like :param or :"param"
+	if lastValueToken != nil && lastValueToken.Value == ":" && (token.Type == IDENT || token.Type == QUOTED_IDENT) {
+		if colonCtx.hasColon && colonCtx.tokenTypeBeforeColon != IDENT && colonCtx.tokenTypeBeforeColon != QUOTED_IDENT {
+			// This is likely a bind variable (e.g., = :param), not a label (e.g., label : LOOP)
+			return
+		}
 	}
 
 	switch token.Value {

@@ -604,6 +604,34 @@ multiline comment */
 				WithDBMS(DBMSMySQL),
 			},
 		},
+		{
+			input:    `SELECT * FROM t WHERE a = :p1 AND b IN (1, 2) OR c = :p2`,
+			expected: `SELECT * FROM t WHERE a = :p? AND b IN ( ? ) OR c = :p?`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"t"},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       7,
+			},
+			lexerOpts: []lexerOption{
+				WithDBMS(DBMSPostgres),
+			},
+		},
+		{
+			input:    `select foo from bar where baz = :"SYS_B_1"`,
+			expected: `select foo from bar where baz = :SYS_B_?`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"bar"},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       9,
+			},
+			lexerOpts: []lexerOption{
+				WithDBMS(DBMSOracle),
+			},
+		},
 	}
 
 	obfuscator := NewObfuscator(
