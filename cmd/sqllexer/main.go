@@ -22,6 +22,7 @@ func main() {
 		replaceBoolean       = flag.Bool("replace-boolean", true, "Replace boolean values with placeholders")
 		replaceNull          = flag.Bool("replace-null", true, "Replace null values with placeholders")
 		replaceBindParameter = flag.Bool("replace-bind-parameter", false, "Replace bind parameters with placeholders")
+		dollarQuotedFunc     = flag.Bool("dollar-quoted-func", false, "Obfuscate content inside $func$...$func$ blocks instead of replacing the entire block")
 		keepJsonPath         = flag.Bool("keep-json-path", false, "Keep JSON path expressions")
 		collectComments      = flag.Bool("collect-comments", true, "Collect comments during normalization")
 		collectCommands      = flag.Bool("collect-commands", true, "Collect commands during normalization")
@@ -50,13 +51,13 @@ func main() {
 	var result string
 	switch *mode {
 	case "obfuscate":
-		result, err = obfuscateSQL(input, *dbms, *replaceDigits, *replaceBoolean, *replaceNull, *replaceBindParameter, *keepJsonPath)
+		result, err = obfuscateSQL(input, *dbms, *replaceDigits, *replaceBoolean, *replaceNull, *replaceBindParameter, *dollarQuotedFunc, *keepJsonPath)
 	case "normalize":
 		result, err = normalizeSQL(input, *dbms, *collectComments, *collectCommands, *collectTables, *keepSQLAlias, *keepIdentifierQuotation, *withMetadata)
 	case "tokenize":
 		result, err = tokenizeSQL(input, *dbms)
 	case "obfuscate_and_normalize":
-		result, err = obfuscateAndNormalizeSQL(input, *dbms, *replaceDigits, *replaceBoolean, *replaceNull, *replaceBindParameter, *keepJsonPath, *collectComments, *collectCommands, *collectTables, *keepSQLAlias, *keepIdentifierQuotation, *withMetadata)
+		result, err = obfuscateAndNormalizeSQL(input, *dbms, *replaceDigits, *replaceBoolean, *replaceNull, *replaceBindParameter, *dollarQuotedFunc, *keepJsonPath, *collectComments, *collectCommands, *collectTables, *keepSQLAlias, *keepIdentifierQuotation, *withMetadata)
 	default:
 		fmt.Fprintf(os.Stderr, "Invalid mode: %s. Use -help for usage information.\n", *mode)
 		os.Exit(1)
@@ -142,12 +143,13 @@ func formatWithMetadata(sql string, metadata *sqllexer.StatementMetadata) (strin
 	return strings.TrimSuffix(result, "\n"), nil
 }
 
-func obfuscateSQL(input, dbms string, replaceDigits, replaceBoolean, replaceNull, replaceBindParameter, keepJsonPath bool) (string, error) {
+func obfuscateSQL(input, dbms string, replaceDigits, replaceBoolean, replaceNull, replaceBindParameter, dollarQuotedFunc, keepJsonPath bool) (string, error) {
 	obfuscator := sqllexer.NewObfuscator(
 		sqllexer.WithReplaceDigits(replaceDigits),
 		sqllexer.WithReplaceBoolean(replaceBoolean),
 		sqllexer.WithReplaceNull(replaceNull),
 		sqllexer.WithReplaceBindParameter(replaceBindParameter),
+		sqllexer.WithDollarQuotedFunc(dollarQuotedFunc),
 		sqllexer.WithKeepJsonPath(keepJsonPath),
 	)
 
@@ -190,12 +192,13 @@ func normalizeSQL(input, dbms string, collectComments, collectCommands, collectT
 	return result, nil
 }
 
-func obfuscateAndNormalizeSQL(input, dbms string, replaceDigits, replaceBoolean, replaceNull, replaceBindParameter, keepJsonPath bool, collectComments, collectCommands, collectTables, keepSQLAlias, keepIdentifierQuotation, withMetadata bool) (string, error) {
+func obfuscateAndNormalizeSQL(input, dbms string, replaceDigits, replaceBoolean, replaceNull, replaceBindParameter, dollarQuotedFunc, keepJsonPath bool, collectComments, collectCommands, collectTables, keepSQLAlias, keepIdentifierQuotation, withMetadata bool) (string, error) {
 	obfuscator := sqllexer.NewObfuscator(
 		sqllexer.WithReplaceDigits(replaceDigits),
 		sqllexer.WithReplaceBoolean(replaceBoolean),
 		sqllexer.WithReplaceNull(replaceNull),
 		sqllexer.WithReplaceBindParameter(replaceBindParameter),
+		sqllexer.WithDollarQuotedFunc(dollarQuotedFunc),
 		sqllexer.WithKeepJsonPath(keepJsonPath),
 	)
 
@@ -261,6 +264,8 @@ Flags:
         Replace null values with placeholders (default true)
   -replace-bind-parameter
         Replace bind parameters with placeholders (default false)
+  -dollar-quoted-func
+        Obfuscate content inside $func$...$func$ blocks instead of replacing the entire block (default false)
   -keep-json-path
         Keep JSON path expressions (default false)
   -collect-comments
