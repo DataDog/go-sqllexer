@@ -26,9 +26,10 @@ func main() {
 		collectComments      = flag.Bool("collect-comments", true, "Collect comments during normalization")
 		collectCommands      = flag.Bool("collect-commands", true, "Collect commands during normalization")
 		collectTables        = flag.Bool("collect-tables", true, "Collect table names during normalization")
-		keepSQLAlias         = flag.Bool("keep-sql-alias", false, "Keep SQL aliases during normalization")
-		withMetadata         = flag.Bool("with-metadata", false, "Output result with metadata as JSON (only for normalize and obfuscate_and_normalize modes)")
-		help                 = flag.Bool("help", false, "Show help message")
+		keepSQLAlias              = flag.Bool("keep-sql-alias", false, "Keep SQL aliases during normalization")
+		keepIdentifierQuotation   = flag.Bool("keep-identifier-quotation", false, "Keep identifier quotation (backticks, double quotes, brackets) during normalization")
+		withMetadata              = flag.Bool("with-metadata", false, "Output result with metadata as JSON (only for normalize and obfuscate_and_normalize modes)")
+		help                      = flag.Bool("help", false, "Show help message")
 	)
 
 	flag.Parse()
@@ -51,11 +52,11 @@ func main() {
 	case "obfuscate":
 		result, err = obfuscateSQL(input, *dbms, *replaceDigits, *replaceBoolean, *replaceNull, *replaceBindParameter, *keepJsonPath)
 	case "normalize":
-		result, err = normalizeSQL(input, *dbms, *collectComments, *collectCommands, *collectTables, *keepSQLAlias, *withMetadata)
+		result, err = normalizeSQL(input, *dbms, *collectComments, *collectCommands, *collectTables, *keepSQLAlias, *keepIdentifierQuotation, *withMetadata)
 	case "tokenize":
 		result, err = tokenizeSQL(input, *dbms)
 	case "obfuscate_and_normalize":
-		result, err = obfuscateAndNormalizeSQL(input, *dbms, *replaceDigits, *replaceBoolean, *replaceNull, *replaceBindParameter, *keepJsonPath, *collectComments, *collectCommands, *collectTables, *keepSQLAlias, *withMetadata)
+		result, err = obfuscateAndNormalizeSQL(input, *dbms, *replaceDigits, *replaceBoolean, *replaceNull, *replaceBindParameter, *keepJsonPath, *collectComments, *collectCommands, *collectTables, *keepSQLAlias, *keepIdentifierQuotation, *withMetadata)
 	default:
 		fmt.Fprintf(os.Stderr, "Invalid mode: %s. Use -help for usage information.\n", *mode)
 		os.Exit(1)
@@ -159,12 +160,13 @@ func obfuscateSQL(input, dbms string, replaceDigits, replaceBoolean, replaceNull
 	return result, nil
 }
 
-func normalizeSQL(input, dbms string, collectComments, collectCommands, collectTables, keepSQLAlias, withMetadata bool) (string, error) {
+func normalizeSQL(input, dbms string, collectComments, collectCommands, collectTables, keepSQLAlias, keepIdentifierQuotation, withMetadata bool) (string, error) {
 	normalizer := sqllexer.NewNormalizer(
 		sqllexer.WithCollectComments(collectComments),
 		sqllexer.WithCollectCommands(collectCommands),
 		sqllexer.WithCollectTables(collectTables),
 		sqllexer.WithKeepSQLAlias(keepSQLAlias),
+		sqllexer.WithKeepIdentifierQuotation(keepIdentifierQuotation),
 	)
 
 	var result string
@@ -188,7 +190,7 @@ func normalizeSQL(input, dbms string, collectComments, collectCommands, collectT
 	return result, nil
 }
 
-func obfuscateAndNormalizeSQL(input, dbms string, replaceDigits, replaceBoolean, replaceNull, replaceBindParameter, keepJsonPath bool, collectComments, collectCommands, collectTables, keepSQLAlias, withMetadata bool) (string, error) {
+func obfuscateAndNormalizeSQL(input, dbms string, replaceDigits, replaceBoolean, replaceNull, replaceBindParameter, keepJsonPath bool, collectComments, collectCommands, collectTables, keepSQLAlias, keepIdentifierQuotation, withMetadata bool) (string, error) {
 	obfuscator := sqllexer.NewObfuscator(
 		sqllexer.WithReplaceDigits(replaceDigits),
 		sqllexer.WithReplaceBoolean(replaceBoolean),
@@ -202,9 +204,7 @@ func obfuscateAndNormalizeSQL(input, dbms string, replaceDigits, replaceBoolean,
 		sqllexer.WithCollectCommands(collectCommands),
 		sqllexer.WithCollectTables(collectTables),
 		sqllexer.WithKeepSQLAlias(keepSQLAlias),
-
-		// TODO: Make config param
-		sqllexer.WithKeepIdentifierQuotation(true),
+		sqllexer.WithKeepIdentifierQuotation(keepIdentifierQuotation),
 	)
 
 	result, metadata, err := sqllexer.ObfuscateAndNormalize(input, obfuscator, normalizer, sqllexer.WithDBMS(sqllexer.DBMSType(dbms)))
@@ -271,6 +271,8 @@ Flags:
         Collect table names during normalization (default true)
   -keep-sql-alias
         Keep SQL aliases during normalization (default false)
+  -keep-identifier-quotation
+        Keep identifier quotation (backticks, double quotes, brackets) during normalization (default false)
   -with-metadata
         Output result with metadata as JSON (only for normalize and obfuscate_and_normalize modes) (default false)
   -help
