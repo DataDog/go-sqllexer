@@ -32,6 +32,7 @@ func main() {
 		keepSQLAlias              = flag.Bool("keep-sql-alias", false, "Keep SQL aliases during normalization")
 		uppercaseKeywords              = flag.Bool("uppercase-keywords", false, "Uppercase SQL keywords during normalization")
 		removeSpaceBetweenParentheses  = flag.Bool("remove-space-between-parentheses", false, "Remove spaces between parentheses during normalization")
+		keepTrailingSemicolon          = flag.Bool("keep-trailing-semicolon", false, "Keep trailing semicolon during normalization (useful for PL/SQL)")
 		keepIdentifierQuotation        = flag.Bool("keep-identifier-quotation", false, "Keep identifier quotation (backticks, double quotes, brackets) during normalization")
 		withMetadata              = flag.Bool("with-metadata", false, "Output result with metadata as JSON (only for normalize and obfuscate_and_normalize modes)")
 		help                      = flag.Bool("help", false, "Show help message")
@@ -57,11 +58,11 @@ func main() {
 	case "obfuscate":
 		result, err = obfuscateSQL(input, *dbms, *replaceDigits, *replaceBoolean, *replaceNull, *replaceBindParameter, *replacePositionalParameter, *dollarQuotedFunc, *keepJsonPath)
 	case "normalize":
-		result, err = normalizeSQL(input, *dbms, *collectComments, *collectCommands, *collectTables, *collectProcedures, *keepSQLAlias, *uppercaseKeywords, *removeSpaceBetweenParentheses, *keepIdentifierQuotation, *withMetadata)
+		result, err = normalizeSQL(input, *dbms, *collectComments, *collectCommands, *collectTables, *collectProcedures, *keepSQLAlias, *uppercaseKeywords, *removeSpaceBetweenParentheses, *keepTrailingSemicolon, *keepIdentifierQuotation, *withMetadata)
 	case "tokenize":
 		result, err = tokenizeSQL(input, *dbms)
 	case "obfuscate_and_normalize":
-		result, err = obfuscateAndNormalizeSQL(input, *dbms, *replaceDigits, *replaceBoolean, *replaceNull, *replaceBindParameter, *replacePositionalParameter, *dollarQuotedFunc, *keepJsonPath, *collectComments, *collectCommands, *collectTables, *collectProcedures, *keepSQLAlias, *uppercaseKeywords, *removeSpaceBetweenParentheses, *keepIdentifierQuotation, *withMetadata)
+		result, err = obfuscateAndNormalizeSQL(input, *dbms, *replaceDigits, *replaceBoolean, *replaceNull, *replaceBindParameter, *replacePositionalParameter, *dollarQuotedFunc, *keepJsonPath, *collectComments, *collectCommands, *collectTables, *collectProcedures, *keepSQLAlias, *uppercaseKeywords, *removeSpaceBetweenParentheses, *keepTrailingSemicolon, *keepIdentifierQuotation, *withMetadata)
 	default:
 		fmt.Fprintf(os.Stderr, "Invalid mode: %s. Use -help for usage information.\n", *mode)
 		os.Exit(1)
@@ -167,7 +168,7 @@ func obfuscateSQL(input, dbms string, replaceDigits, replaceBoolean, replaceNull
 	return result, nil
 }
 
-func normalizeSQL(input, dbms string, collectComments, collectCommands, collectTables, collectProcedures, keepSQLAlias, uppercaseKeywords, removeSpaceBetweenParentheses, keepIdentifierQuotation, withMetadata bool) (string, error) {
+func normalizeSQL(input, dbms string, collectComments, collectCommands, collectTables, collectProcedures, keepSQLAlias, uppercaseKeywords, removeSpaceBetweenParentheses, keepTrailingSemicolon, keepIdentifierQuotation, withMetadata bool) (string, error) {
 	normalizer := sqllexer.NewNormalizer(
 		sqllexer.WithCollectComments(collectComments),
 		sqllexer.WithCollectCommands(collectCommands),
@@ -176,6 +177,7 @@ func normalizeSQL(input, dbms string, collectComments, collectCommands, collectT
 		sqllexer.WithKeepSQLAlias(keepSQLAlias),
 		sqllexer.WithUppercaseKeywords(uppercaseKeywords),
 		sqllexer.WithRemoveSpaceBetweenParentheses(removeSpaceBetweenParentheses),
+		sqllexer.WithKeepTrailingSemicolon(keepTrailingSemicolon),
 		sqllexer.WithKeepIdentifierQuotation(keepIdentifierQuotation),
 	)
 
@@ -200,7 +202,7 @@ func normalizeSQL(input, dbms string, collectComments, collectCommands, collectT
 	return result, nil
 }
 
-func obfuscateAndNormalizeSQL(input, dbms string, replaceDigits, replaceBoolean, replaceNull, replaceBindParameter, replacePositionalParameter, dollarQuotedFunc, keepJsonPath bool, collectComments, collectCommands, collectTables, collectProcedures, keepSQLAlias, uppercaseKeywords, removeSpaceBetweenParentheses, keepIdentifierQuotation, withMetadata bool) (string, error) {
+func obfuscateAndNormalizeSQL(input, dbms string, replaceDigits, replaceBoolean, replaceNull, replaceBindParameter, replacePositionalParameter, dollarQuotedFunc, keepJsonPath bool, collectComments, collectCommands, collectTables, collectProcedures, keepSQLAlias, uppercaseKeywords, removeSpaceBetweenParentheses, keepTrailingSemicolon, keepIdentifierQuotation, withMetadata bool) (string, error) {
 	obfuscator := sqllexer.NewObfuscator(
 		sqllexer.WithReplaceDigits(replaceDigits),
 		sqllexer.WithReplaceBoolean(replaceBoolean),
@@ -219,6 +221,7 @@ func obfuscateAndNormalizeSQL(input, dbms string, replaceDigits, replaceBoolean,
 		sqllexer.WithKeepSQLAlias(keepSQLAlias),
 		sqllexer.WithUppercaseKeywords(uppercaseKeywords),
 		sqllexer.WithRemoveSpaceBetweenParentheses(removeSpaceBetweenParentheses),
+		sqllexer.WithKeepTrailingSemicolon(keepTrailingSemicolon),
 		sqllexer.WithKeepIdentifierQuotation(keepIdentifierQuotation),
 	)
 
@@ -296,6 +299,8 @@ Flags:
         Uppercase SQL keywords during normalization (default false)
   -remove-space-between-parentheses
         Remove spaces between parentheses during normalization (default false)
+  -keep-trailing-semicolon
+        Keep trailing semicolon during normalization (useful for PL/SQL) (default false)
   -keep-identifier-quotation
         Keep identifier quotation (backticks, double quotes, brackets) during normalization (default false)
   -with-metadata
