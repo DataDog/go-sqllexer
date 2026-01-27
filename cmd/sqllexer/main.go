@@ -12,41 +12,115 @@ import (
 	"github.com/DataDog/go-sqllexer"
 )
 
-func main() {
-	var (
-		mode                 = flag.String("mode", "obfuscate_and_normalize", "Operation mode: obfuscate, normalize, tokenize, obfuscate_and_normalize")
-		inputFile            = flag.String("input", "", "Input file (default: stdin)")
-		outputFile           = flag.String("output", "", "Output file (default: stdout)")
-		dbms                 = flag.String("dbms", "", "Database type: mssql, postgresql, mysql, oracle, snowflake")
-		replaceDigits        = flag.Bool("replace-digits", true, "Replace digits with placeholders")
-		replaceBoolean       = flag.Bool("replace-boolean", true, "Replace boolean values with placeholders")
-		replaceNull          = flag.Bool("replace-null", true, "Replace null values with placeholders")
-		replaceBindParameter       = flag.Bool("replace-bind-parameter", false, "Replace bind parameters with placeholders")
-		replacePositionalParameter = flag.Bool("replace-positional-parameter", false, "Replace positional parameters ($1, $2, etc.) with placeholders")
-		dollarQuotedFunc           = flag.Bool("dollar-quoted-func", false, "Obfuscate content inside $func$...$func$ blocks instead of replacing the entire block")
-		keepJsonPath         = flag.Bool("keep-json-path", false, "Keep JSON path expressions")
-		collectComments      = flag.Bool("collect-comments", true, "Collect comments during normalization")
-		collectCommands      = flag.Bool("collect-commands", true, "Collect commands during normalization")
-		collectTables        = flag.Bool("collect-tables", true, "Collect table names during normalization")
-		collectProcedures    = flag.Bool("collect-procedures", false, "Collect procedure names during normalization")
-		keepSQLAlias              = flag.Bool("keep-sql-alias", false, "Keep SQL aliases during normalization")
-		uppercaseKeywords              = flag.Bool("uppercase-keywords", false, "Uppercase SQL keywords during normalization")
-		removeSpaceBetweenParentheses  = flag.Bool("remove-space-between-parentheses", false, "Remove spaces between parentheses during normalization")
-		keepTrailingSemicolon          = flag.Bool("keep-trailing-semicolon", false, "Keep trailing semicolon during normalization (useful for PL/SQL)")
-		keepIdentifierQuotation        = flag.Bool("keep-identifier-quotation", false, "Keep identifier quotation (backticks, double quotes, brackets) during normalization")
-		withMetadata              = flag.Bool("with-metadata", false, "Output result with metadata as JSON (only for normalize and obfuscate_and_normalize modes)")
-		help                      = flag.Bool("help", false, "Show help message")
-	)
+// ObfuscatorConfig holds all obfuscator-related CLI flags
+type ObfuscatorConfig struct {
+	ReplaceDigits              bool
+	ReplaceBoolean             bool
+	ReplaceNull                bool
+	ReplaceBindParameter       bool
+	ReplacePositionalParameter bool
+	DollarQuotedFunc           bool
+	KeepJsonPath               bool
+}
 
+// NormalizerConfig holds all normalizer-related CLI flags
+type NormalizerConfig struct {
+	CollectComments               bool
+	CollectCommands               bool
+	CollectTables                 bool
+	CollectProcedures             bool
+	KeepSQLAlias                  bool
+	UppercaseKeywords             bool
+	RemoveSpaceBetweenParentheses bool
+	KeepTrailingSemicolon         bool
+	KeepIdentifierQuotation       bool
+}
+
+// CLIConfig holds all CLI configuration
+type CLIConfig struct {
+	Mode         string
+	InputFile    string
+	OutputFile   string
+	DBMS         string
+	WithMetadata bool
+	Obfuscator   ObfuscatorConfig
+	Normalizer   NormalizerConfig
+}
+
+// NewObfuscator creates a sqllexer.Obfuscator from the config
+func (c *ObfuscatorConfig) NewObfuscator() *sqllexer.Obfuscator {
+	return sqllexer.NewObfuscator(
+		sqllexer.WithReplaceDigits(c.ReplaceDigits),
+		sqllexer.WithReplaceBoolean(c.ReplaceBoolean),
+		sqllexer.WithReplaceNull(c.ReplaceNull),
+		sqllexer.WithReplaceBindParameter(c.ReplaceBindParameter),
+		sqllexer.WithReplacePositionalParameter(c.ReplacePositionalParameter),
+		sqllexer.WithDollarQuotedFunc(c.DollarQuotedFunc),
+		sqllexer.WithKeepJsonPath(c.KeepJsonPath),
+	)
+}
+
+// NewNormalizer creates a sqllexer.Normalizer from the config
+func (c *NormalizerConfig) NewNormalizer() *sqllexer.Normalizer {
+	return sqllexer.NewNormalizer(
+		sqllexer.WithCollectComments(c.CollectComments),
+		sqllexer.WithCollectCommands(c.CollectCommands),
+		sqllexer.WithCollectTables(c.CollectTables),
+		sqllexer.WithCollectProcedures(c.CollectProcedures),
+		sqllexer.WithKeepSQLAlias(c.KeepSQLAlias),
+		sqllexer.WithUppercaseKeywords(c.UppercaseKeywords),
+		sqllexer.WithRemoveSpaceBetweenParentheses(c.RemoveSpaceBetweenParentheses),
+		sqllexer.WithKeepTrailingSemicolon(c.KeepTrailingSemicolon),
+		sqllexer.WithKeepIdentifierQuotation(c.KeepIdentifierQuotation),
+	)
+}
+
+// DBMSType returns the DBMS type for the lexer
+func (c *CLIConfig) DBMSType() sqllexer.DBMSType {
+	return sqllexer.DBMSType(c.DBMS)
+}
+
+func parseFlags() *CLIConfig {
+	cfg := &CLIConfig{}
+
+	// General options
+	flag.StringVar(&cfg.Mode, "mode", "obfuscate_and_normalize", "Operation mode: obfuscate, normalize, tokenize, obfuscate_and_normalize")
+	flag.StringVar(&cfg.InputFile, "input", "", "Input file (default: stdin)")
+	flag.StringVar(&cfg.OutputFile, "output", "", "Output file (default: stdout)")
+	flag.StringVar(&cfg.DBMS, "dbms", "", "Database type: mssql, postgresql, mysql, oracle, snowflake")
+	flag.BoolVar(&cfg.WithMetadata, "with-metadata", false, "Output result with metadata as JSON (normalize and obfuscate_and_normalize modes)")
+
+	// Obfuscator options
+	flag.BoolVar(&cfg.Obfuscator.ReplaceDigits, "replace-digits", true, "Replace digits in identifiers with placeholders")
+	flag.BoolVar(&cfg.Obfuscator.ReplaceBoolean, "replace-boolean", true, "Replace boolean values with placeholders")
+	flag.BoolVar(&cfg.Obfuscator.ReplaceNull, "replace-null", true, "Replace NULL values with placeholders")
+	flag.BoolVar(&cfg.Obfuscator.ReplaceBindParameter, "replace-bind-parameter", false, "Replace bind parameters with placeholders")
+	flag.BoolVar(&cfg.Obfuscator.ReplacePositionalParameter, "replace-positional-parameter", false, "Replace positional parameters ($1, $2, etc.) with placeholders")
+	flag.BoolVar(&cfg.Obfuscator.DollarQuotedFunc, "dollar-quoted-func", false, "Obfuscate content inside $func$...$func$ blocks instead of replacing entirely")
+	flag.BoolVar(&cfg.Obfuscator.KeepJsonPath, "keep-json-path", false, "Keep JSON path expressions unobfuscated")
+
+	// Normalizer options
+	flag.BoolVar(&cfg.Normalizer.CollectComments, "collect-comments", true, "Collect comments as metadata")
+	flag.BoolVar(&cfg.Normalizer.CollectCommands, "collect-commands", true, "Collect SQL commands as metadata")
+	flag.BoolVar(&cfg.Normalizer.CollectTables, "collect-tables", true, "Collect table names as metadata")
+	flag.BoolVar(&cfg.Normalizer.CollectProcedures, "collect-procedures", false, "Collect procedure names as metadata")
+	flag.BoolVar(&cfg.Normalizer.KeepSQLAlias, "keep-sql-alias", false, "Keep SQL aliases (AS clauses)")
+	flag.BoolVar(&cfg.Normalizer.UppercaseKeywords, "uppercase-keywords", false, "Uppercase SQL keywords")
+	flag.BoolVar(&cfg.Normalizer.RemoveSpaceBetweenParentheses, "remove-space-between-parentheses", false, "Remove spaces inside parentheses")
+	flag.BoolVar(&cfg.Normalizer.KeepTrailingSemicolon, "keep-trailing-semicolon", false, "Keep trailing semicolon (useful for PL/SQL)")
+	flag.BoolVar(&cfg.Normalizer.KeepIdentifierQuotation, "keep-identifier-quotation", false, "Keep identifier quotes (backticks, double quotes, brackets)")
+
+	flag.Usage = printUsage
 	flag.Parse()
 
-	if *help {
-		printHelp()
-		return
-	}
+	return cfg
+}
+
+func main() {
+	cfg := parseFlags()
 
 	// Read input
-	input, err := readInput(*inputFile)
+	input, err := readInput(cfg.InputFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error reading input: %v\n", err)
 		os.Exit(1)
@@ -54,17 +128,17 @@ func main() {
 
 	// Process based on mode
 	var result string
-	switch *mode {
+	switch cfg.Mode {
 	case "obfuscate":
-		result, err = obfuscateSQL(input, *dbms, *replaceDigits, *replaceBoolean, *replaceNull, *replaceBindParameter, *replacePositionalParameter, *dollarQuotedFunc, *keepJsonPath)
+		result, err = obfuscate(cfg, input)
 	case "normalize":
-		result, err = normalizeSQL(input, *dbms, *collectComments, *collectCommands, *collectTables, *collectProcedures, *keepSQLAlias, *uppercaseKeywords, *removeSpaceBetweenParentheses, *keepTrailingSemicolon, *keepIdentifierQuotation, *withMetadata)
+		result, err = normalize(cfg, input)
 	case "tokenize":
-		result, err = tokenizeSQL(input, *dbms)
+		result, err = tokenize(cfg, input)
 	case "obfuscate_and_normalize":
-		result, err = obfuscateAndNormalizeSQL(input, *dbms, *replaceDigits, *replaceBoolean, *replaceNull, *replaceBindParameter, *replacePositionalParameter, *dollarQuotedFunc, *keepJsonPath, *collectComments, *collectCommands, *collectTables, *collectProcedures, *keepSQLAlias, *uppercaseKeywords, *removeSpaceBetweenParentheses, *keepTrailingSemicolon, *keepIdentifierQuotation, *withMetadata)
+		result, err = obfuscateAndNormalize(cfg, input)
 	default:
-		fmt.Fprintf(os.Stderr, "Invalid mode: %s. Use -help for usage information.\n", *mode)
+		fmt.Fprintf(os.Stderr, "Invalid mode: %s. Use -help for usage information.\n", cfg.Mode)
 		os.Exit(1)
 	}
 
@@ -74,11 +148,56 @@ func main() {
 	}
 
 	// Write output
-	err = writeOutput(result, *outputFile)
-	if err != nil {
+	if err := writeOutput(result, cfg.OutputFile); err != nil {
 		fmt.Fprintf(os.Stderr, "Error writing output: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+func obfuscate(cfg *CLIConfig, input string) (string, error) {
+	obfuscator := cfg.Obfuscator.NewObfuscator()
+	return obfuscator.Obfuscate(input, sqllexer.WithDBMS(cfg.DBMSType())), nil
+}
+
+func normalize(cfg *CLIConfig, input string) (string, error) {
+	normalizer := cfg.Normalizer.NewNormalizer()
+	result, metadata, err := normalizer.Normalize(input, sqllexer.WithDBMS(cfg.DBMSType()))
+	if err != nil {
+		return "", err
+	}
+	if cfg.WithMetadata {
+		return formatWithMetadata(result, metadata)
+	}
+	return result, nil
+}
+
+func obfuscateAndNormalize(cfg *CLIConfig, input string) (string, error) {
+	obfuscator := cfg.Obfuscator.NewObfuscator()
+	normalizer := cfg.Normalizer.NewNormalizer()
+
+	result, metadata, err := sqllexer.ObfuscateAndNormalize(input, obfuscator, normalizer, sqllexer.WithDBMS(cfg.DBMSType()))
+	if err != nil {
+		return "", err
+	}
+	if cfg.WithMetadata {
+		return formatWithMetadata(result, metadata)
+	}
+	return result, nil
+}
+
+func tokenize(cfg *CLIConfig, input string) (string, error) {
+	lexer := sqllexer.New(input, sqllexer.WithDBMS(cfg.DBMSType()))
+
+	var result strings.Builder
+	for {
+		token := lexer.Scan()
+		if token.Type == sqllexer.EOF {
+			break
+		}
+		result.WriteString(token.Value)
+		result.WriteByte('\n')
+	}
+	return result.String(), nil
 }
 
 func readInput(inputFile string) (string, error) {
@@ -99,11 +218,9 @@ func readInput(inputFile string) (string, error) {
 	for scanner.Scan() {
 		lines = append(lines, scanner.Text())
 	}
-
 	if err := scanner.Err(); err != nil {
 		return "", err
 	}
-
 	return strings.Join(lines, "\n"), nil
 }
 
@@ -143,126 +260,15 @@ func formatWithMetadata(sql string, metadata *sqllexer.StatementMetadata) (strin
 		return "", fmt.Errorf("failed to marshal output: %w", err)
 	}
 
-	// Encoder.Encode adds a trailing newline, remove it for consistency
-	result := buf.String()
-	return strings.TrimSuffix(result, "\n"), nil
+	return strings.TrimSuffix(buf.String(), "\n"), nil
 }
 
-func obfuscateSQL(input, dbms string, replaceDigits, replaceBoolean, replaceNull, replaceBindParameter, replacePositionalParameter, dollarQuotedFunc, keepJsonPath bool) (string, error) {
-	obfuscator := sqllexer.NewObfuscator(
-		sqllexer.WithReplaceDigits(replaceDigits),
-		sqllexer.WithReplaceBoolean(replaceBoolean),
-		sqllexer.WithReplaceNull(replaceNull),
-		sqllexer.WithReplaceBindParameter(replaceBindParameter),
-		sqllexer.WithReplacePositionalParameter(replacePositionalParameter),
-		sqllexer.WithDollarQuotedFunc(dollarQuotedFunc),
-		sqllexer.WithKeepJsonPath(keepJsonPath),
-	)
-
-	if dbms != "" {
-		result := obfuscator.Obfuscate(input, sqllexer.WithDBMS(sqllexer.DBMSType(dbms)))
-		return result, nil
-	}
-
-	result := obfuscator.Obfuscate(input)
-	return result, nil
-}
-
-func normalizeSQL(input, dbms string, collectComments, collectCommands, collectTables, collectProcedures, keepSQLAlias, uppercaseKeywords, removeSpaceBetweenParentheses, keepTrailingSemicolon, keepIdentifierQuotation, withMetadata bool) (string, error) {
-	normalizer := sqllexer.NewNormalizer(
-		sqllexer.WithCollectComments(collectComments),
-		sqllexer.WithCollectCommands(collectCommands),
-		sqllexer.WithCollectTables(collectTables),
-		sqllexer.WithCollectProcedures(collectProcedures),
-		sqllexer.WithKeepSQLAlias(keepSQLAlias),
-		sqllexer.WithUppercaseKeywords(uppercaseKeywords),
-		sqllexer.WithRemoveSpaceBetweenParentheses(removeSpaceBetweenParentheses),
-		sqllexer.WithKeepTrailingSemicolon(keepTrailingSemicolon),
-		sqllexer.WithKeepIdentifierQuotation(keepIdentifierQuotation),
-	)
-
-	var result string
-	var metadata *sqllexer.StatementMetadata
-	var err error
-
-	if dbms != "" {
-		result, metadata, err = normalizer.Normalize(input, sqllexer.WithDBMS(sqllexer.DBMSType(dbms)))
-	} else {
-		result, metadata, err = normalizer.Normalize(input)
-	}
-
-	if err != nil {
-		return "", err
-	}
-
-	if withMetadata {
-		return formatWithMetadata(result, metadata)
-	}
-
-	return result, nil
-}
-
-func obfuscateAndNormalizeSQL(input, dbms string, replaceDigits, replaceBoolean, replaceNull, replaceBindParameter, replacePositionalParameter, dollarQuotedFunc, keepJsonPath bool, collectComments, collectCommands, collectTables, collectProcedures, keepSQLAlias, uppercaseKeywords, removeSpaceBetweenParentheses, keepTrailingSemicolon, keepIdentifierQuotation, withMetadata bool) (string, error) {
-	obfuscator := sqllexer.NewObfuscator(
-		sqllexer.WithReplaceDigits(replaceDigits),
-		sqllexer.WithReplaceBoolean(replaceBoolean),
-		sqllexer.WithReplaceNull(replaceNull),
-		sqllexer.WithReplaceBindParameter(replaceBindParameter),
-		sqllexer.WithReplacePositionalParameter(replacePositionalParameter),
-		sqllexer.WithDollarQuotedFunc(dollarQuotedFunc),
-		sqllexer.WithKeepJsonPath(keepJsonPath),
-	)
-
-	normalizer := sqllexer.NewNormalizer(
-		sqllexer.WithCollectComments(collectComments),
-		sqllexer.WithCollectCommands(collectCommands),
-		sqllexer.WithCollectTables(collectTables),
-		sqllexer.WithCollectProcedures(collectProcedures),
-		sqllexer.WithKeepSQLAlias(keepSQLAlias),
-		sqllexer.WithUppercaseKeywords(uppercaseKeywords),
-		sqllexer.WithRemoveSpaceBetweenParentheses(removeSpaceBetweenParentheses),
-		sqllexer.WithKeepTrailingSemicolon(keepTrailingSemicolon),
-		sqllexer.WithKeepIdentifierQuotation(keepIdentifierQuotation),
-	)
-
-	result, metadata, err := sqllexer.ObfuscateAndNormalize(input, obfuscator, normalizer, sqllexer.WithDBMS(sqllexer.DBMSType(dbms)))
-	if err != nil {
-		return "", err
-	}
-
-	if withMetadata {
-		return formatWithMetadata(result, metadata)
-	}
-
-	return result, nil
-}
-
-func tokenizeSQL(input, dbms string) (string, error) {
-	var lexer *sqllexer.Lexer
-	if dbms != "" {
-		lexer = sqllexer.New(input, sqllexer.WithDBMS(sqllexer.DBMSType(dbms)))
-	} else {
-		lexer = sqllexer.New(input)
-	}
-
-	var result strings.Builder
-	for {
-		token := lexer.Scan()
-		if token.Type == sqllexer.EOF {
-			break
-		}
-		result.WriteString(fmt.Sprintf("%s\n", token.Value))
-	}
-
-	return result.String(), nil
-}
-
-func printHelp() {
+func printUsage() {
 	fmt.Println(`SQL Lexer CLI Tool
 
 Usage: sqllexer [flags]
 
-Flags:
+General Flags:
   -mode string
         Operation mode: obfuscate, normalize, tokenize, obfuscate_and_normalize (default "obfuscate_and_normalize")
   -input string
@@ -271,42 +277,44 @@ Flags:
         Output file (default: stdout)
   -dbms string
         Database type: mssql, postgresql, mysql, oracle, snowflake
+  -with-metadata
+        Output result with metadata as JSON (default false)
+
+Obfuscator Flags:
   -replace-digits
-        Replace digits with placeholders (default true)
+        Replace digits in identifiers with placeholders (default true)
   -replace-boolean
         Replace boolean values with placeholders (default true)
   -replace-null
-        Replace null values with placeholders (default true)
+        Replace NULL values with placeholders (default true)
   -replace-bind-parameter
         Replace bind parameters with placeholders (default false)
   -replace-positional-parameter
         Replace positional parameters ($1, $2, etc.) with placeholders (default false)
   -dollar-quoted-func
-        Obfuscate content inside $func$...$func$ blocks instead of replacing the entire block (default false)
+        Obfuscate content inside $func$...$func$ blocks instead of replacing entirely (default false)
   -keep-json-path
-        Keep JSON path expressions (default false)
+        Keep JSON path expressions unobfuscated (default false)
+
+Normalizer Flags:
   -collect-comments
-        Collect comments during normalization (default true)
+        Collect comments as metadata (default true)
   -collect-commands
-        Collect commands during normalization (default true)
+        Collect SQL commands as metadata (default true)
   -collect-tables
-        Collect table names during normalization (default true)
+        Collect table names as metadata (default true)
   -collect-procedures
-        Collect procedure names during normalization (default false)
+        Collect procedure names as metadata (default false)
   -keep-sql-alias
-        Keep SQL aliases during normalization (default false)
+        Keep SQL aliases (AS clauses) (default false)
   -uppercase-keywords
-        Uppercase SQL keywords during normalization (default false)
+        Uppercase SQL keywords (default false)
   -remove-space-between-parentheses
-        Remove spaces between parentheses during normalization (default false)
+        Remove spaces inside parentheses (default false)
   -keep-trailing-semicolon
-        Keep trailing semicolon during normalization (useful for PL/SQL) (default false)
+        Keep trailing semicolon (useful for PL/SQL) (default false)
   -keep-identifier-quotation
-        Keep identifier quotation (backticks, double quotes, brackets) during normalization (default false)
-  -with-metadata
-        Output result with metadata as JSON (only for normalize and obfuscate_and_normalize modes) (default false)
-  -help
-        Show this help message
+        Keep identifier quotes (backticks, double quotes, brackets) (default false)
 
 Examples:
   # Obfuscate SQL from stdin
@@ -327,6 +335,6 @@ Examples:
   # Obfuscate with custom options
   sqllexer -replace-digits=false -keep-json-path=true -input query.sql
 
-  # Obfuscate with bind parameter replacement
-  sqllexer -replace-bind-parameter=true -dbms sqlserver -input query.sql`)
+  # Strip MySQL backticks and uppercase keywords
+  sqllexer -dbms mysql -uppercase-keywords -keep-identifier-quotation=false`)
 }
