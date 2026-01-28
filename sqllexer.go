@@ -77,13 +77,6 @@ func WithDBMS(dbms DBMSType) lexerOption {
 	}
 }
 
-type trieNode struct {
-	children         map[rune]*trieNode
-	isEnd            bool
-	tokenType        TokenType
-	isTableIndicator bool
-}
-
 // SQL Lexer inspired from Rob Pike's talk on Lexical Scanning in Go
 type Lexer struct {
 	src                string // the input src string
@@ -377,8 +370,17 @@ func (s *Lexer) scanIdentifier(ch rune) *Token {
 			upperCh -= 32
 		}
 
-		// Try to follow trie path
-		if next, exists := node.children[upperCh]; exists {
+		// Get array index for this character
+		idx := trieIndex(upperCh)
+		if idx < 0 {
+			// Invalid character for trie, break out
+			node = keywordRoot
+			ch = s.next()
+			break
+		}
+
+		// Try to follow trie path using direct array access
+		if next := node.children[idx]; next != nil {
 			node = next
 			pos = s.cursor
 			ch = s.next()
