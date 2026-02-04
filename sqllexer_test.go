@@ -237,7 +237,7 @@ func TestLexer(t *testing.T) {
 		},
 		{
 			name: "simple select with multi line comment",
-			input: `SELECT * /* comment here */ FROM users where id = 1/* comment 
+			input: `SELECT * /* comment here */ FROM users where id = 1/* comment ` + `
 here */`,
 			expected: []TokenSpec{
 				{COMMAND, "SELECT"},
