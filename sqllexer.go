@@ -461,9 +461,10 @@ func (s *Lexer) scanDoubleQuotedIdentifier(delimiter rune) *Token {
 				s.isSimpleIdentifier = false
 			}
 		}
-		ch = s.next()
+		// Advance by full rune length to handle multi-byte UTF-8 characters correctly
+		ch = s.nextBy(utf8.RuneLen(ch))
 	}
-	s.next() // consume the closing quote
+	s.next() // consume the closing quote (ASCII)
 	return s.emit(QUOTED_IDENT)
 }
 

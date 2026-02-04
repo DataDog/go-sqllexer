@@ -1307,6 +1307,33 @@ func TestLexerUnicode(t *testing.T) {
 				{IDENT, "t"},
 			},
 		},
+		// Quoted identifiers with multi-byte UTF-8 characters should be tokenized
+		// correctly without splitting bytes. This is a regression test for
+		// scanDoubleQuotedIdentifier() byte-splitting bug.
+		{
+			input: `"世界"`, // 3-byte UTF-8 characters
+			expected: []TokenSpec{
+				{QUOTED_IDENT, `"世界"`},
+			},
+		},
+		{
+			input: `"café"`, // 2-byte UTF-8 character
+			expected: []TokenSpec{
+				{QUOTED_IDENT, `"café"`},
+			},
+		},
+		{
+			input: `SELECT * FROM "日本語テーブル"`, // Japanese table name
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
+				{WILDCARD, "*"},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
+				{QUOTED_IDENT, `"日本語テーブル"`},
+			},
+		},
 	}
 
 	for _, tt := range tests {
