@@ -1277,6 +1277,36 @@ func TestLexerUnicode(t *testing.T) {
 				{QUOTED_IDENT, `"über"`},
 			},
 		},
+		// Multi-byte UTF-8 characters that are not valid identifiers should be
+		// tokenized as single UNKNOWN tokens, not split into individual bytes.
+		// This is a regression test for scanUnknown() byte-splitting bug.
+		{
+			input: "，", // Full-width comma U+FF0C (3 bytes)
+			expected: []TokenSpec{
+				{UNKNOWN, "，"},
+			},
+		},
+		{
+			input: "🔥", // Emoji U+1F525 (4 bytes)
+			expected: []TokenSpec{
+				{UNKNOWN, "🔥"},
+			},
+		},
+		{
+			input: "SELECT a， b FROM t", // Full-width comma in query
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
+				{IDENT, "a"},
+				{UNKNOWN, "，"},
+				{SPACE, " "},
+				{IDENT, "b"},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
+				{IDENT, "t"},
+			},
+		},
 	}
 
 	for _, tt := range tests {

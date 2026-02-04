@@ -635,9 +635,12 @@ func (s *Lexer) scanSystemVariable() *Token {
 }
 
 func (s *Lexer) scanUnknown() *Token {
-	// When we see an unknown token, we advance the cursor until we see something that looks like a token boundary.
+	// When we see an unknown token, we advance the cursor by the full rune length.
+	// This is important for multi-byte UTF-8 characters (e.g., full-width punctuation)
+	// to avoid splitting them into separate byte tokens.
 	s.start = s.cursor
-	s.next()
+	_, size := utf8.DecodeRuneInString(s.src[s.cursor:])
+	s.cursor += size
 	return s.emit(UNKNOWN)
 }
 

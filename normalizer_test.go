@@ -379,6 +379,30 @@ multiline comment */
 				Size:       11,
 			},
 		},
+		// Multi-byte UTF-8 characters should be preserved, not split into bytes.
+		// This is a regression test for scanUnknown() byte-splitting bug.
+		{
+			input:    "SELECT a， b FROM t", // Full-width comma U+FF0C
+			expected: "SELECT a ， b FROM t",
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"t"},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       7,
+			},
+		},
+		{
+			input:    "SELECT a, b， c FROM t", // Mixed ASCII and full-width comma
+			expected: "SELECT a, b ， c FROM t",
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"t"},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       7,
+			},
+		},
 	}
 
 	normalizer := NewNormalizer(
