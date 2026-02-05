@@ -1334,6 +1334,22 @@ func TestLexerUnicode(t *testing.T) {
 				{QUOTED_IDENT, `"日本語テーブル"`},
 			},
 		},
+		// Truncated UTF-8 inside quoted identifier should not cause the lexer
+		// to skip over the closing quote. This is a regression test for using
+		// utf8.DecodeRuneInString() instead of utf8.RuneLen() which returns 3
+		// for RuneError, causing bytes to be skipped incorrectly.
+		{
+			input: "SELECT \"ab\xe4\xb8\" FROM t", // 2 bytes of 3-byte UTF-8 char
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
+				{QUOTED_IDENT, "\"ab\xe4\xb8\""},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
+				{IDENT, "t"},
+			},
+		},
 	}
 
 	for _, tt := range tests {
