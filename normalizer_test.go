@@ -379,6 +379,30 @@ multiline comment */
 				Size:       11,
 			},
 		},
+		// Multi-byte UTF-8 characters should be preserved, not split into bytes.
+		// This is a regression test for scanUnknown() byte-splitting bug.
+		{
+			input:    "SELECT a， b FROM t", // Full-width comma U+FF0C
+			expected: "SELECT a ， b FROM t",
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"t"},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       7,
+			},
+		},
+		{
+			input:    "SELECT a, b， c FROM t", // Mixed ASCII and full-width comma
+			expected: "SELECT a, b ， c FROM t",
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"t"},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       7,
+			},
+		},
 	}
 
 	normalizer := NewNormalizer(
@@ -803,6 +827,62 @@ func TestNormalizeDeobfuscatedSQL(t *testing.T) {
 				CollectCommands:         false,
 				CollectTables:           false,
 				KeepSQLAlias:            false,
+				KeepIdentifierQuotation: false,
+			},
+		},
+		// Multi-byte UTF-8 quoted identifiers should have quotes stripped correctly.
+		// This is a regression test for scanDoubleQuotedIdentifier() byte-splitting bug.
+		{
+			input:    `SELECT * FROM "über" WHERE id = ?`,
+			expected: `SELECT * FROM über WHERE id = ?`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{`über`},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       11, // über(5 bytes) + SELECT(6 bytes)
+			},
+			normalizationConfig: &normalizerConfig{
+				CollectComments:         true,
+				CollectCommands:         true,
+				CollectTables:           true,
+				KeepSQLAlias:            false,
+				KeepIdentifierQuotation: false,
+			},
+		},
+		{
+			input:    `SELECT * FROM "世界" WHERE id = ?`,
+			expected: `SELECT * FROM 世界 WHERE id = ?`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{`世界`},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       12, // 世界(6 bytes) + SELECT(6 bytes)
+			},
+			normalizationConfig: &normalizerConfig{
+				CollectComments:         true,
+				CollectCommands:         true,
+				CollectTables:           true,
+				KeepSQLAlias:            false,
+				KeepIdentifierQuotation: false,
+			},
+		},
+		{
+			input:    `SELECT a AS "café" FROM t`,
+			expected: `SELECT a AS café FROM t`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{`t`},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       7, // t(1 byte) + SELECT(6 bytes)
+			},
+			normalizationConfig: &normalizerConfig{
+				CollectComments:         true,
+				CollectCommands:         true,
+				CollectTables:           true,
+				KeepSQLAlias:            true,
 				KeepIdentifierQuotation: false,
 			},
 		},

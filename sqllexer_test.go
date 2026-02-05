@@ -237,7 +237,7 @@ func TestLexer(t *testing.T) {
 		},
 		{
 			name: "simple select with multi line comment",
-			input: `SELECT * /* comment here */ FROM users where id = 1/* comment 
+			input: `SELECT * /* comment here */ FROM users where id = 1/* comment ` + `
 here */`,
 			expected: []TokenSpec{
 				{COMMAND, "SELECT"},
@@ -1275,6 +1275,79 @@ func TestLexerUnicode(t *testing.T) {
 			input: `"über"`,
 			expected: []TokenSpec{
 				{QUOTED_IDENT, `"über"`},
+			},
+		},
+		// Multi-byte UTF-8 characters that are not valid identifiers should be
+		// tokenized as single UNKNOWN tokens, not split into individual bytes.
+		// This is a regression test for scanUnknown() byte-splitting bug.
+		{
+			input: "，", // Full-width comma U+FF0C (3 bytes)
+			expected: []TokenSpec{
+				{UNKNOWN, "，"},
+			},
+		},
+		{
+			input: "🔥", // Emoji U+1F525 (4 bytes)
+			expected: []TokenSpec{
+				{UNKNOWN, "🔥"},
+			},
+		},
+		{
+			input: "SELECT a， b FROM t", // Full-width comma in query
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
+				{IDENT, "a"},
+				{UNKNOWN, "，"},
+				{SPACE, " "},
+				{IDENT, "b"},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
+				{IDENT, "t"},
+			},
+		},
+		// Quoted identifiers with multi-byte UTF-8 characters should be tokenized
+		// correctly without splitting bytes. This is a regression test for
+		// scanDoubleQuotedIdentifier() byte-splitting bug.
+		{
+			input: `"世界"`, // 3-byte UTF-8 characters
+			expected: []TokenSpec{
+				{QUOTED_IDENT, `"世界"`},
+			},
+		},
+		{
+			input: `"café"`, // 2-byte UTF-8 character
+			expected: []TokenSpec{
+				{QUOTED_IDENT, `"café"`},
+			},
+		},
+		{
+			input: `SELECT * FROM "日本語テーブル"`, // Japanese table name
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
+				{WILDCARD, "*"},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
+				{QUOTED_IDENT, `"日本語テーブル"`},
+			},
+		},
+		// Truncated UTF-8 inside quoted identifier should not cause the lexer
+		// to skip over the closing quote. This is a regression test for using
+		// utf8.DecodeRuneInString() instead of utf8.RuneLen() which returns 3
+		// for RuneError, causing bytes to be skipped incorrectly.
+		{
+			input: "SELECT \"ab\xe4\xb8\" FROM t", // 2 bytes of 3-byte UTF-8 char
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
+				{QUOTED_IDENT, "\"ab\xe4\xb8\""},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
+				{IDENT, "t"},
 			},
 		},
 	}
