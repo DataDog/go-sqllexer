@@ -1027,6 +1027,19 @@ here */`,
 				{STRING, `'\'`},
 			},
 		},
+		{
+			name:  "simple select with multiline comments as separators",
+			input: `SELECT/**/*/**/FROM/**/test`,
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{MULTILINE_COMMENT, "/**/"},
+				{WILDCARD, "*"},
+				{MULTILINE_COMMENT, "/**/"},
+				{KEYWORD, "FROM"},
+				{MULTILINE_COMMENT, "/**/"},
+				{IDENT, "test"},
+			},
+		},
 	}
 
 	for _, tt := range tests {
