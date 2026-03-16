@@ -31,14 +31,14 @@ jobs:
       - name: Display Go version
         run: go version
       - name: Restore main benchmark
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         id: restore-main-benchmark
         with:
           path: bench/main.txt
           key: main-benchmark-6-${{ github.sha }}
       - name: Checkout main
         if: steps.restore-main-benchmark.outputs.cache-hit != 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           ref: main
           clean: false
@@ -54,15 +54,15 @@ jobs:
         if: steps.restore-main-benchmark.outputs.cache-hit != 'true'
         run: go test -timeout=9999999s -bench=. -benchmem -count=6  ./... | tee bench/main.txt
       - name: Save main benchmark
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         if: steps.restore-main-benchmark.outputs.cache-hit != 'true'
         with:
           path: bench/main.txt
           key: ${{ steps.restore-main-benchmark.outputs.cache-primary-key }}
       - name: Checkout branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - name: Restore main benchmark
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: bench/main.txt
           key: main-benchmark-6-${{ github.sha }}
@@ -78,7 +78,7 @@ jobs:
       - name: Compare benchmarks
         run: benchstat bench/main.txt bench/${{github.sha}}.txt | tee bench/benchstat.txt
       - name: Store benchmark
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: benchmark-${{ github.sha }}
           path: bench
@@ -100,14 +100,14 @@ jobs:
       - name: Display Go version
         run: go version
       - name: Checkout main
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - name: Install dependencies
         run: go get .
       - name: Build
         run: go build -v ./...
       - run: mkdir -p bench
       - name: Cache main benchmark
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: bench/main.txt
           key: main-benchmark-6
