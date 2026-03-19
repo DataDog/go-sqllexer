@@ -306,11 +306,11 @@ multiline comment */
 			input:    "SELECT d.id, d.uuid, d.org_id, d.creator_id, d.updater_id, d.monitor_id, d.parent_id, d.original_parent_id, d.scope, d.start_dt, d.end_dt, d.canceled_dt, d.active, d.disabled, d.created, d.modified, d.message, d.monitor_tags, d.recurrence, d.mute_first_recovery_notification, d.scope_v2_query, d.scope_v2 FROM monitor_downtime d, org o WHERE o.id = d.org_id AND d.modified >= ? AND o.partition_num = ANY (?, ?, ?)",
 			expected: "SELECT d.id, d.uuid, d.org_id, d.creator_id, d.updater_id, d.monitor_id, d.parent_id, d.original_parent_id, d.scope, d.start_dt, d.end_dt, d.canceled_dt, d.active, d.disabled, d.created, d.modified, d.message, d.monitor_tags, d.recurrence, d.mute_first_recovery_notification, d.scope_v2_query, d.scope_v2 FROM monitor_downtime d, org o WHERE o.id = d.org_id AND d.modified >= ? AND o.partition_num = ANY ( ? )",
 			statementMetadata: StatementMetadata{
-				Tables:     []string{"monitor_downtime"},
+				Tables:     []string{"monitor_downtime", "org"},
 				Comments:   []string{},
 				Commands:   []string{"SELECT"},
 				Procedures: []string{},
-				Size:       22,
+				Size:       25,
 			},
 		},
 		{
