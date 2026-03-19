@@ -4,8 +4,8 @@
       {
         "expected": "SELECT e.employee_id, e.first_name, d.department_name FROM employees e, departments d WHERE e.department_id = d.department_id;",
         "statement_metadata": {
-          "size": 44,
-          "tables": ["employees"],
+          "size": 55,
+          "tables": ["employees", "departments"],
           "commands": ["SELECT"],
           "comments": ["/*+ LEADING(e) USE_HASH(d) */"],
           "procedures": []

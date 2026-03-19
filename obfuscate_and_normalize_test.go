@@ -632,6 +632,17 @@ multiline comment */
 				WithDBMS(DBMSOracle),
 			},
 		},
+		{
+			input:    "SELECT events.target_id, events.created_at, source_tickets.title FROM events, tickets AS source_tickets WHERE events.org_id = 123 AND source_tickets.status = 'open' LIMIT 100",
+			expected: "SELECT events.target_id, events.created_at, source_tickets.title FROM events, tickets WHERE events.org_id = ? AND source_tickets.status = ? LIMIT ?",
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"events", "tickets"},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       19,
+			},
+		},
 	}
 
 	obfuscator := NewObfuscator(

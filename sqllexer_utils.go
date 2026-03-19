@@ -105,6 +105,7 @@ var keywords = []string{
 	"INTO",
 	"IS",
 	"KEY",
+	"LATERAL",
 	"LEFT",
 	"LIKE",
 	"LIMIT",
