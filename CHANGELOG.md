@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.2.1
+
+### Bug Fixes
+
+- **Fix table name metadata extraction** ([#91](https://github.com/DataDog/go-sqllexer/pull/91))
+  The normalizer now correctly extracts all table names from comma-separated table lists (e.g., `SELECT * FROM t1, t2`). Previously, only the first table after a table indicator keyword was collected. This also adds `LATERAL` as a recognized keyword so it is no longer misidentified as a table name during metadata extraction.
+
+### Maintenance
+
+- **Pin GitHub Actions** ([#90](https://github.com/DataDog/go-sqllexer/pull/90))
+
 ## v0.2.0
 
 ### Breaking Changes
