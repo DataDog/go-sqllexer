@@ -129,7 +129,8 @@ type colonContext struct {
 }
 
 type groupablePlaceholder struct {
-	groupable bool
+	groupable    bool
+	skippedCount int // number of (comma, placeholder) pairs skipped during grouping
 }
 
 type headState struct {
@@ -434,7 +435,9 @@ func (n *Normalizer) isObfuscatedValueGroupable(token *Token, lastValueToken *La
 			// we know it's the start of groupable placeholders
 			// we don't return here because we still need to write the first placeholder
 			groupablePlaceholder.groupable = true
+			groupablePlaceholder.skippedCount = 0
 		} else if lastValueToken.Value == "," && groupablePlaceholder.groupable {
+			groupablePlaceholder.skippedCount++
 			return true
 		}
 	}
@@ -446,14 +449,21 @@ func (n *Normalizer) isObfuscatedValueGroupable(token *Token, lastValueToken *La
 	if groupablePlaceholder.groupable && (token.Value == ")" || token.Value == "]") {
 		// end of groupable placeholders
 		groupablePlaceholder.groupable = false
+		groupablePlaceholder.skippedCount = 0
 		return false
 	}
 
 	if groupablePlaceholder.groupable && token.Value != NumberPlaceholder && token.Value != StringPlaceholder && lastValueToken != nil && lastValueToken.Value == "," {
-		// This is a tricky edge case. If we are inside a groupbale block, and the current token is not a placeholder,
-		// we not only want to write the current token to the normalizedSQLBuilder, but also write the last comma that we skipped.
-		// For example, (?, ARRAY[?, ?, ?]) should be normalized as (?, ARRAY[?])
+		// A non-placeholder was encountered while grouping. This means the parenthesized
+		// list contains mixed values (e.g. VALUES (?, ?, NOW(), ?)) and should not be grouped.
+		// Write back all the previously skipped (comma, placeholder) pairs and the trailing comma.
+		for i := 0; i < groupablePlaceholder.skippedCount; i++ {
+			normalizedSQLBuilder.WriteString(", ")
+			normalizedSQLBuilder.WriteString(NumberPlaceholder)
+		}
 		normalizedSQLBuilder.WriteString(lastValueToken.Value)
+		groupablePlaceholder.groupable = false
+		groupablePlaceholder.skippedCount = 0
 		return false
 	}
 
