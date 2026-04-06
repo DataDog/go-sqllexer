@@ -643,6 +643,18 @@ multiline comment */
 				Size:       19,
 			},
 		},
+		{
+			// INSERT with mixed placeholders and function calls should preserve all value positions
+			input:    "INSERT INTO t (a, b, c, d, e, f, g, h, i, j) VALUES ('x', 'y', 'z', 0, NOW(), NOW(), 1, 64, 18446744073709551615, '2026-04-11 00:00:00+00')",
+			expected: "INSERT INTO t ( a, b, c, d, e, f, g, h, i, j ) VALUES ( ?, ?, ?, ?, NOW ( ), NOW ( ), ?, ?, ?, ? )",
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"t"},
+				Comments:   []string{},
+				Commands:   []string{"INSERT"},
+				Procedures: []string{},
+				Size:       7,
+			},
+		},
 	}
 
 	obfuscator := NewObfuscator(
