@@ -403,6 +403,17 @@ multiline comment */
 				Size:       7,
 			},
 		},
+		{
+			input:    "VACUUM ANALYZE my_table",
+			expected: "VACUUM ANALYZE my_table",
+			statementMetadata: StatementMetadata{
+				Tables:     []string{},
+				Comments:   []string{},
+				Commands:   []string{"VACUUM"},
+				Procedures: []string{},
+				Size:       6,
+			},
+		},
 	}
 
 	normalizer := NewNormalizer(
