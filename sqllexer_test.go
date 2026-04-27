@@ -1040,6 +1040,28 @@ here */`,
 				{IDENT, "test"},
 			},
 		},
+		{
+			name:  "VACUUM should be classified as COMMAND",
+			input: "VACUUM ANALYZE my_table",
+			expected: []TokenSpec{
+				{COMMAND, "VACUUM"},
+				{SPACE, " "},
+				{KEYWORD, "ANALYZE"},
+				{SPACE, " "},
+				{IDENT, "my_table"},
+			},
+		},
+		{
+			name:  "vacuum lowercase should be classified as COMMAND",
+			input: "vacuum analyze my_table",
+			expected: []TokenSpec{
+				{COMMAND, "vacuum"},
+				{SPACE, " "},
+				{KEYWORD, "analyze"},
+				{SPACE, " "},
+				{IDENT, "my_table"},
+			},
+		},
 	}
 
 	for _, tt := range tests {

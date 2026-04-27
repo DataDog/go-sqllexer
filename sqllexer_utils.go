@@ -57,6 +57,7 @@ var commands = []string{
 	"STRAIGHT_JOIN",
 	"USE",
 	"CLONE",
+	"VACUUM",
 }
 
 var tableIndicatorCommands = []string{
@@ -135,7 +136,6 @@ var keywords = []string{
 	"ROLLUP",
 	"LITERAL",
 	"WINDOW",
-	"VACCUM",
 	"ANALYZE",
 	"ILIKE",
 	"USING",

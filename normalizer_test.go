@@ -403,6 +403,17 @@ multiline comment */
 				Size:       7,
 			},
 		},
+		{
+			input:    "VACUUM ANALYZE my_table",
+			expected: "VACUUM ANALYZE my_table",
+			statementMetadata: StatementMetadata{
+				Tables:     []string{},
+				Comments:   []string{},
+				Commands:   []string{"VACUUM"},
+				Procedures: []string{},
+				Size:       6,
+			},
+		},
 	}
 
 	normalizer := NewNormalizer(
@@ -522,6 +533,15 @@ func TestNormalizerFormatting(t *testing.T) {
 				"select * from discount where description like ?",
 			},
 			expected:          "SELECT * FROM discount WHERE description LIKE ?",
+			uppercaseKeywords: true,
+		},
+		{
+			queries: []string{
+				"vacuum analyze my_table",
+				"VACUUM ANALYZE my_table",
+				"Vacuum Analyze my_table",
+			},
+			expected:          "VACUUM ANALYZE my_table",
 			uppercaseKeywords: true,
 		},
 	}
