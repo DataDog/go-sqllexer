@@ -524,6 +524,15 @@ func TestNormalizerFormatting(t *testing.T) {
 			expected:          "SELECT * FROM discount WHERE description LIKE ?",
 			uppercaseKeywords: true,
 		},
+		{
+			queries: []string{
+				"vacuum analyze my_table",
+				"VACUUM ANALYZE my_table",
+				"Vacuum Analyze my_table",
+			},
+			expected:          "VACUUM ANALYZE my_table",
+			uppercaseKeywords: true,
+		},
 	}
 
 	for _, test := range tests {

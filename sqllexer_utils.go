@@ -135,7 +135,7 @@ var keywords = []string{
 	"ROLLUP",
 	"LITERAL",
 	"WINDOW",
-	"VACCUM",
+	"VACUUM",
 	"ANALYZE",
 	"ILIKE",
 	"USING",
