@@ -4,6 +4,8 @@ retract v0.1.0 // This version had memory leaks and should not be used
 
 go 1.25
 
+toolchain go1.26.2
+
 require github.com/stretchr/testify v1.11.1
 
 require (
