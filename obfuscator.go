@@ -79,6 +79,58 @@ const (
 	NumberPlaceholder = "?"
 )
 
+// temporalFunctions is the set of SQL functions whose first argument is a field
+// keyword (e.g. 'epoch', 'month') rather than a user-supplied value.
+var temporalFunctions = map[string]bool{
+	"extract": true, "date_part": true, "date_trunc": true,
+}
+
+func isTemporalFunction(name string) bool {
+	return temporalFunctions[strings.ToLower(name)]
+}
+
+type temporalState int
+
+const (
+	temporalStateNone temporalState = iota
+	temporalStateFunc               // saw a temporal function token
+	temporalStateOpen               // saw '(' after temporal function; next STRING is the field name
+)
+
+// temporalFuncTracker detects when the current token is a quoted field-name
+// argument inside a temporal function call (EXTRACT, date_part, date_trunc).
+// Call advance before deciding whether to obfuscate a token; if it returns
+// true the token is a field name and its quotes have already been stripped.
+type temporalFuncTracker struct {
+	state temporalState
+}
+
+func (t *temporalFuncTracker) advance(token *Token) (isFieldName bool) {
+	if token.Type == SPACE {
+		return false
+	}
+	switch t.state {
+	case temporalStateFunc:
+		if token.Type == PUNCTUATION && token.Value == "(" {
+			t.state = temporalStateOpen
+		} else {
+			t.state = temporalStateNone
+		}
+	case temporalStateOpen:
+		t.state = temporalStateNone
+		if token.Type == STRING && len(token.Value) >= 2 {
+			// Strip surrounding single quotes: 'epoch' → epoch
+			token.Value = token.Value[1 : len(token.Value)-1]
+			return true
+		}
+	}
+	// Re-evaluate as None (handles the case where state just reset above on the same token)
+	if t.state == temporalStateNone && token.Type == FUNCTION && isTemporalFunction(token.Value) {
+		t.state = temporalStateFunc
+	}
+	return false
+}
+
 // Obfuscate takes an input SQL string and returns an obfuscated SQL string.
 // The obfuscator replaces all literal values with a single placeholder
 func (o *Obfuscator) Obfuscate(input string, lexerOpts ...lexerOption) string {
@@ -91,12 +143,25 @@ func (o *Obfuscator) Obfuscate(input string, lexerOpts ...lexerOption) string {
 	)
 
 	var lastValueToken *LastValueToken
+	var tracker temporalFuncTracker
 
 	for {
 		token := lexer.Scan()
 		if token.Type == EOF {
 			break
 		}
+
+		// Preserve quoted field-name arguments inside temporal functions:
+		// EXTRACT('epoch' FROM x) and date_part('month', x) use string literals
+		// that are SQL keywords, not user values — they must not be replaced with ?.
+		if tracker.advance(token) {
+			obfuscatedSQL.WriteString(token.Value)
+			if isValueToken(token) {
+				lastValueToken = token.getLastValueToken()
+			}
+			continue
+		}
+
 		o.ObfuscateTokenValue(token, lastValueToken, lexerOpts...)
 		obfuscatedSQL.WriteString(token.Value)
 		if isValueToken(token) {

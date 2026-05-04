@@ -579,6 +579,81 @@ func ExampleObfuscator() {
 
 // TestObfuscatorDoesNotPinLargeBackingArrays verifies that the Obfuscate function
 // returns a string that doesn't hold a reference to an excessively large backing array.
+// TestObfuscatorTemporalFunctions verifies that quoted field-name arguments inside
+// EXTRACT / date_part / date_trunc are preserved rather than replaced with ?.
+// See https://github.com/DataDog/datadog-agent/issues/49420
+func TestObfuscatorTemporalFunctions(t *testing.T) {
+	obfuscator := NewObfuscator(WithReplacePositionalParameter(true))
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		// Unquoted form — baseline, must stay unchanged.
+		{
+			`SELECT EXTRACT(epoch FROM t.ts) FROM t WHERE id = 1`,
+			`SELECT EXTRACT(epoch FROM t.ts) FROM t WHERE id = ?`,
+		},
+		// Quoted form (PG ≤13 / some ORMs): 'epoch' must be preserved, not replaced with ?.
+		{
+			`SELECT EXTRACT('epoch' FROM t.ts) FROM t WHERE id = 1`,
+			`SELECT EXTRACT(epoch FROM t.ts) FROM t WHERE id = ?`,
+		},
+		// pg_stat_statements sends positional params; output must match the quoted-form output.
+		{
+			`SELECT EXTRACT(epoch FROM t.ts) FROM t WHERE id = $1`,
+			`SELECT EXTRACT(epoch FROM t.ts) FROM t WHERE id = ?`,
+		},
+		{
+			`SELECT date_part('month', t.ts) FROM t WHERE id = 1`,
+			`SELECT date_part(month, t.ts) FROM t WHERE id = ?`,
+		},
+		{
+			`SELECT date_trunc('year', t.ts) FROM t WHERE id = 1`,
+			`SELECT date_trunc(year, t.ts) FROM t WHERE id = ?`,
+		},
+		// Other string args must still be obfuscated.
+		{
+			`SELECT f('secret') FROM t`,
+			`SELECT f(?) FROM t`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			assert.Equal(t, tt.expected, obfuscator.Obfuscate(tt.input, WithDBMS(DBMSPostgres)))
+		})
+	}
+}
+
+func TestObfuscateAndNormalizeTemporalFunctions(t *testing.T) {
+	obfuscator := NewObfuscator(WithReplacePositionalParameter(true))
+	normalizer := NewNormalizer()
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{
+			`SELECT EXTRACT('epoch' FROM t.ts) FROM t WHERE id = 1`,
+			`SELECT EXTRACT ( epoch FROM t.ts ) FROM t WHERE id = ?`,
+		},
+		// Both forms must collapse to the same signature.
+		{
+			`SELECT EXTRACT(epoch FROM t.ts) FROM t WHERE id = $1`,
+			`SELECT EXTRACT ( epoch FROM t.ts ) FROM t WHERE id = ?`,
+		},
+		{
+			`SELECT date_part('month', t.ts) FROM t WHERE id = 1`,
+			`SELECT date_part ( month, t.ts ) FROM t WHERE id = ?`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got, _, err := ObfuscateAndNormalize(tt.input, obfuscator, normalizer, WithDBMS(DBMSPostgres))
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, got)
+		})
+	}
+}
+
 func TestObfuscatorDoesNotPinLargeBackingArrays(t *testing.T) {
 	obfuscator := NewObfuscator()
 
