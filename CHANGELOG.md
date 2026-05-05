@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.2.2
+
+### Bug Fixes
+
+- **Obfuscate EXTRACT field keywords** ([#98](https://github.com/DataDog/go-sqllexer/pull/98))
+  The obfuscator now replaces the field argument of `EXTRACT(field FROM source)` with a placeholder when it matches a known PostgreSQL field name (`epoch`, `year`, `month`, `dow`, `isodow`, `microseconds`, `timezone_hour`, etc.). Previously, queries captured via `pg_stat_activity` kept `epoch` as an unquoted identifier while queries from `pg_stat_statements` had it normalized to `$1` (and then to `?`), splitting one logical query across two DBM signatures. Both code paths now converge on `EXTRACT(? FROM source)`. Bare `epoch`/`year`/etc. outside an `EXTRACT(...)` call (e.g. as a column reference) and unrecognized field names are left untouched.
+
+- **Fix handling of PostgreSQL VACUUM commands** ([#96](https://github.com/DataDog/go-sqllexer/pull/96))
+  Fixes a typo and reclassifies `VACUUM` from a generic keyword to a command so it is correctly extracted into statement metadata.
+
+- **Handle multiline comment after keyword** ([#89](https://github.com/DataDog/go-sqllexer/pull/89))
+  The lexer now correctly tokenizes SQL keywords when they are directly followed by a multiline comment (e.g. `select/**/*/**/from/**/events`). Previously, the leading `/` of the comment could be absorbed into the preceding token, breaking keyword detection.
+
+### Performance Improvements
+
+- **Avoid allocation in `isExtractFieldKeyword`** ([#99](https://github.com/DataDog/go-sqllexer/pull/99))
+  Replaces a `strings.ToUpper` + map lookup with an allocation-free `strings.EqualFold` scan over a small slice of EXTRACT field names.
+
 ## v0.2.1
 
 ### Bug Fixes
