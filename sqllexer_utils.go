@@ -184,38 +184,43 @@ var (
 	// (https://www.postgresql.org/docs/current/functions-datetime.html#FUNCTIONS-DATETIME-EXTRACT).
 	// They appear as unquoted identifiers in `EXTRACT(field FROM source)` and must be
 	// obfuscated to a placeholder so signatures match the pg_stat_statements form
-	// `EXTRACT($1 FROM source)`.
-	extractFieldKeywords = map[string]struct{}{
-		"CENTURY":         {},
-		"DAY":             {},
-		"DECADE":          {},
-		"DOW":             {},
-		"DOY":             {},
-		"EPOCH":           {},
-		"HOUR":            {},
-		"ISODOW":          {},
-		"ISOYEAR":         {},
-		"JULIAN":          {},
-		"MICROSECONDS":    {},
-		"MILLENNIUM":      {},
-		"MILLISECONDS":    {},
-		"MINUTE":          {},
-		"MONTH":           {},
-		"QUARTER":         {},
-		"SECOND":          {},
-		"TIMEZONE":        {},
-		"TIMEZONE_HOUR":   {},
-		"TIMEZONE_MINUTE": {},
-		"WEEK":            {},
-		"YEAR":            {},
+	// `EXTRACT($1 FROM source)`. Stored as a flat slice so isExtractFieldKeyword can
+	// use strings.EqualFold without allocating a folded copy of the input.
+	extractFieldKeywords = [...]string{
+		"CENTURY",
+		"DAY",
+		"DECADE",
+		"DOW",
+		"DOY",
+		"EPOCH",
+		"HOUR",
+		"ISODOW",
+		"ISOYEAR",
+		"JULIAN",
+		"MICROSECONDS",
+		"MILLENNIUM",
+		"MILLISECONDS",
+		"MINUTE",
+		"MONTH",
+		"QUARTER",
+		"SECOND",
+		"TIMEZONE",
+		"TIMEZONE_HOUR",
+		"TIMEZONE_MINUTE",
+		"WEEK",
+		"YEAR",
 	}
 )
 
 // isExtractFieldKeyword reports whether value is a known PostgreSQL EXTRACT field
 // keyword (case-insensitive).
 func isExtractFieldKeyword(value string) bool {
-	_, ok := extractFieldKeywords[strings.ToUpper(value)]
-	return ok
+	for _, kw := range extractFieldKeywords {
+		if strings.EqualFold(value, kw) {
+			return true
+		}
+	}
+	return false
 }
 
 // extractContext tracks the two most recent non-whitespace, non-comment tokens
