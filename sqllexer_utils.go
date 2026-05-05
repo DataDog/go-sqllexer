@@ -179,7 +179,85 @@ var (
 	alias = []string{
 		"AS",
 	}
+
+	// extractFieldKeywords is the set of PostgreSQL EXTRACT field names
+	// (https://www.postgresql.org/docs/current/functions-datetime.html#FUNCTIONS-DATETIME-EXTRACT).
+	// They appear as unquoted identifiers in `EXTRACT(field FROM source)` and must be
+	// obfuscated to a placeholder so signatures match the pg_stat_statements form
+	// `EXTRACT($1 FROM source)`.
+	extractFieldKeywords = map[string]struct{}{
+		"CENTURY":         {},
+		"DAY":             {},
+		"DECADE":          {},
+		"DOW":             {},
+		"DOY":             {},
+		"EPOCH":           {},
+		"HOUR":            {},
+		"ISODOW":          {},
+		"ISOYEAR":         {},
+		"JULIAN":          {},
+		"MICROSECONDS":    {},
+		"MILLENNIUM":      {},
+		"MILLISECONDS":    {},
+		"MINUTE":          {},
+		"MONTH":           {},
+		"QUARTER":         {},
+		"SECOND":          {},
+		"TIMEZONE":        {},
+		"TIMEZONE_HOUR":   {},
+		"TIMEZONE_MINUTE": {},
+		"WEEK":            {},
+		"YEAR":            {},
+	}
 )
+
+// isExtractFieldKeyword reports whether value is a known PostgreSQL EXTRACT field
+// keyword (case-insensitive).
+func isExtractFieldKeyword(value string) bool {
+	_, ok := extractFieldKeywords[strings.ToUpper(value)]
+	return ok
+}
+
+// extractContext tracks the two most recent non-whitespace, non-comment tokens
+// so callers can detect when the current token is the field argument of an
+// `EXTRACT(field FROM ...)` call. The zero value is ready to use.
+type extractContext struct {
+	prevType   TokenType
+	prevValue  string
+	prev2Type  TokenType
+	prev2Value string
+}
+
+// maybeReplaceExtractField rewrites token.Value to StringPlaceholder when the
+// token is the field argument of an EXTRACT(...) call (i.e. preceded by
+// FUNCTION "EXTRACT" then PUNCTUATION "(") and matches a known field name.
+// This converges the obfuscated form of `EXTRACT(epoch FROM x)` with the
+// pg_stat_statements form `EXTRACT($1 FROM x)`.
+func (c *extractContext) maybeReplaceExtractField(token *Token) {
+	if token.Type != IDENT && token.Type != KEYWORD {
+		return
+	}
+	if c.prevType != PUNCTUATION || c.prevValue != "(" {
+		return
+	}
+	if c.prev2Type != FUNCTION || !strings.EqualFold(c.prev2Value, "EXTRACT") {
+		return
+	}
+	if !isExtractFieldKeyword(token.Value) {
+		return
+	}
+	token.Value = StringPlaceholder
+}
+
+// update advances the rolling window of recent tokens, ignoring whitespace and
+// comments so they don't break the EXTRACT( ... ) adjacency check.
+func (c *extractContext) update(token *Token) {
+	if token.Type == SPACE || token.Type == COMMENT || token.Type == MULTILINE_COMMENT {
+		return
+	}
+	c.prev2Type, c.prev2Value = c.prevType, c.prevValue
+	c.prevType, c.prevValue = token.Type, token.Value
+}
 
 // trieNode represents a node in the keyword trie.
 type trieNode struct {

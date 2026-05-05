@@ -1,0 +1,8 @@
+{
+  "input": "SELECT DATE_TRUNC('month', created_at) FROM events;",
+  "outputs": [
+    {
+      "expected": "SELECT DATE_TRUNC ( ?, created_at ) FROM events"
+    }
+  ]
+}

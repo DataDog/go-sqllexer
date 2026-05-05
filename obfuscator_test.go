@@ -551,6 +551,34 @@ func TestObfuscator(t *testing.T) {
 			expected:             `SELECT * FROM users where id = ?`,
 			replaceBindParameter: true,
 		},
+		{
+			// pg_stat_activity captures the raw SQL with `epoch` as an unquoted
+			// identifier. Obfuscate it so the signature converges with the
+			// pg_stat_statements form `EXTRACT($1 FROM ...)`.
+			input:    `SELECT EXTRACT(epoch FROM created_at) FROM events`,
+			expected: `SELECT EXTRACT(? FROM created_at) FROM events`,
+		},
+		{
+			input:    `SELECT EXTRACT(YEAR FROM a), EXTRACT(MoNtH FROM b) FROM t`,
+			expected: `SELECT EXTRACT(? FROM a), EXTRACT(? FROM b) FROM t`,
+		},
+		{
+			input:                      `SELECT EXTRACT($1 FROM created_at) FROM events`,
+			expected:                   `SELECT EXTRACT(? FROM created_at) FROM events`,
+			replacePositionalParameter: true,
+		},
+		{
+			// `epoch` outside an EXTRACT(...) call is just an identifier and
+			// must not be replaced.
+			input:    `SELECT epoch FROM events WHERE epoch > 0`,
+			expected: `SELECT epoch FROM events WHERE epoch > ?`,
+		},
+		{
+			// Unknown EXTRACT field (not in the recognized set) is left alone
+			// so we don't accidentally rewrite user identifiers.
+			input:    `SELECT EXTRACT(custom_field FROM created_at) FROM events`,
+			expected: `SELECT EXTRACT(custom_field FROM created_at) FROM events`,
+		},
 	}
 
 	for _, tt := range tests {

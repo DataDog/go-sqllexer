@@ -1,0 +1,8 @@
+{
+  "input": "SELECT EXTRACT(year FROM a), EXTRACT(MONTH FROM b), EXTRACT(dow FROM c), EXTRACT(microseconds FROM d), EXTRACT(timezone_hour FROM e) FROM t;",
+  "outputs": [
+    {
+      "expected": "SELECT EXTRACT ( ? FROM a ), EXTRACT ( ? FROM b ), EXTRACT ( ? FROM c ), EXTRACT ( ? FROM d ), EXTRACT ( ? FROM e ) FROM t"
+    }
+  ]
+}
