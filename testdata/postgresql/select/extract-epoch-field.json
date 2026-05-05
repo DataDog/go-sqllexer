@@ -1,0 +1,26 @@
+{
+  "input": "SELECT EXTRACT(epoch FROM created_at) FROM events;",
+  "outputs": [
+    {
+      "expected": "SELECT EXTRACT ( ? FROM created_at ) FROM events",
+      "statement_metadata": {
+        "size": 22,
+        "tables": [
+          "created_at",
+          "events"
+        ],
+        "commands": [
+          "SELECT"
+        ],
+        "comments": [],
+        "procedures": []
+      }
+    },
+    {
+      "expected": "SELECT EXTRACT(? FROM created_at) FROM events",
+      "normalizer_config": {
+        "remove_space_between_parentheses": true
+      }
+    }
+  ]
+}

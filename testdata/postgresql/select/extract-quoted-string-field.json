@@ -1,0 +1,8 @@
+{
+  "input": "SELECT EXTRACT('epoch' FROM created_at) FROM events;",
+  "outputs": [
+    {
+      "expected": "SELECT EXTRACT ( ? FROM created_at ) FROM events"
+    }
+  ]
+}

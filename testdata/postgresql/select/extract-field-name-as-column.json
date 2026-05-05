@@ -1,0 +1,8 @@
+{
+  "input": "SELECT epoch, year FROM events WHERE epoch > 100;",
+  "outputs": [
+    {
+      "expected": "SELECT epoch, year FROM events WHERE epoch > ?"
+    }
+  ]
+}
