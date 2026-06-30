@@ -408,6 +408,11 @@ func (n *Normalizer) shouldStripIdentifierQuotes(token *Token, lastValueToken *L
 	if isAliasContext(lastValueToken) && !token.isSimpleIdentifier {
 		return false
 	}
+	// Bracket-quoted identifiers whose content contains whitespace cannot be
+	// safely unquoted: the stripped form would produce multiple SQL tokens.
+	if strings.ContainsAny(token.Value, " \t\n\r") {
+		return false
+	}
 	return true
 }
 
@@ -467,6 +472,12 @@ func (n *Normalizer) appendSpace(token *Token, lastValueToken *LastValueToken, n
 	}
 
 	if n.config.RemoveSpaceBetweenParentheses && (token.Value == ")" || token.Value == "]") {
+		return
+	}
+
+	// do not add a space between a dot-suffixed identifier and the following identifier,
+	// because the lexer splits e.g. t.[Col] into "t." and "[Col]" as separate tokens
+	if lastValueToken != nil && len(lastValueToken.Value) > 1 && lastValueToken.Value[len(lastValueToken.Value)-1] == '.' && (token.Type == IDENT || token.Type == QUOTED_IDENT) {
 		return
 	}
 

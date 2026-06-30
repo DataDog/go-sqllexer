@@ -1042,6 +1042,85 @@ func TestNormalizeDeobfuscatedSQL(t *testing.T) {
 			},
 		},
 		{
+			// simple bracket-quoted column after dot — no space, brackets stripped, metadata on
+			input:    `SELECT t.[SimpleCol] FROM dbo.SomeTable AS t`,
+			expected: `SELECT t.SimpleCol FROM dbo.SomeTable AS t`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{`dbo.SomeTable`},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       19,
+			},
+			normalizationConfig: &normalizerConfig{
+				CollectComments: true,
+				CollectCommands: true,
+				CollectTables:   true,
+				KeepSQLAlias:    true,
+			},
+			lexerOptions: []lexerOption{
+				WithDBMS(DBMSSQLServer),
+			},
+		},
+		{
+			// same as above with all metadata collection disabled — output must be identical
+			input:    `SELECT t.[SimpleCol] FROM dbo.SomeTable AS t`,
+			expected: `SELECT t.SimpleCol FROM dbo.SomeTable AS t`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{},
+				Comments:   []string{},
+				Commands:   []string{},
+				Procedures: []string{},
+				Size:       0,
+			},
+			normalizationConfig: &normalizerConfig{
+				KeepSQLAlias: true,
+			},
+			lexerOptions: []lexerOption{
+				WithDBMS(DBMSSQLServer),
+			},
+		},
+		{
+			input:    `SELECT t.[Column With Spaces] FROM dbo.SomeTable AS t`,
+			expected: `SELECT t.[Column With Spaces] FROM dbo.SomeTable AS t`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{`dbo.SomeTable`},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       19,
+			},
+			normalizationConfig: &normalizerConfig{
+				CollectComments: true,
+				CollectCommands: true,
+				CollectTables:   true,
+				KeepSQLAlias:    true,
+			},
+			lexerOptions: []lexerOption{
+				WithDBMS(DBMSSQLServer),
+			},
+		},
+		{
+			input:    `SELECT [First Name], [Last Name] FROM [My Table]`,
+			expected: `SELECT [First Name], [Last Name] FROM [My Table]`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{`My Table`},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       14,
+			},
+			normalizationConfig: &normalizerConfig{
+				CollectComments: true,
+				CollectCommands: true,
+				CollectTables:   true,
+				KeepSQLAlias:    true,
+			},
+			lexerOptions: []lexerOption{
+				WithDBMS(DBMSSQLServer),
+			},
+		},
+		{
 			input:    `( @p1 bigint ) SELECT * from dbm_user as prepared_user WHERE id = @p1`,
 			expected: `SELECT * from dbm_user as prepared_user WHERE id = @p1`,
 			statementMetadata: StatementMetadata{
