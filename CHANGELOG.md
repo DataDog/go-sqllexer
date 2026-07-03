@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.2.3
+
+### Bug Fixes
+
+- **Preserve bracket-quoted T-SQL identifiers containing spaces** ([#101](https://github.com/DataDog/go-sqllexer/pull/101))
+  Bracket-quoted identifiers whose content contains whitespace (e.g. `[Column With Spaces]`) are no longer de-bracketed during normalization. Stripping the brackets produces bare spaces in identifier position, which breaks query structure. Simple identifiers (`[schema]`, `[table]`) and dot-joined multi-part identifiers (`[schema].[table]`) are unaffected and continue to be de-bracketed as before. A secondary fix suppresses the spurious space that the normalizer was inserting between a dot-suffixed token and the bracket-quoted identifier that follows it (e.g. `t. [Col]` → `t.[Col]`).
+
 ## v0.2.2
 
 ### Bug Fixes
