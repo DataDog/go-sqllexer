@@ -318,6 +318,10 @@ func (s *Lexer) scanStringWithDelimiter(delimiter rune) *Token {
 	escaped := false
 	escapedQuote := false
 
+	// SQL Server (T-SQL) and Oracle do not use backslash as a string escape
+	// character; a quote inside a literal is escaped by doubling it ('').
+	backslashEscapes := s.config.DBMS != DBMSSQLServer && s.config.DBMS != DBMSOracle
+
 	ch := s.next() // consume opening quote
 
 	for ; !isEOF(ch); ch = s.next() {
@@ -327,7 +331,7 @@ func (s *Lexer) scanStringWithDelimiter(delimiter rune) *Token {
 			continue
 		}
 
-		if ch == '\\' {
+		if backslashEscapes && ch == '\\' {
 			escaped = true
 			continue
 		}

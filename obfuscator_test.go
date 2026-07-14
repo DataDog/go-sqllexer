@@ -46,6 +46,40 @@ func TestObfuscator(t *testing.T) {
 			replaceDigits: false,
 		},
 		{
+			// SDBM-2792: SQL Server does not treat backslash as a string escape, so
+			// ESCAPE N'\' is a complete literal (a single backslash). This exercises
+			// the problematic shape: two ESCAPE N'\' literals with SQL both between
+			// and after them. Without the fix the first '\' escaped its closing quote
+			// and consumed forward to the opening quote of the second literal, so the
+			// text in between collapsed into one string and the query was truncated.
+			input:    `DECLARE @p1 NVARCHAR(50)=N'%foo%', @p2 NVARCHAR(50)=N'%bar%'; SELECT col FROM tbl WHERE col LIKE @p1 ESCAPE N'\' AND col LIKE @p2 ESCAPE N'\';`,
+			expected: `DECLARE @p1 NVARCHAR(?)=N?, @p2 NVARCHAR(?)=N?; SELECT col FROM tbl WHERE col LIKE @p1 ESCAPE N? AND col LIKE @p2 ESCAPE N?;`,
+			dbms:     DBMSSQLServer,
+		},
+		{
+			// SDBM-2792: Oracle does not treat backslash as a string escape either.
+			// Same two-literal shape as the SQL Server case above.
+			input:    `SELECT col FROM tbl WHERE col LIKE '%foo\_%' ESCAPE '\' AND col LIKE '%bar\_%' ESCAPE '\' AND flag = 'x'`,
+			expected: `SELECT col FROM tbl WHERE col LIKE ? ESCAPE ? AND col LIKE ? ESCAPE ? AND flag = ?`,
+			dbms:     DBMSOracle,
+		},
+		{
+			// Boundary guard: MySQL genuinely uses backslash as a string escape, so
+			// '\' escapes the following quote and the literal continues (you would
+			// write '\\' for a literal backslash). Asserting the trailing text is
+			// absorbed proves the SQL Server / Oracle fix did not over-broaden.
+			input:    `SELECT col FROM tbl WHERE col LIKE '%foo%' ESCAPE '\' AND flag = 1`,
+			expected: `SELECT col FROM tbl WHERE col LIKE ? ESCAPE ?`,
+			dbms:     DBMSMySQL,
+		},
+		{
+			// Boundary guard: Snowflake also supports backslash escape sequences, so
+			// it must keep the escaping behavior too.
+			input:    `SELECT col FROM tbl WHERE col LIKE '%foo%' ESCAPE '\' AND flag = 1`,
+			expected: `SELECT col FROM tbl WHERE col LIKE ? ESCAPE ?`,
+			dbms:     DBMSSnowflake,
+		},
+		{
 			input:         "SELECT * FROM \"users table\" where id = 1",
 			expected:      "SELECT * FROM \"users table\" where id = ?",
 			replaceDigits: true,
