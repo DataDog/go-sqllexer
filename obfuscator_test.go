@@ -46,6 +46,31 @@ func TestObfuscator(t *testing.T) {
 			replaceDigits: false,
 		},
 		{
+			// SQL Server does not treat backslash as a string escape, so
+			// ESCAPE N'\' is a complete literal (a single backslash).
+			input:    `DECLARE @p1 NVARCHAR(50)=N'%foo%', @p2 NVARCHAR(50)=N'%bar%'; SELECT col FROM tbl WHERE col LIKE @p1 ESCAPE N'\' AND col LIKE @p2 ESCAPE N'\';`,
+			expected: `DECLARE @p1 NVARCHAR(?)=N?, @p2 NVARCHAR(?)=N?; SELECT col FROM tbl WHERE col LIKE @p1 ESCAPE N? AND col LIKE @p2 ESCAPE N?;`,
+			dbms:     DBMSSQLServer,
+		},
+		{
+			// Oracle does not treat backslash as a string escape either.
+			input:    `SELECT col FROM tbl WHERE col LIKE '%foo\_%' ESCAPE '\' AND col LIKE '%bar\_%' ESCAPE '\' AND flag = 'x'`,
+			expected: `SELECT col FROM tbl WHERE col LIKE ? ESCAPE ? AND col LIKE ? ESCAPE ? AND flag = ?`,
+			dbms:     DBMSOracle,
+		},
+		{
+			// MySQL genuinely uses backslash as a string escape
+			input:    `SELECT col FROM tbl WHERE col LIKE '%foo%' ESCAPE '\' AND flag = 1`,
+			expected: `SELECT col FROM tbl WHERE col LIKE ? ESCAPE ?`,
+			dbms:     DBMSMySQL,
+		},
+		{
+			// Snowflake also supports backslash escape sequences
+			input:    `SELECT col FROM tbl WHERE col LIKE '%foo%' ESCAPE '\' AND flag = 1`,
+			expected: `SELECT col FROM tbl WHERE col LIKE ? ESCAPE ?`,
+			dbms:     DBMSSnowflake,
+		},
+		{
 			input:         "SELECT * FROM \"users table\" where id = 1",
 			expected:      "SELECT * FROM \"users table\" where id = ?",
 			replaceDigits: true,
