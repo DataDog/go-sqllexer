@@ -5,7 +5,7 @@
 ### Bug Fixes
 
 - **Don't treat backslash as a string escape in SQL Server and Oracle** ([#103](https://github.com/DataDog/go-sqllexer/pull/103))
-  SQL Server (T-SQL) and Oracle follow ANSI-SQL string semantics, where backslash is an ordinary character and a quote inside a literal is escaped by doubling it (`''`). The lexer previously treated `\` as an escape character for all dialects, so a literal like `ESCAPE '\'` had its closing quote misread as escaped, causing the scan to swallow the rest of the batch up to the next quote and truncate the obfuscated query. Backslash-escaping is now disabled for SQL Server and Oracle; MySQL and Snowflake, which genuinely use C-style backslash escaping, are unchanged.
+  SQL Server (T-SQL) and Oracle follow ANSI-SQL string semantics, where backslash is an ordinary character and a quote inside a literal is escaped by doubling it (`''`). The lexer previously treated `\` as an escape character for all dialects, so a literal like `ESCAPE '\'` had its closing quote misread as escaped, causing the scan to swallow the rest of the batch up to the next quote and truncate the obfuscated query.
 
 ## v0.2.3
 
