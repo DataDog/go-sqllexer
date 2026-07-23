@@ -414,6 +414,17 @@ multiline comment */
 				Size:       6,
 			},
 		},
+		{
+			input:    "SELECT * FROM eval.no_such_table_eval",
+			expected: "SELECT * FROM eval.no_such_table_eval",
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"eval.no_such_table_eval"},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       29,
+			},
+		},
 	}
 
 	normalizer := NewNormalizer(
