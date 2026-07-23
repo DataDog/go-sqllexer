@@ -1,7 +1,6 @@
 package sqllexer
 
 import (
-	"fmt"
 	"unicode/utf8"
 )
 
@@ -107,7 +106,6 @@ func New(input string, opts ...lexerOption) *Lexer {
 // Scan scans the next token and returns it.
 func (s *Lexer) Scan() *Token {
 	ch := s.peek()
-	fmt.Println("Scanning token at cursor:", ch)
 	switch {
 	case isSpace(ch):
 		return s.scanWhitespace()
