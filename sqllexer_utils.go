@@ -21,12 +21,17 @@ const (
 	DBMSOracle DBMSType = "oracle"
 	// DBMSSnowflake is a Snowflake Server
 	DBMSSnowflake DBMSType = "snowflake"
+	// DBMSCassandra is a Cassandra/CQL Server
+	DBMSCassandra DBMSType = "cassandra"
+	// DBMSCQL is an alias for Cassandra used by some tracers
+	DBMSCQL DBMSType = "cql"
 )
 
 var dbmsAliases = map[DBMSType]DBMSType{
 	DBMSSQLServerAlias1: DBMSSQLServer,
 	DBMSSQLServerAlias2: DBMSSQLServer,
 	DBMSPostgresAlias1:  DBMSPostgres,
+	DBMSCQL:             DBMSCassandra,
 }
 
 func getDBMSFromAlias(alias DBMSType) DBMSType {
@@ -58,6 +63,7 @@ var commands = []string{
 	"USE",
 	"CLONE",
 	"VACUUM",
+	"BATCH", // Cassandra/CQL
 }
 
 var tableIndicatorCommands = []string{
@@ -154,6 +160,18 @@ var keywords = []string{
 	"SKIP",
 	"IF",
 	"ONLY",
+	// Cassandra/CQL
+	"ALLOW",
+	"FILTERING",
+	"KEYSPACE",
+	"TOKEN",
+	"TTL",
+	"WRITETIME",
+	"PARTITION",
+	"COMPACT",
+	"STORAGE",
+	"FROZEN",
+	"STATIC",
 }
 
 var (
@@ -369,6 +387,16 @@ func trimQuotes(token *Token) string {
 // isDigit checks if a rune is a digit (0-9)
 func isDigit(ch rune) bool {
 	return ch >= '0' && ch <= '9'
+}
+
+// isHexDigit checks if a rune is a hexadecimal digit (0-9, a-f, A-F)
+func isHexDigit(ch rune) bool {
+	return isDigit(ch) || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F')
+}
+
+// isHexByte checks if a byte is a hexadecimal digit (0-9, a-f, A-F)
+func isHexByte(b byte) bool {
+	return (b >= '0' && b <= '9') || (b >= 'a' && b <= 'f') || (b >= 'A' && b <= 'F')
 }
 
 // isLeadingDigit checks if a rune is + or -

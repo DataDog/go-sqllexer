@@ -1,0 +1,19 @@
+{
+  "input": "SELECT * FROM users WHERE id = :user_id AND name = ?",
+  "outputs": [
+    {
+      "expected": "SELECT * FROM users WHERE id = :user_id AND name = ?",
+      "statement_metadata": {
+        "size": 11,
+        "tables": [
+          "users"
+        ],
+        "commands": [
+          "SELECT"
+        ],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}

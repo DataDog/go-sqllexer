@@ -1,0 +1,19 @@
+{
+  "input": "INSERT INTO eval.cql_docs (id, name, status) VALUES (550e8400-e29b-41d4-a716-446655440000, 'uuid-user', 'ACTIVE')",
+  "outputs": [
+    {
+      "expected": "INSERT INTO eval.cql_docs ( id, name, status ) VALUES ( ? )",
+      "statement_metadata": {
+        "size": 19,
+        "tables": [
+          "eval.cql_docs"
+        ],
+        "commands": [
+          "INSERT"
+        ],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}

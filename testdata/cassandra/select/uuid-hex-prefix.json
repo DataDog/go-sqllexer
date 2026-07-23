@@ -1,0 +1,19 @@
+{
+  "input": "SELECT * FROM users WHERE id = a50e8400-e29b-41d4-a716-446655440000 ALLOW FILTERING",
+  "outputs": [
+    {
+      "expected": "SELECT * FROM users WHERE id = ? ALLOW FILTERING",
+      "statement_metadata": {
+        "size": 11,
+        "tables": [
+          "users"
+        ],
+        "commands": [
+          "SELECT"
+        ],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}

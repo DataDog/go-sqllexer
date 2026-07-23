@@ -35,6 +35,7 @@ const (
 	PROC_INDICATOR         // procedure indicator
 	CTE_INDICATOR          // CTE indicator
 	ALIAS_INDICATOR        // alias indicator
+	UUID                   // UUID literal (Cassandra/CQL)
 )
 
 // Token represents a SQL token with its type and value.
@@ -109,6 +110,10 @@ func (s *Lexer) Scan() *Token {
 	case isSpace(ch):
 		return s.scanWhitespace()
 	case isLetter(ch):
+		// Cassandra/CQL UUIDs may start with a hex letter (a-f)
+		if s.config.DBMS == DBMSCassandra && isHexDigit(ch) && s.isUUID() {
+			return s.scanUUID()
+		}
 		return s.scanIdentifier(ch)
 	case isDoubleQuote(ch):
 		// MySQL by default (without ANSI_QUOTES mode) treats double quotes as string literals
@@ -131,6 +136,11 @@ func (s *Lexer) Scan() *Token {
 		}
 		return s.scanOperator(ch)
 	case isDigit(ch):
+		// Cassandra/CQL UUID literals must be recognized before number scanning,
+		// otherwise scientific notation (e.g. 550e8400) splits the UUID apart.
+		if s.config.DBMS == DBMSCassandra && s.isUUID() {
+			return s.scanUUID()
+		}
 		return s.scanNumber(ch)
 	case isWildcard(ch):
 		return s.scanWildcard()
@@ -144,7 +154,8 @@ func (s *Lexer) Scan() *Token {
 		}
 		return s.scanDollarQuotedString()
 	case ch == ':':
-		if s.config.DBMS == DBMSOracle && isAlphaNumeric(s.lookAhead(1)) {
+		// Oracle and Cassandra/CQL support named bind parameters (:name)
+		if (s.config.DBMS == DBMSOracle || s.config.DBMS == DBMSCassandra) && isAlphaNumeric(s.lookAhead(1)) {
 			return s.scanBindParameter()
 		}
 		return s.scanOperator(ch)
@@ -614,6 +625,43 @@ func (s *Lexer) scanPositionalParameter() *Token {
 		ch = s.next()
 	}
 	return s.emit(POSITIONAL_PARAMETER)
+}
+
+// uuidGroupLens is the standard UUID group lengths: 8-4-4-4-12 (36 chars with hyphens).
+var uuidGroupLens = [...]int{8, 4, 4, 4, 12}
+
+// isUUID reports whether the input starting at the cursor is a UUID literal
+// of the form xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (hex digits).
+func (s *Lexer) isUUID() bool {
+	pos := s.cursor
+	for i, groupLen := range uuidGroupLens {
+		if i > 0 {
+			if pos >= len(s.src) || s.src[pos] != '-' {
+				return false
+			}
+			pos++
+		}
+		for j := 0; j < groupLen; j++ {
+			if pos >= len(s.src) || !isHexByte(s.src[pos]) {
+				return false
+			}
+			pos++
+		}
+	}
+	// Reject if the UUID is a prefix of a longer identifier/literal
+	if pos < len(s.src) {
+		c := s.src[pos]
+		if isHexByte(c) || c == '-' || c == '_' {
+			return false
+		}
+	}
+	return true
+}
+
+func (s *Lexer) scanUUID() *Token {
+	s.start = s.cursor
+	s.nextBy(36) // UUID literals are always 36 ASCII characters
+	return s.emit(UUID)
 }
 
 func (s *Lexer) scanBindParameter() *Token {

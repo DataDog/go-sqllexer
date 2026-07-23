@@ -1,0 +1,19 @@
+{
+  "input": "INSERT INTO users (id, data, name) VALUES (550e8400-e29b-41d4-a716-446655440000, 0xdeadbeef, 'alice')",
+  "outputs": [
+    {
+      "expected": "INSERT INTO users ( id, data, name ) VALUES ( ? )",
+      "statement_metadata": {
+        "size": 11,
+        "tables": [
+          "users"
+        ],
+        "commands": [
+          "INSERT"
+        ],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}

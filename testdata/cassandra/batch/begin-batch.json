@@ -1,0 +1,22 @@
+{
+  "input": "BEGIN BATCH INSERT INTO users (id, name) VALUES (550e8400-e29b-41d4-a716-446655440000, 'alice'); DELETE FROM users WHERE id = a50e8400-e29b-41d4-a716-446655440000 APPLY BATCH",
+  "outputs": [
+    {
+      "expected": "BEGIN BATCH INSERT INTO users ( id, name ) VALUES ( ? ); DELETE FROM users WHERE id = ? APPLY BATCH",
+      "statement_metadata": {
+        "size": 27,
+        "tables": [
+          "users"
+        ],
+        "commands": [
+          "BEGIN",
+          "BATCH",
+          "INSERT",
+          "DELETE"
+        ],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}
