@@ -1217,9 +1217,9 @@ func TestLexerMySQLQualifiedIdentifiersWithSpaces(t *testing.T) {
 			expectedDigits: true,
 		},
 		{
-			name:          "table before column list",
+			name:          "unquoted name before parentheses",
 			input:         "mydb . table(id)",
-			expectedType:  IDENT,
+			expectedType:  FUNCTION,
 			expectedValue: "mydb.table",
 			expectedNext:  &TokenSpec{Type: PUNCTUATION, Value: "("},
 		},
@@ -1291,6 +1291,23 @@ func TestLexerMySQLAdjacentQuotedRoutineKeepsTokenType(t *testing.T) {
 	}
 	if !token.hasDigits {
 		t.Fatal("expected quoted routine token to retain its digit metadata")
+	}
+}
+
+func TestLexerMySQLQualifiedIdentifierRequiresScannableComponent(t *testing.T) {
+	lexer := New("mydb .߂", WithDBMS(DBMSMySQL))
+	expected := []TokenSpec{
+		{Type: IDENT, Value: "mydb"},
+		{Type: SPACE, Value: " "},
+		{Type: PUNCTUATION, Value: "."},
+		{Type: UNKNOWN, Value: "߂"},
+	}
+
+	for i, want := range expected {
+		got := lexer.Scan()
+		if got.Type != want.Type || got.Value != want.Value {
+			t.Fatalf("token[%d] got %#v, want %#v", i, got, want)
+		}
 	}
 }
 

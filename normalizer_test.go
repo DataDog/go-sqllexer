@@ -1174,6 +1174,23 @@ func TestNormalizeMySQLPerformanceSchemaQualifiedIdentifiers(t *testing.T) {
 	assert.Equal(t, []string{"performance_schema.events_statements_summary_by_digest"}, metadata.Tables)
 }
 
+func TestNormalizeMySQLSpacedQualifiedNameBeforeParentheses(t *testing.T) {
+	normalizer := NewNormalizer(WithRemoveSpaceBetweenParentheses(true))
+	tests := []struct {
+		spaced   string
+		adjacent string
+	}{
+		{spaced: "SELECT mydb . func(1)", adjacent: "SELECT mydb.func(1)"},
+		{spaced: "INSERT INTO mydb . table(id) VALUES (1)", adjacent: "INSERT INTO mydb.table(id) VALUES (1)"},
+	}
+
+	for _, tt := range tests {
+		got, _, err := normalizer.Normalize(tt.spaced, WithDBMS(DBMSMySQL))
+		assert.NoError(t, err)
+		assert.Equal(t, tt.adjacent, got)
+	}
+}
+
 func TestGroupObfuscatedValues(t *testing.T) {
 	tests := []struct {
 		input    string
