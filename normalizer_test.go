@@ -1160,6 +1160,20 @@ func TestNormalizeDeobfuscatedSQL(t *testing.T) {
 	}
 }
 
+func TestNormalizeMySQLPerformanceSchemaQualifiedIdentifiers(t *testing.T) {
+	input := "SELECT `performance_schema` . `events_statements_summary_by_digest` . `DIGEST_TEXT` " +
+		"FROM `performance_schema` . `events_statements_summary_by_digest` " +
+		"WHERE `SCHEMA_NAME` = ?"
+	expected := "SELECT performance_schema.events_statements_summary_by_digest.DIGEST_TEXT " +
+		"FROM performance_schema.events_statements_summary_by_digest WHERE SCHEMA_NAME = ?"
+
+	normalizer := NewNormalizer(WithCollectTables(true))
+	got, metadata, err := normalizer.Normalize(input, WithDBMS(DBMSMySQL))
+	assert.NoError(t, err)
+	assert.Equal(t, expected, got)
+	assert.Equal(t, []string{"performance_schema.events_statements_summary_by_digest"}, metadata.Tables)
+}
+
 func TestGroupObfuscatedValues(t *testing.T) {
 	tests := []struct {
 		input    string
