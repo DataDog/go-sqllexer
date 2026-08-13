@@ -3,6 +3,7 @@ package sqllexer
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -103,5 +104,36 @@ func BenchmarkLexer(b *testing.B) {
 				}
 			}
 		})
+	}
+}
+
+func BenchmarkLexerMySQLQualifiedIdentifier(b *testing.B) {
+	for _, components := range []int{2, 32, 256} {
+		benchmarks := []struct {
+			name  string
+			input string
+		}{
+			{
+				name:  "spaced",
+				input: "t" + strings.Repeat(" . t", components-1),
+			},
+			{
+				name:  "adjacent",
+				input: "t" + strings.Repeat(".t", components-1),
+			},
+		}
+
+		for _, benchmark := range benchmarks {
+			b.Run(benchmark.name+"/"+strconv.Itoa(components), func(b *testing.B) {
+				b.ReportAllocs()
+				for i := 0; i < b.N; i++ {
+					lexer := New(benchmark.input, WithDBMS(DBMSMySQL))
+					token := lexer.Scan()
+					if token.Type != IDENT || len(token.Value) != components*2-1 {
+						b.Fatalf("unexpected token: %#v", token)
+					}
+				}
+			})
+		}
 	}
 }

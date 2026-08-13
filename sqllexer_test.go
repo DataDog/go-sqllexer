@@ -1170,6 +1170,147 @@ here */`,
 	}
 }
 
+func TestLexerMySQLQualifiedIdentifiersWithSpaces(t *testing.T) {
+	tests := []struct {
+		name           string
+		input          string
+		expectedType   TokenType
+		expectedValue  string
+		expectedNext   *TokenSpec
+		expectedDigits bool
+	}{
+		{
+			name:          "unquoted",
+			input:         "mydb . table",
+			expectedType:  IDENT,
+			expectedValue: "mydb.table",
+		},
+		{
+			name:          "quoted and partially quoted",
+			input:         "`mydb` . table . `column`",
+			expectedType:  QUOTED_IDENT,
+			expectedValue: "`mydb`.table.`column`",
+		},
+		{
+			name:          "keyword component",
+			input:         "mydb . select",
+			expectedType:  IDENT,
+			expectedValue: "mydb.select",
+		},
+		{
+			name:          "unicode components",
+			input:         "édb . 表 . column",
+			expectedType:  IDENT,
+			expectedValue: "édb.表.column",
+		},
+		{
+			name:          "space after consumed dot",
+			input:         "mydb. table",
+			expectedType:  IDENT,
+			expectedValue: "mydb.table",
+		},
+		{
+			name:           "digit metadata",
+			input:          "mydb . tenant42",
+			expectedType:   IDENT,
+			expectedValue:  "mydb.tenant42",
+			expectedDigits: true,
+		},
+		{
+			name:          "unquoted name before parentheses",
+			input:         "mydb . table(id)",
+			expectedType:  FUNCTION,
+			expectedValue: "mydb.table",
+			expectedNext:  &TokenSpec{Type: PUNCTUATION, Value: "("},
+		},
+		{
+			name:          "qualified wildcard",
+			input:         "mydb . table . *",
+			expectedType:  IDENT,
+			expectedValue: "mydb.table.",
+			expectedNext:  &TokenSpec{Type: WILDCARD, Value: "*"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lexer := New(tt.input, WithDBMS(DBMSMySQL))
+			token := lexer.Scan()
+			if token.Type != tt.expectedType {
+				t.Fatalf("got token type %v, want %v", token.Type, tt.expectedType)
+			}
+			if token.Value != tt.expectedValue {
+				t.Fatalf("got token value %q, want %q", token.Value, tt.expectedValue)
+			}
+			if token.hasDigits != tt.expectedDigits {
+				t.Fatalf("got hasDigits %v, want %v", token.hasDigits, tt.expectedDigits)
+			}
+
+			if tt.expectedNext == nil {
+				if next := lexer.Scan(); next.Type != EOF {
+					t.Fatalf("got trailing token %#v, want EOF", next)
+				}
+				return
+			}
+
+			next := lexer.Scan()
+			if next.Type != tt.expectedNext.Type || next.Value != tt.expectedNext.Value {
+				t.Fatalf("got next token %#v, want %#v", next, *tt.expectedNext)
+			}
+		})
+	}
+}
+
+func TestLexerQualifiedIdentifierSpacingIsMySQLSpecific(t *testing.T) {
+	lexer := New("mydb . table")
+	expected := []TokenSpec{
+		{Type: IDENT, Value: "mydb"},
+		{Type: SPACE, Value: " "},
+		{Type: PUNCTUATION, Value: "."},
+		{Type: SPACE, Value: " "},
+		{Type: KEYWORD, Value: "table"},
+	}
+
+	for i, want := range expected {
+		got := lexer.Scan()
+		if got.Type != want.Type || got.Value != want.Value {
+			t.Fatalf("token[%d] got %#v, want %#v", i, got, want)
+		}
+	}
+}
+
+func TestLexerMySQLAdjacentQuotedRoutineKeepsTokenType(t *testing.T) {
+	lexer := New("`database`.`func42`()", WithDBMS(DBMSMySQL))
+	token := lexer.Scan()
+
+	if token.Type != QUOTED_IDENT {
+		t.Fatalf("got token type %v, want %v", token.Type, QUOTED_IDENT)
+	}
+	if token.Value != "`database`.`func42`" {
+		t.Fatalf("got token value %q, want %q", token.Value, "`database`.`func42`")
+	}
+	if !token.hasDigits {
+		t.Fatal("expected quoted routine token to retain its digit metadata")
+	}
+}
+
+func TestLexerMySQLQualifiedIdentifierRequiresScannableComponent(t *testing.T) {
+	lexer := New("mydb .߂", WithDBMS(DBMSMySQL))
+	expected := []TokenSpec{
+		{Type: IDENT, Value: "mydb"},
+		{Type: SPACE, Value: " "},
+		{Type: PUNCTUATION, Value: "."},
+		{Type: UNKNOWN, Value: "߂"},
+	}
+
+	for i, want := range expected {
+		got := lexer.Scan()
+		if got.Type != want.Type || got.Value != want.Value {
+			t.Fatalf("token[%d] got %#v, want %#v", i, got, want)
+		}
+	}
+}
+
 func TestLexerIdentifierWithDigits(t *testing.T) {
 	tests := []struct {
 		input          string
