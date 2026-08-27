@@ -1,0 +1,19 @@
+{
+  "input": "SELECT EMP_NO FROM EMPLOYEE WHERE JOB_GRADE IS DISTINCT FROM 5 AND EMP_NO != 100",
+  "outputs": [
+    {
+      "expected": "SELECT EMP_NO FROM EMPLOYEE WHERE JOB_GRADE IS DISTINCT FROM ? AND EMP_NO != ?",
+      "statement_metadata": {
+        "size": 14,
+        "tables": [
+          "EMPLOYEE"
+        ],
+        "commands": [
+          "SELECT"
+        ],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}

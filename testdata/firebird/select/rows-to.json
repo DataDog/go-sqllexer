@@ -1,0 +1,19 @@
+{
+  "input": "SELECT LAST_NAME FROM EMPLOYEE ROWS 5 TO 10",
+  "outputs": [
+    {
+      "expected": "SELECT LAST_NAME FROM EMPLOYEE ROWS ? TO ?",
+      "statement_metadata": {
+        "size": 14,
+        "tables": [
+          "EMPLOYEE"
+        ],
+        "commands": [
+          "SELECT"
+        ],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}

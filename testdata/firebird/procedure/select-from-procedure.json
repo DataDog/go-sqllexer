@@ -1,0 +1,19 @@
+{
+  "input": "SELECT * FROM GET_EMP_PROJ(145) WHERE PROJ_ID = 'VBASE'",
+  "outputs": [
+    {
+      "expected": "SELECT * FROM GET_EMP_PROJ ( ? ) WHERE PROJ_ID = ?",
+      "statement_metadata": {
+        "size": 18,
+        "tables": [
+          "GET_EMP_PROJ"
+        ],
+        "commands": [
+          "SELECT"
+        ],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}

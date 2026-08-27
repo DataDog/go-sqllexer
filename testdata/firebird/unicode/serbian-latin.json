@@ -1,0 +1,19 @@
+{
+  "input": "SELECT FIRST 1 TEKST FROM PORUKE WHERE SADRZAJ = 'Ljubazni fenjerdžija čađavog lica hoće da mi pokaže štos.' AND TEKST LIKE :šablon",
+  "outputs": [
+    {
+      "expected": "SELECT FIRST ? TEKST FROM PORUKE WHERE SADRZAJ = ? AND TEKST LIKE :šablon",
+      "statement_metadata": {
+        "size": 12,
+        "tables": [
+          "PORUKE"
+        ],
+        "commands": [
+          "SELECT"
+        ],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "input": "SELECT \"ИД\", \"ТЕКСТ\" FROM \"ЗАМЕТКИ\" WHERE \"ТЕКСТ\" = 'Съешь еще этих мягких французских булочек' OR \"ТЕКСТ\" LIKE :шаблон",
+  "outputs": [
+    {
+      "expected": "SELECT ИД, ТЕКСТ FROM ЗАМЕТКИ WHERE ТЕКСТ = ? OR ТЕКСТ LIKE :шаблон",
+      "statement_metadata": {
+        "size": 20,
+        "tables": [
+          "ЗАМЕТКИ"
+        ],
+        "commands": [
+          "SELECT"
+        ],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}

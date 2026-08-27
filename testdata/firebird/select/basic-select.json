@@ -1,0 +1,19 @@
+{
+  "input": "SELECT LAST_NAME, FIRST_NAME, SALARY FROM EMPLOYEE WHERE DEPT_NO = '600' ORDER BY LAST_NAME;",
+  "outputs": [
+    {
+      "expected": "SELECT LAST_NAME, FIRST_NAME, SALARY FROM EMPLOYEE WHERE DEPT_NO = ? ORDER BY LAST_NAME",
+      "statement_metadata": {
+        "size": 14,
+        "tables": [
+          "EMPLOYEE"
+        ],
+        "commands": [
+          "SELECT"
+        ],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}

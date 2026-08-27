@@ -135,6 +135,11 @@ func (s *Lexer) Scan() *Token {
 	case isWildcard(ch):
 		return s.scanWildcard()
 	case ch == '$':
+		if s.config.DBMS == DBMSFirebird {
+			// In Firebird, '$' is only valid inside identifiers (e.g. RDB$RELATIONS);
+			// dollar-quoted strings and $n parameters don't exist in this dialect.
+			return s.scanUnknown()
+		}
 		if isDigit(s.lookAhead(1)) {
 			// if the dollar sign is followed by a digit, then it's a numbered parameter
 			return s.scanPositionalParameter()
@@ -144,7 +149,8 @@ func (s *Lexer) Scan() *Token {
 		}
 		return s.scanDollarQuotedString()
 	case ch == ':':
-		if s.config.DBMS == DBMSOracle && isAlphaNumeric(s.lookAhead(1)) {
+		// Oracle and Firebird use :name bind parameters (e.g. WHERE id = :id)
+		if (s.config.DBMS == DBMSOracle || s.config.DBMS == DBMSFirebird) && isAlphaNumeric(s.lookAhead(1)) {
 			return s.scanBindParameter()
 		}
 		return s.scanOperator(ch)
@@ -318,9 +324,9 @@ func (s *Lexer) scanStringWithDelimiter(delimiter rune) *Token {
 	escaped := false
 	escapedQuote := false
 
-	// SQL Server (T-SQL) and Oracle do not use backslash as a string escape
-	// character; a quote inside a literal is escaped by doubling it ('').
-	backslashEscapes := s.config.DBMS != DBMSSQLServer && s.config.DBMS != DBMSOracle
+	// SQL Server (T-SQL), Oracle and Firebird do not use backslash as a string
+	// escape character; a quote inside a literal is escaped by doubling it ('').
+	backslashEscapes := s.config.DBMS != DBMSSQLServer && s.config.DBMS != DBMSOracle && s.config.DBMS != DBMSFirebird
 
 	ch := s.next() // consume opening quote
 
@@ -337,6 +343,12 @@ func (s *Lexer) scanStringWithDelimiter(delimiter rune) *Token {
 		}
 
 		if ch == delimiter {
+			// in dialects without backslash escapes, a doubled quote ('') is a
+			// literal quote inside the string, e.g. 'it''s'
+			if !backslashEscapes && s.lookAhead(1) == delimiter {
+				ch = s.next()
+				continue
+			}
 			s.next() // consume the closing quote
 			return s.emit(STRING)
 		}
@@ -618,12 +630,11 @@ func (s *Lexer) scanPositionalParameter() *Token {
 
 func (s *Lexer) scanBindParameter() *Token {
 	s.start = s.cursor
-	ch := s.nextBy(2) // consume the (colon|at sign) and the char
-	for {
-		if !isAlphaNumeric(ch) {
-			break
-		}
-		ch = s.next()
+	ch := s.next() // consume the leading ':' (or '@')
+	for isAlphaNumeric(ch) {
+		// advance by the full rune length: parameter names may contain
+		// multi-byte letters (e.g. Firebird :größe, Oracle :имя)
+		ch = s.nextBy(utf8.RuneLen(ch))
 	}
 	return s.emit(BIND_PARAMETER)
 }

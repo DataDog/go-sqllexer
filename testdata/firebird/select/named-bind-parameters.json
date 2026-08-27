@@ -1,0 +1,19 @@
+{
+  "input": "SELECT FIRST 10 SKIP 5 LAST_NAME FROM EMPLOYEE WHERE SALARY > :min_salary AND DEPT_NO = :dept_no",
+  "outputs": [
+    {
+      "expected": "SELECT FIRST ? SKIP ? LAST_NAME FROM EMPLOYEE WHERE SALARY > :min_salary AND DEPT_NO = :dept_no",
+      "statement_metadata": {
+        "size": 14,
+        "tables": [
+          "EMPLOYEE"
+        ],
+        "commands": [
+          "SELECT"
+        ],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "input": "SELECT FIRST 5 SKIP 10 LAST_NAME FROM EMPLOYEE ORDER BY LAST_NAME",
+  "outputs": [
+    {
+      "expected": "SELECT FIRST ? SKIP ? LAST_NAME FROM EMPLOYEE ORDER BY LAST_NAME",
+      "statement_metadata": {
+        "size": 14,
+        "tables": [
+          "EMPLOYEE"
+        ],
+        "commands": [
+          "SELECT"
+        ],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "input": "SELECT X'0A', 0x1F, X'414243' FROM RDB$DATABASE",
+  "outputs": [
+    {
+      "expected": "SELECT X ?, ?, X ? FROM RDB$DATABASE",
+      "statement_metadata": {
+        "size": 18,
+        "tables": [
+          "RDB$DATABASE"
+        ],
+        "commands": [
+          "SELECT"
+        ],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}

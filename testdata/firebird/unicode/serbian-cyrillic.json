@@ -1,0 +1,19 @@
+{
+  "input": "DELETE FROM PORUKE WHERE SADRZAJ = 'Џандрљив муж псује кафиће што због њих ђаци лочу!'",
+  "outputs": [
+    {
+      "expected": "DELETE FROM PORUKE WHERE SADRZAJ = ?",
+      "statement_metadata": {
+        "size": 12,
+        "tables": [
+          "PORUKE"
+        ],
+        "commands": [
+          "DELETE"
+        ],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}

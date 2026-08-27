@@ -3,7 +3,7 @@ package sqllexer
 import (
 	"embed"
 	"encoding/json"
-	"path/filepath"
+	"path"
 	"strings"
 	"testing"
 
@@ -39,11 +39,14 @@ func TestQueriesPerDBMS(t *testing.T) {
 		DBMSSQLServer,
 		DBMSMySQL,
 		DBMSSnowflake,
+		DBMSFirebird,
 	}
 
 	for _, dbms := range dbmsTypes {
 		// Get all subdirectories of the testdata folder
-		baseDir := filepath.Join("testdata", string(dbms))
+		// Note: embed.FS always uses forward slashes, so path.Join is used
+		// instead of filepath.Join for portability (e.g. Windows)
+		baseDir := path.Join("testdata", string(dbms))
 		// Get all subdirectories of the testdata folder
 		queryTypes, err := testdata.ReadDir(baseDir)
 		if err != nil {
@@ -51,7 +54,7 @@ func TestQueriesPerDBMS(t *testing.T) {
 		}
 
 		for _, qt := range queryTypes {
-			dirPath := filepath.Join(baseDir, qt.Name())
+			dirPath := path.Join(baseDir, qt.Name())
 			files, err := testdata.ReadDir(dirPath)
 			if err != nil {
 				t.Fatal(err)
@@ -60,7 +63,7 @@ func TestQueriesPerDBMS(t *testing.T) {
 			for _, file := range files {
 				testName := strings.TrimSuffix(file.Name(), ".json")
 				t.Run(testName, func(t *testing.T) {
-					queryPath := filepath.Join(dirPath, file.Name())
+					queryPath := path.Join(dirPath, file.Name())
 
 					testfile, err := testdata.ReadFile(queryPath)
 					if err != nil {

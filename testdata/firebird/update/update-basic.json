@@ -1,0 +1,19 @@
+{
+  "input": "UPDATE EMPLOYEE SET SALARY = SALARY * 1.1, JOB_GRADE = 12 WHERE EMP_NO = 20 AND JOB_COUNTRY = 'USA'",
+  "outputs": [
+    {
+      "expected": "UPDATE EMPLOYEE SET SALARY = SALARY * ?, JOB_GRADE = ? WHERE EMP_NO = ? AND JOB_COUNTRY = ?",
+      "statement_metadata": {
+        "size": 14,
+        "tables": [
+          "EMPLOYEE"
+        ],
+        "commands": [
+          "UPDATE"
+        ],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}
