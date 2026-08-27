@@ -1,0 +1,19 @@
+{
+  "input": "INSERT INTO COUNTRY (COUNTRY, CURRENCY) VALUES ('France', 'Euro') RETURNING COUNTRY",
+  "outputs": [
+    {
+      "expected": "INSERT INTO COUNTRY ( COUNTRY, CURRENCY ) VALUES ( ? ) RETURNING COUNTRY",
+      "statement_metadata": {
+        "size": 13,
+        "tables": [
+          "COUNTRY"
+        ],
+        "commands": [
+          "INSERT"
+        ],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}

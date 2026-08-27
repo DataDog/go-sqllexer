@@ -1,0 +1,44 @@
+{
+  "input": "SELECT \"EMPNO\", \"LAST_NAME\" FROM \"EMPLOYEE\" WHERE \"SALARY\" > 50000",
+  "outputs": [
+    {
+      "expected": "SELECT EMPNO, LAST_NAME FROM EMPLOYEE WHERE SALARY > ?",
+      "statement_metadata": {
+        "size": 14,
+        "tables": [
+          "EMPLOYEE"
+        ],
+        "commands": [
+          "SELECT"
+        ],
+        "comments": [],
+        "procedures": []
+      }
+    },
+    {
+      "expected": "SELECT \"EMPNO\", \"LAST_NAME\" FROM \"EMPLOYEE\" WHERE \"SALARY\" > ?",
+      "statement_metadata": {
+        "size": 14,
+        "tables": [
+          "EMPLOYEE"
+        ],
+        "commands": [
+          "SELECT"
+        ],
+        "comments": [],
+        "procedures": []
+      },
+      "normalizer_config": {
+        "collect_tables": true,
+        "collect_commands": true,
+        "collect_comments": true,
+        "collect_procedure": true,
+        "keep_sql_alias": false,
+        "uppercase_keywords": false,
+        "remove_space_between_parentheses": false,
+        "keep_trailing_semicolon": false,
+        "keep_identifier_quotation": true
+      }
+    }
+  ]
+}

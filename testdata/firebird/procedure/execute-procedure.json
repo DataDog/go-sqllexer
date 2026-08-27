@@ -1,0 +1,19 @@
+{
+  "input": "EXECUTE PROCEDURE GET_EMP_PROJ(145)",
+  "outputs": [
+    {
+      "expected": "EXECUTE PROCEDURE GET_EMP_PROJ ( ? )",
+      "statement_metadata": {
+        "size": 19,
+        "tables": [],
+        "commands": [
+          "EXECUTE"
+        ],
+        "comments": [],
+        "procedures": [
+          "GET_EMP_PROJ"
+        ]
+      }
+    }
+  ]
+}

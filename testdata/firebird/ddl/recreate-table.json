@@ -1,0 +1,19 @@
+{
+  "input": "RECREATE TABLE EMPLOYEE_PROJECT_BACKUP (EMP_NO INTEGER NOT NULL, PROJ_ID VARCHAR(20) NOT NULL)",
+  "outputs": [
+    {
+      "expected": "RECREATE TABLE EMPLOYEE_PROJECT_BACKUP ( EMP_NO INTEGER NOT ?, PROJ_ID VARCHAR ( ? ) NOT ? )",
+      "statement_metadata": {
+        "size": 31,
+        "tables": [
+          "EMPLOYEE_PROJECT_BACKUP"
+        ],
+        "commands": [
+          "RECREATE"
+        ],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}

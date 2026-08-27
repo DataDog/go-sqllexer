@@ -1,0 +1,21 @@
+{
+  "input": "SELECT d.DEPARTMENT, COUNT(e.EMP_NO) AS HEADCOUNT, AVG(e.SALARY) AS AVG_SALARY FROM EMPLOYEE e JOIN DEPARTMENT d ON e.DEPT_NO = d.DEPT_NO GROUP BY d.DEPARTMENT HAVING COUNT(e.EMP_NO) > 2 ORDER BY AVG_SALARY DESC",
+  "outputs": [
+    {
+      "expected": "SELECT d.DEPARTMENT, COUNT ( e.EMP_NO ), AVG ( e.SALARY ) FROM EMPLOYEE e JOIN DEPARTMENT d ON e.DEPT_NO = d.DEPT_NO GROUP BY d.DEPARTMENT HAVING COUNT ( e.EMP_NO ) > ? ORDER BY AVG_SALARY DESC",
+      "statement_metadata": {
+        "size": 28,
+        "tables": [
+          "EMPLOYEE",
+          "DEPARTMENT"
+        ],
+        "commands": [
+          "SELECT",
+          "JOIN"
+        ],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}

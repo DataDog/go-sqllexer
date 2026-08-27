@@ -1,0 +1,19 @@
+{
+  "input": "UPDATE MENSAJES SET TEXTO = 'Benjamín pidió una bebida de kiwi y fresa. Noé, sin vergüenza, la más exquisita champaña del menú.' WHERE ID = 7",
+  "outputs": [
+    {
+      "expected": "UPDATE MENSAJES SET TEXTO = ? WHERE ID = ?",
+      "statement_metadata": {
+        "size": 14,
+        "tables": [
+          "MENSAJES"
+        ],
+        "commands": [
+          "UPDATE"
+        ],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}

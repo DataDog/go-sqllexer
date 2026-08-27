@@ -1,5 +1,30 @@
 # Changelog
 
+## Unreleased
+
+### New Features
+
+- **Add FirebirdSQL support (`firebird` DBMS, alias `firebirdsql`)**
+  The lexer, obfuscator and normalizer now understand Firebird dialect specifics:
+  - Strings follow ANSI semantics: backslash is an ordinary character and a literal quote is escaped by doubling it (`''`), e.g. `'don''t'` lexes as a single string literal.
+  - `:name` tokens are lexed as bind parameters (`WHERE SALARY > :min_salary`), matching Firebird driver conventions (`?` placeholders and `@name` parameters keep working as before).
+  - `$` no longer starts a PostgreSQL-style dollar-quoted string; it is only valid inside identifiers (e.g. `RDB$RELATIONS`, `MY$VAR`), and `$1` is no longer treated as a positional parameter.
+  - Firebird keywords added: `RECREATE` (classified as a command so it shows up in statement metadata), `SUSPEND`, `STARTING`, `CONTAINING`, `SIMILAR`, `SINGULAR` and `LEAVE`.
+  - New `testdata/firebird` suite (selects with `FIRST`/`SKIP`, `ROWS` and `OFFSET`/`FETCH` paging, `CONTAINING`/`STARTING WITH` operators, hex and binary literals, quoted identifiers, `RDB$` system tables, `INSERT ... RETURNING`, `EXECUTE BLOCK`, stored procedures) plus a `testdata/firebird/unicode` suite covering multi-byte string literals, quoted identifiers and bind parameter names in Russian, Serbian (Cyrillic and Latin), Portuguese, Spanish and German. CLI/README updates. See [FIREBIRD.md](FIREBIRD.md) for the full write-up.
+
+### Bug Fixes
+
+- **Fix bind parameter scanning for multi-byte parameter names**
+  `scanBindParameter` advanced one byte per iteration, so a `:` (or `@`) parameter whose name contains multi-byte letters was split mid-rune: Firebird `:größe` / `:šablon` / `:шаблон` (and Oracle `:имя`) produced a truncated `BIND_PARAMETER` followed by garbage tokens. The scanner now advances by `utf8.RuneLen`, matching the existing identifier scanners. ASCII parameter names are unaffected.
+
+- **Complete ANSI string semantics for SQL Server and Oracle** ([#103](https://github.com/DataDog/go-sqllexer/pull/103) follow-up)
+  PR #103 stopped treating backslash as a string escape in T-SQL/Oracle but did not handle doubled quotes: `'don''t'` was still split into two string literals (`? ?` instead of `?`), and dynamic SQL such as `N'... = ''' + @x + ''' ...'` mis-lexed into four placeholders. Dialects without backslash escapes (SQL Server, Oracle, Firebird) now treat `''` inside a literal as an escaped quote. The one affected mssql testdata expectation was updated accordingly.
+
+### Maintenance
+
+- **Use `path.Join` for embedded testdata lookups in `dbms_test.go`**
+  `embed.FS` always uses forward slashes; `filepath.Join` produced backslash paths on Windows, making `TestQueriesPerDBMS` fail on Windows machines.
+
 ## v0.2.4
 
 ### Bug Fixes

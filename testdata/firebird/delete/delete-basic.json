@@ -1,0 +1,19 @@
+{
+  "input": "DELETE FROM EMPLOYEE WHERE EMP_NO = 999;",
+  "outputs": [
+    {
+      "expected": "DELETE FROM EMPLOYEE WHERE EMP_NO = ?",
+      "statement_metadata": {
+        "size": 14,
+        "tables": [
+          "EMPLOYEE"
+        ],
+        "commands": [
+          "DELETE"
+        ],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}
