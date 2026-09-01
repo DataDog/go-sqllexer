@@ -1,0 +1,59 @@
+{
+  "implementation": "rust",
+  "corpus": "harness/corpus/pathological.jsonl",
+  "workers": 1,
+  "duration": "1m0s",
+  "reuse_instances": true,
+  "gomaxprocs": 8,
+  "total_ops": 230528,
+  "ops_per_second": 3839.8279971115444,
+  "bytes_per_second": 143119355.00298932,
+  "classes": [
+    {
+      "class": "W1-short",
+      "ops": 115248,
+      "ops_per_second": 1919.6474918930078,
+      "mean_ns": 797.6898774816049,
+      "p50_ns": 742,
+      "p90_ns": 1236,
+      "p99_ns": 2984,
+      "p999_ns": 5284,
+      "max_ns": 11843
+    },
+    {
+      "class": "W3-large",
+      "ops": 19224,
+      "ops_per_second": 320.20775531159916,
+      "mean_ns": 92581.06699958385,
+      "p50_ns": 91520,
+      "p90_ns": 96192,
+      "p99_ns": 114752,
+      "p999_ns": 152576,
+      "max_ns": 237513
+    },
+    {
+      "class": "W4-pathological",
+      "ops": 96056,
+      "ops_per_second": 1599.9727499069377,
+      "mean_ns": 605451.6433746981,
+      "p50_ns": 164864,
+      "p90_ns": 1640448,
+      "p99_ns": 1820672,
+      "p999_ns": 2046976,
+      "max_ns": 2158085
+    }
+  ],
+  "memory": {
+    "bytes_allocated_total": 4363787280,
+    "bytes_per_op": 18929.532551360357,
+    "allocs_total": 1343154,
+    "allocs_per_op": 5.826424555802332,
+    "alloc_rate_mb_per_second": 69.31891351980956,
+    "num_gc": 297,
+    "gc_pause_total_ms": 5.89563,
+    "gc_cpu_fraction": 0.0002162232104265798,
+    "heap_in_use_peak_mb": 28.6484375,
+    "rss_peak_mb": 34.625,
+    "rss_final_mb": 34.625
+  }
+}
