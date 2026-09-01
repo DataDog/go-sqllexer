@@ -123,6 +123,52 @@ impl Result {
     };
 }
 
+/// The result of one call, packed so a caller that has to own its output can
+/// take it in one copy instead of one per value.
+///
+/// `values` is every metadata value concatenated in list order — tables,
+/// comments, commands, procedures — and `lens` has one entry per value in that
+/// same order, so a caller reconstructs the lists by walking `lens` with a
+/// running offset. Splitting the SQL out of `values` keeps the normalized
+/// output where it already is (the handle's own buffer) instead of copying it
+/// twice.
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct PackedResult {
+    pub sql: Slice,
+    pub values: Slice,
+    pub lens: *const usize,
+    /// Number of values belonging to tables, comments, commands, procedures.
+    pub counts: [usize; 4],
+    pub metadata_size: usize,
+}
+
+impl PackedResult {
+    const EMPTY: PackedResult = PackedResult {
+        sql: Slice::EMPTY,
+        values: Slice::EMPTY,
+        lens: ptr::null(),
+        counts: [0; 4],
+        metadata_size: 0,
+    };
+}
+
+/// The result of one call for callers that need the normalized SQL and the
+/// metadata size, but not the metadata values themselves.
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct SizeResult {
+    pub sql: Slice,
+    pub metadata_size: usize,
+}
+
+impl SizeResult {
+    const EMPTY: SizeResult = SizeResult {
+        sql: Slice::EMPTY,
+        metadata_size: 0,
+    };
+}
+
 /// One token, borrowing the input the caller passed in.
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -156,6 +202,11 @@ pub struct Processor {
     /// Slice descriptors handed back to the caller, kept alive by the handle and
     /// rebuilt in place on every call so no allocation is needed per statement.
     views: Vec<Slice>,
+    /// Metadata values concatenated for [`PackedResult`], and their lengths.
+    /// Both are handle-owned and reused, so packing costs a memcpy of the
+    /// metadata bytes and no allocation once the handle is warm.
+    pack: Vec<u8>,
+    lens: Vec<usize>,
     tokens: Vec<Token>,
     /// Backing store for token values that the lexer had to materialize (the
     /// unescaping paths); the rest borrow the caller's input directly.
@@ -216,6 +267,8 @@ pub extern "C" fn sqllexer_processor_new(
             sql: Vec::with_capacity(1024),
             metadata: StatementMetadata::default(),
             views: Vec::new(),
+            pack: Vec::new(),
+            lens: Vec::new(),
             tokens: Vec::new(),
             token_values: Vec::new(),
         }))
@@ -303,6 +356,149 @@ fn build_result(processor: &mut Processor) -> Result {
         comments: next(lists[1].len()),
         commands: next(lists[2].len()),
         procedures: next(lists[3].len()),
+    }
+}
+
+/// Obfuscates and normalizes one statement, reporting the result packed.
+///
+/// Same computation as [`sqllexer_process`]; only the shape of `out` differs.
+/// It exists for callers that copy the result into their own memory, which is
+/// one copy of `sql` plus one of `values` instead of one copy per value.
+///
+/// # Safety
+/// As [`sqllexer_process`], except that `out` is a [`PackedResult`].
+#[no_mangle]
+pub unsafe extern "C" fn sqllexer_process_packed(
+    processor: *mut Processor,
+    sql: *const u8,
+    sql_len: usize,
+    dbms: u32,
+    out: *mut PackedResult,
+) -> i32 {
+    if out.is_null() {
+        return SQLLEXER_ERR_NULL;
+    }
+    *out = PackedResult::EMPTY;
+    let Some((processor, input)) = args(processor, sql, sql_len) else {
+        return SQLLEXER_ERR_NULL;
+    };
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        processor.normalizer.obfuscate_and_normalize_into(
+            input,
+            &processor.obfuscator,
+            dbms_from_code(dbms),
+            &mut processor.sql,
+            &mut processor.metadata,
+        );
+        build_packed(processor)
+    }));
+    finish(result, out)
+}
+
+/// Normalizes one statement, reporting the result packed.
+///
+/// # Safety
+/// As [`sqllexer_process_packed`].
+#[no_mangle]
+pub unsafe extern "C" fn sqllexer_normalize_packed(
+    processor: *mut Processor,
+    sql: *const u8,
+    sql_len: usize,
+    dbms: u32,
+    out: *mut PackedResult,
+) -> i32 {
+    if out.is_null() {
+        return SQLLEXER_ERR_NULL;
+    }
+    *out = PackedResult::EMPTY;
+    let Some((processor, input)) = args(processor, sql, sql_len) else {
+        return SQLLEXER_ERR_NULL;
+    };
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        processor.normalizer.normalize_into(
+            input,
+            dbms_from_code(dbms),
+            &mut processor.sql,
+            &mut processor.metadata,
+        );
+        build_packed(processor)
+    }));
+    finish(result, out)
+}
+
+/// Obfuscates and normalizes one statement, reporting only the normalized SQL
+/// and the metadata size.
+///
+/// The metadata is still collected — `size` is defined by it — but nothing is
+/// published for the values, so a caller that only reports the size never
+/// materializes the lists.
+///
+/// # Safety
+/// As [`sqllexer_process`], except that `out` is a [`SizeResult`].
+#[no_mangle]
+pub unsafe extern "C" fn sqllexer_process_size(
+    processor: *mut Processor,
+    sql: *const u8,
+    sql_len: usize,
+    dbms: u32,
+    out: *mut SizeResult,
+) -> i32 {
+    if out.is_null() {
+        return SQLLEXER_ERR_NULL;
+    }
+    *out = SizeResult::EMPTY;
+    let Some((processor, input)) = args(processor, sql, sql_len) else {
+        return SQLLEXER_ERR_NULL;
+    };
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        processor.normalizer.obfuscate_and_normalize_into(
+            input,
+            &processor.obfuscator,
+            dbms_from_code(dbms),
+            &mut processor.sql,
+            &mut processor.metadata,
+        );
+        SizeResult {
+            sql: Slice::of(&processor.sql),
+            metadata_size: processor.metadata.size,
+        }
+    }));
+    finish(result, out)
+}
+
+/// Concatenates the metadata values into the handle's pack buffer and describes
+/// them with one length per value. The buffers are reused across calls, so this
+/// is a memcpy of the metadata bytes and no allocation once the handle is warm.
+fn build_packed(processor: &mut Processor) -> PackedResult {
+    let Processor {
+        sql,
+        metadata,
+        pack,
+        lens,
+        ..
+    } = processor;
+    let lists = [
+        metadata.tables.values(),
+        metadata.comments.values(),
+        metadata.commands.values(),
+        metadata.procedures.values(),
+    ];
+    pack.clear();
+    lens.clear();
+    let mut counts = [0usize; 4];
+    for (i, list) in lists.iter().enumerate() {
+        counts[i] = list.len();
+        for value in *list {
+            pack.extend_from_slice(value);
+            lens.push(value.len());
+        }
+    }
+    PackedResult {
+        sql: Slice::of(sql),
+        values: Slice::of(pack),
+        lens: lens.as_ptr(),
+        counts,
+        metadata_size: metadata.size,
     }
 }
 
