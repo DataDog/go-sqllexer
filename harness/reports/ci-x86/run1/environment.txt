@@ -1,0 +1,7 @@
+cores=4
+workers=1 4
+duration=60s warmup=10s
+arch=x86_64 kernel=6.17.0-1022-azure
+go version go1.25.7 linux/amd64
+cargo 1.98.0 (797e8a9bc 2026-08-05)
+rustc 1.98.0 (88d9e12ae 2026-08-18)

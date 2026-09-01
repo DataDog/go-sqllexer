@@ -1,0 +1,59 @@
+{
+  "implementation": "go",
+  "corpus": "/home/runner/work/go-sqllexer/go-sqllexer/harness/corpus/pathological.jsonl",
+  "workers": 8,
+  "duration": "1m0s",
+  "reuse_instances": true,
+  "gomaxprocs": 8,
+  "total_ops": 871936,
+  "ops_per_second": 14504.434635489528,
+  "bytes_per_second": 540707671.6819257,
+  "classes": [
+    {
+      "class": "W1-short",
+      "ops": 435896,
+      "ops_per_second": 7251.019615971061,
+      "mean_ns": 1327.6325522601721,
+      "p50_ns": 1113,
+      "p90_ns": 2041,
+      "p99_ns": 5844,
+      "p999_ns": 12552,
+      "max_ns": 601250
+    },
+    {
+      "class": "W3-large",
+      "ops": 72672,
+      "ops_per_second": 1208.8803235906018,
+      "mean_ns": 187422.01497137826,
+      "p50_ns": 176768,
+      "p90_ns": 181888,
+      "p99_ns": 495872,
+      "p999_ns": 817152,
+      "max_ns": 5198684
+    },
+    {
+      "class": "W4-pathological",
+      "ops": 363368,
+      "ops_per_second": 6044.534695927865,
+      "mean_ns": 1282828.3478567183,
+      "p50_ns": 384512,
+      "p90_ns": 3459072,
+      "p99_ns": 4177920,
+      "p999_ns": 7426048,
+      "max_ns": 14188615
+    }
+  ],
+  "memory": {
+    "bytes_allocated_total": 67388872040,
+    "bytes_per_op": 77286.48896249266,
+    "allocs_total": 7951353,
+    "allocs_per_op": 9.11919338116559,
+    "alloc_rate_mb_per_second": 1069.0658830289437,
+    "num_gc": 2403,
+    "gc_pause_total_ms": 423.110102,
+    "gc_cpu_fraction": 0.006244759582200092,
+    "heap_in_use_peak_mb": 63.296875,
+    "rss_peak_mb": 68.04296875,
+    "rss_final_mb": 45.62890625
+  }
+}
