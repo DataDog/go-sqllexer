@@ -25,23 +25,28 @@ pub struct NormalizerConfig {
 /// Dedup is a linear scan guarded by a stored hash rather than a hash map: these
 /// lists almost always hold a handful of entries, and avoiding the map keeps the
 /// common statement allocation-light.
+///
+/// The value buffers are pooled rather than dropped between statements — `len`
+/// bounds the live prefix — so a reused handle stops allocating once it has seen
+/// its steady-state shape.
 #[derive(Debug, Default, Clone)]
 pub struct MetadataList {
     values: Vec<Vec<u8>>,
     hashes: Vec<u64>,
+    len: usize,
 }
 
 impl MetadataList {
     pub fn values(&self) -> &[Vec<u8>] {
-        &self.values
+        &self.values[..self.len]
     }
 
     pub fn is_empty(&self) -> bool {
-        self.values.is_empty()
+        self.len == 0
     }
 
     fn clear(&mut self) {
-        self.values.clear();
+        self.len = 0;
         self.hashes.clear();
     }
 
@@ -55,7 +60,14 @@ impl MetadataList {
             }
         }
         self.hashes.push(hash);
-        self.values.push(value.to_vec());
+        if self.len == self.values.len() {
+            self.values.push(value.to_vec());
+        } else {
+            let slot = &mut self.values[self.len];
+            slot.clear();
+            slot.extend_from_slice(value);
+        }
+        self.len += 1;
         value.len()
     }
 }

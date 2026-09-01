@@ -7,8 +7,6 @@
 //!
 //!     cargo run --release -p sqllexer-runner < corpus/testdata.jsonl > rust.out.jsonl
 
-mod text;
-
 use std::collections::HashMap;
 use std::io::{self, BufWriter, Read, Write};
 
@@ -18,7 +16,7 @@ use sqllexer::{
     TokenType,
 };
 
-use crate::text::Text;
+use sqllexer_runner::text::Text;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Default)]
 #[serde(default)]

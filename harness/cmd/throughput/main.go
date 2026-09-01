@@ -124,9 +124,18 @@ func main() {
 		warmup     = flag.Duration("warmup", 3*time.Second, "warmup period excluded from the measurements")
 		reuse      = flag.Bool("reuse", true, "reuse one obfuscator/normalizer per worker instead of constructing per call")
 		jsonOut    = flag.String("json", "", "optional path for the JSON report")
-		label      = flag.String("label", "go", "implementation label recorded in the report")
+		label      = flag.String("label", "", "implementation label recorded in the report (defaults to -impl)")
+		impl       = flag.String("impl", "go", "implementation to drive: "+engineNames())
 	)
 	flag.Parse()
+
+	newEngine, ok := engines[*impl]
+	if !ok {
+		log.Fatalf("unknown -impl %q; built with %s (the rust engine needs -tags rustffi)", *impl, engineNames())
+	}
+	if *label == "" {
+		*label = *impl
+	}
 
 	requests, err := corpus.Read(*corpusPath)
 	if err != nil {
@@ -143,7 +152,7 @@ func main() {
 
 	// Warmup lets the allocator and (for the Go side) the GC reach steady state, so
 	// the measured window reflects sustained behavior rather than startup.
-	runLoad(requests, *workers, *warmup, *reuse, nil)
+	runLoad(newEngine, requests, *workers, *warmup, *reuse, nil)
 
 	runtime.GC()
 	var before, after runtime.MemStats
@@ -151,7 +160,7 @@ func main() {
 
 	peakRSS := newRSSSampler()
 	start := time.Now()
-	totalOps := runLoad(requests, *workers, *duration, *reuse, stats)
+	totalOps := runLoad(newEngine, requests, *workers, *duration, *reuse, stats)
 	elapsed := time.Since(start)
 	peakRSS.stop()
 	runtime.ReadMemStats(&after)
@@ -176,7 +185,7 @@ func main() {
 
 // runLoad drives the corpus in a round-robin across workers until the deadline.
 // Passing nil stats runs the load without recording (used for warmup).
-func runLoad(requests []protocol.Request, workers int, duration time.Duration, reuse bool, stats map[string]*classStats) int64 {
+func runLoad(newEngine func(bool) engine, requests []protocol.Request, workers int, duration time.Duration, reuse bool, stats map[string]*classStats) int64 {
 	var ops int64
 	deadline := time.Now().Add(duration)
 
@@ -186,11 +195,8 @@ func runLoad(requests []protocol.Request, workers int, duration time.Duration, r
 		go func(worker int) {
 			defer wg.Done()
 
-			var obfuscator *sqllexer.Obfuscator
-			var normalizer *sqllexer.Normalizer
-			if reuse {
-				obfuscator, normalizer = defaultObfuscator(), defaultNormalizer()
-			}
+			eng := newEngine(reuse)
+			defer eng.close()
 
 			// Workers start at different offsets so they do not march through the
 			// corpus in lockstep and share cache lines on the same input.
@@ -205,17 +211,11 @@ func runLoad(requests []protocol.Request, workers int, duration time.Duration, r
 					req := requests[i%len(requests)]
 					i++
 
-					o, nrm := obfuscator, normalizer
-					if !reuse {
-						o, nrm = defaultObfuscator(), defaultNormalizer()
-					}
-
 					var started time.Time
 					if stats != nil {
 						started = time.Now()
 					}
-					_, _, err := sqllexer.ObfuscateAndNormalize(string(req.SQL), o, nrm, sqllexer.WithDBMS(sqllexer.DBMSType(req.DBMS)))
-					if err != nil {
+					if _, err := eng.process(string(req.SQL), sqllexer.DBMSType(req.DBMS)); err != nil {
 						continue
 					}
 					if stats != nil {
@@ -228,22 +228,6 @@ func runLoad(requests []protocol.Request, workers int, duration time.Duration, r
 	}
 	wg.Wait()
 	return atomic.LoadInt64(&ops)
-}
-
-func defaultObfuscator() *sqllexer.Obfuscator {
-	return sqllexer.NewObfuscator(
-		sqllexer.WithReplaceDigits(true),
-		sqllexer.WithReplaceBoolean(true),
-		sqllexer.WithReplaceNull(true),
-	)
-}
-
-func defaultNormalizer() *sqllexer.Normalizer {
-	return sqllexer.NewNormalizer(
-		sqllexer.WithCollectTables(true),
-		sqllexer.WithCollectCommands(true),
-		sqllexer.WithCollectComments(true),
-	)
 }
 
 func buildReport(
