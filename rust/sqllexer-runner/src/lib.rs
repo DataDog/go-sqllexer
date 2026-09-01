@@ -2,4 +2,5 @@
 //! protocol runner and the corpus reader used by the benchmark driver.
 
 pub mod corpus;
+pub mod histogram;
 pub mod text;

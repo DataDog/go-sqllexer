@@ -18,13 +18,13 @@ import (
 	"log"
 	"os"
 	"runtime"
-	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/DataDog/go-sqllexer"
 	"github.com/DataDog/go-sqllexer/harness/internal/corpus"
+	"github.com/DataDog/go-sqllexer/harness/internal/latency"
 	"github.com/DataDog/go-sqllexer/harness/internal/protocol"
 )
 
@@ -53,21 +53,30 @@ func classify(size int) string {
 	return classes[len(classes)-1].name
 }
 
-// classStats accumulates latencies for one workload class. Latencies are kept in
-// full (not bucketed) so percentiles are exact; at ~1M ops that is a few MB.
+// classStats accumulates latencies for one workload class in a fixed-size
+// histogram. Workers record into their own copy and merge at the end, so the
+// measured path takes no lock and the harness's own memory does not grow with the
+// number of operations (which would distort exactly the RSS numbers being
+// compared).
 type classStats struct {
 	mu        sync.Mutex
-	latencies []time.Duration
+	histogram latency.Histogram
 	bytes     int64
 	ops       int64
 }
 
-func (s *classStats) add(d time.Duration, size int) {
+func (s *classStats) merge(other *classStats) {
 	s.mu.Lock()
-	s.latencies = append(s.latencies, d)
+	s.histogram.Merge(&other.histogram)
+	s.bytes += other.bytes
+	s.ops += other.ops
+	s.mu.Unlock()
+}
+
+func (s *classStats) add(d time.Duration, size int) {
+	s.histogram.Add(uint64(d.Nanoseconds()))
 	s.bytes += int64(size)
 	s.ops++
-	s.mu.Unlock()
 }
 
 // Report is the machine-readable output, written with -json so runs can be diffed
@@ -198,6 +207,20 @@ func runLoad(newEngine func(bool) engine, requests []protocol.Request, workers i
 			eng := newEngine(reuse)
 			defer eng.close()
 
+			// Per-worker stats, merged once at the end.
+			var local map[string]*classStats
+			if stats != nil {
+				local = map[string]*classStats{}
+				for name := range stats {
+					local[name] = &classStats{}
+				}
+				defer func() {
+					for name, s := range local {
+						stats[name].merge(s)
+					}
+				}()
+			}
+
 			// Workers start at different offsets so they do not march through the
 			// corpus in lockstep and share cache lines on the same input.
 			i := worker * len(requests) / workers
@@ -219,7 +242,7 @@ func runLoad(newEngine func(bool) engine, requests []protocol.Request, workers i
 						continue
 					}
 					if stats != nil {
-						stats[classify(len(req.SQL))].add(time.Since(started), len(req.SQL))
+						local[classify(len(req.SQL))].add(time.Since(started), len(req.SQL))
 						atomic.AddInt64(&ops, 1)
 					}
 				}
@@ -254,22 +277,16 @@ func buildReport(
 			continue
 		}
 		totalBytes += s.bytes
-		sort.Slice(s.latencies, func(i, j int) bool { return s.latencies[i] < s.latencies[j] })
-
-		var sum time.Duration
-		for _, d := range s.latencies {
-			sum += d
-		}
 		report.Classes = append(report.Classes, ClassReport{
 			Class:        c.name,
 			Ops:          s.ops,
 			OpsPerSecond: float64(s.ops) / seconds,
-			MeanNs:       float64(sum.Nanoseconds()) / float64(s.ops),
-			P50Ns:        percentile(s.latencies, 0.50),
-			P90Ns:        percentile(s.latencies, 0.90),
-			P99Ns:        percentile(s.latencies, 0.99),
-			P999Ns:       percentile(s.latencies, 0.999),
-			MaxNs:        s.latencies[len(s.latencies)-1].Nanoseconds(),
+			MeanNs:       s.histogram.Mean(),
+			P50Ns:        int64(s.histogram.Quantile(0.50)),
+			P90Ns:        int64(s.histogram.Quantile(0.90)),
+			P99Ns:        int64(s.histogram.Quantile(0.99)),
+			P999Ns:       int64(s.histogram.Quantile(0.999)),
+			MaxNs:        int64(s.histogram.Max()),
 		})
 	}
 	report.BytesPerSecond = float64(totalBytes) / seconds
@@ -309,14 +326,6 @@ func printReport(r Report) {
 	fmt.Printf("\nallocation      %.0f B/op, %.1f allocs/op, %.1f MB/s allocated\n", m.BytesPerOp, m.AllocsPerOp, m.AllocRateMBPerSecond)
 	fmt.Printf("gc              %d cycles, %.1f ms total pause, %.2f%% of CPU\n", m.NumGC, m.GCPauseTotalMs, m.GCCPUFraction*100)
 	fmt.Printf("memory          heap peak %.1f MB, RSS peak %.1f MB, RSS final %.1f MB\n", m.HeapInUsePeakMB, m.RSSPeakMB, m.RSSFinalMB)
-}
-
-func percentile(sorted []time.Duration, p float64) int64 {
-	if len(sorted) == 0 {
-		return 0
-	}
-	i := int(float64(len(sorted)-1) * p)
-	return sorted[i].Nanoseconds()
 }
 
 func safeDiv(a, b float64) float64 {

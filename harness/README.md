@@ -35,7 +35,10 @@ Two details of the wire format are load-bearing:
 | `harness/cmd/corpusgen` | Builds the shared corpora from testdata, benchmark literals, generated pathological inputs, a sampled config matrix, and an optional Go fuzz corpus |
 | `harness/cmd/gorunner` | The Go reference implementation of the protocol |
 | `harness/cmd/differ` | Runs a corpus through two implementations and reports every difference |
-| `harness/cmd/throughput` | Tier-4 sustained load: throughput, tail latency, allocation rate, GC pressure, RSS |
+| `harness/cmd/ffirunner` | The same protocol backed by the Rust core through cgo, so the binding is validated as just another runner (`-tags rustffi`) |
+| `harness/cmd/throughput` | Sustained load: throughput, tail latency, allocation rate, GC pressure, RSS. `-impl go` or `-impl rust` (the latter needs `-tags rustffi`) |
+| `rust/sqllexer-runner --bin bench` | The same load driver for the Rust core with no FFI in the path |
+| `harness/rustffi` | The cgo binding itself, plus `FuzzParity`, which runs Go and Rust against the same input in one process |
 
 ## Usage
 
@@ -79,6 +82,18 @@ go run ./harness/cmd/throughput \
 
 `-reuse=false` constructs the obfuscator and normalizer per call instead of once per
 worker. The gap between the two runs is the cost the FFI object model has to avoid.
+
+All three engines at once, into [`reports/`](reports/README.md):
+
+```sh
+harness/reports/run.sh
+```
+
+Runs are sequential by construction: two load drivers on one host measure each
+other. Latency percentiles come from a fixed-size histogram shared by both drivers
+(`internal/latency`, mirrored in `rust/sqllexer-runner/src/histogram.rs`) so the
+harness's own memory does not grow with the number of operations completed — which
+would otherwise make the faster engine look like the hungrier one.
 
 ## What a candidate has to satisfy
 
