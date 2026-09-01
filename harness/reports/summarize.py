@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Aggregates the JSON reports of one environment into comparison tables.
 
-    python3 harness/reports/summarize.py harness/reports/x86-dedicated
+    python3 harness/reports/summarize.py harness/reports/ci-arm
 
-Prints, per corpus and worker count, the three engines side by side with the
-run-to-run spread across the run*/ subdirectories, which is the number that says
-whether a gate can be enforced on that hardware at all.
+Prints, per corpus and worker count, Go and Rust side by side with the run-to-run
+spread across the run*/ subdirectories, which is the number that says whether a
+gate can be enforced on that hardware at all.
 """
 
 import json
@@ -13,9 +13,8 @@ import statistics
 import sys
 from pathlib import Path
 
-ENGINES = ["go", "rust", "rust-native"]
+ENGINES = ["go", "rust"]
 CORPORA = ["workloads", "pathological"]
-WORKERS = [1, 8]
 
 
 def load(root: Path):
@@ -46,9 +45,11 @@ def classes(reports):
 
 def main(root: Path):
     runs = load(root)
+    # Worker counts come from the reports: they follow the host's core count.
+    workers_seen = sorted({key[1] for key in runs})
     print(f"# {root.name}  ({len(list(root.glob('run*')))} runs)\n")
     for corpus in CORPORA:
-        for workers in WORKERS:
+        for workers in workers_seen:
             rows = []
             base = None
             for engine in ENGINES:

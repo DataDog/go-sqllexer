@@ -1,9 +1,16 @@
-name: Harness throughput matrix
+name: Harness parity and throughput
 
-# Cross-platform performance evidence for the Rust migration harness. The ratios in
-# harness/ACCEPTANCE.md section C were measured on a single x86_64 cloud VM; this
-# workflow re-measures them on the dedicated arm-8core-linux runner (the agreed
-# arbiter) and, informationally, on a shared ubuntu-latest runner.
+# Evidence for the Rust rewrite: the Go implementation and the Rust one, measured
+# against each other on the same host, on both architectures. Neither arch is
+# "informational" — a rewrite that only wins on one of them is not a rewrite we can
+# ship, so both jobs produce gate-quality numbers and the report keeps them apart.
+#
+# Fairness is by construction rather than by convention:
+#   - Go and Rust always run back to back on the same runner, same corpus, same
+#     duration, so only the ratio is compared across hosts. Absolute ops/s between
+#     an 8-core ARM box and a 4-vCPU x86 one means nothing.
+#   - Worker counts come from the host's core count (see harness/reports/run.sh),
+#     so neither host is oversubscribed while the other is merely saturated.
 #
 # It never touches the library build: everything lives under harness/ and rust/.
 
@@ -24,18 +31,28 @@ on:
         default: "3"
   push:
     branches:
-      - "devin/**-cross-platform-perf"
+      - "devin/**-rust-migration-harness"
 
 concurrency:
   group: harness-throughput-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  arm:
-    name: arm-8core-linux (dedicated)
-    runs-on:
-      group: ARM LINUX SHARED
-      labels: arm-8core-linux
+  matrix:
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: arm-8core-linux
+            key: ci-arm
+            runs-on:
+              group: ARM LINUX SHARED
+              labels: arm-8core-linux
+          - name: ubuntu-latest (x86_64)
+            key: ci-x86
+            runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runs-on }}
     timeout-minutes: 180
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
@@ -62,61 +79,25 @@ jobs:
       - name: Build Rust workspace
         run: cargo build --release --workspace
         working-directory: rust
-      - name: Generate corpora
-        run: go run ./harness/cmd/corpusgen -out harness/corpus
-      - name: Sanity check the cgo binding on this architecture
-        run: |
-          go vet -tags rustffi ./harness/...
-          go test -a -tags rustffi -count=1 ./harness/...
-      - name: Run the report matrix
-        env:
-          DURATION: ${{ github.event.inputs.duration || '60s' }}
-          WARMUP: ${{ github.event.inputs.warmup || '10s' }}
-          REPEATS: ${{ github.event.inputs.repeats || '3' }}
-        run: |
-          for i in $(seq 1 "$REPEATS"); do
-            OUT="harness/reports/ci-arm/run$i" harness/reports/run.sh
-          done
-      - name: Upload reports
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: reports-ci-arm
-          path: harness/reports/ci-arm
-
-  x86:
-    # Informational only: ubuntu-latest is a shared 4-vCPU runner, so absolute
-    # throughput and tail latency there are noise-dominated. It is here as a
-    # second architecture-independent data point for the Rust/Go ratios.
-    name: ubuntu-latest (shared, informational)
-    runs-on: ubuntu-latest
-    timeout-minutes: 180
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-      - name: Setup Go
-        uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
-        with:
-          go-version: '1.25.7'
-      - name: Install Rust
-        run: |
-          if ! command -v cargo >/dev/null 2>&1; then
-            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
-              | sh -s -- -y --default-toolchain stable --profile minimal
-          fi
-          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
-      - name: Environment
-        run: |
-          go version
-          cargo --version && rustc --version --verbose
-          uname -a
-          nproc
-          getconf PAGESIZE
-          lscpu || cat /proc/cpuinfo
-          free -g || true
-      - name: Build Rust workspace
-        run: cargo build --release --workspace
+      - name: Rust unit tests
+        run: cargo test --workspace
         working-directory: rust
       - name: Generate corpora
         run: go run ./harness/cmd/corpusgen -out harness/corpus
+      # Parity is architecture-dependent in principle (endianness, char signedness,
+      # float formatting), so it is re-proven on each runner rather than assumed
+      # from the x86 developer machine.
+      - name: Differential parity against the Go oracle
+        run: |
+          go build -o /tmp/gorunner ./harness/cmd/gorunner
+          for corpus in harness/corpus/*.jsonl; do
+            echo "== $corpus"
+            go run ./harness/cmd/differ \
+              -corpus "$corpus" \
+              -reference /tmp/gorunner \
+              -candidate rust/target/release/sqllexer-runner \
+              -report "/tmp/mismatches-$(basename "$corpus")"
+          done
       - name: Run the report matrix
         env:
           DURATION: ${{ github.event.inputs.duration || '60s' }}
@@ -124,10 +105,12 @@ jobs:
           REPEATS: ${{ github.event.inputs.repeats || '3' }}
         run: |
           for i in $(seq 1 "$REPEATS"); do
-            OUT="harness/reports/ci-x86/run$i" harness/reports/run.sh
+            OUT="harness/reports/${{ matrix.key }}/run$i" harness/reports/run.sh
           done
+      - name: Summarize
+        run: python3 harness/reports/summarize.py "harness/reports/${{ matrix.key }}" | tee "$GITHUB_STEP_SUMMARY"
       - name: Upload reports
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: reports-ci-x86
-          path: harness/reports/ci-x86
+          name: reports-${{ matrix.key }}
+          path: harness/reports/${{ matrix.key }}

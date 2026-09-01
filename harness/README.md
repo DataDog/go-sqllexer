@@ -1,8 +1,13 @@
 # Migration validation harness
 
-Tooling to decide, with evidence, whether an alternative implementation of the
-lexer/obfuscator/normalizer (initially a Rust rewrite consumed through cgo) is a
-safe replacement for the Go one.
+Tooling to decide, with evidence, whether the Rust rewrite of the
+lexer/obfuscator/normalizer is a faithful and faster equivalent of the Go one.
+
+The two implementations are compared as **parallel implementations**: same inputs,
+same outputs, same measurements, no binding between them. How the Rust core would
+eventually be consumed from Go (cgo or otherwise) is a separate decision and is
+deliberately not in scope here — it would put integration overhead inside every
+number on this page.
 
 Nothing here is part of the library: `harness/` is additive, the existing tests and
 `testdata/` are never modified, and the Go implementation is the oracle every
@@ -14,8 +19,7 @@ Every implementation under validation exposes the same interface: a binary that
 reads [`protocol.Request`](internal/protocol/protocol.go) objects as
 newline-delimited JSON on stdin and writes one `protocol.Response` per line to
 stdout. That is the entire coupling between the harness and an implementation, so
-the Rust core needs no Go bindings to be validated, and the FFI layer can be
-validated separately as just another runner.
+the Rust core needs no Go bindings to be validated.
 
 Two details of the wire format are load-bearing:
 
@@ -35,10 +39,9 @@ Two details of the wire format are load-bearing:
 | `harness/cmd/corpusgen` | Builds the shared corpora from testdata, benchmark literals, generated pathological inputs, a sampled config matrix, and an optional Go fuzz corpus |
 | `harness/cmd/gorunner` | The Go reference implementation of the protocol |
 | `harness/cmd/differ` | Runs a corpus through two implementations and reports every difference |
-| `harness/cmd/ffirunner` | The same protocol backed by the Rust core through cgo, so the binding is validated as just another runner (`-tags rustffi`) |
-| `harness/cmd/throughput` | Sustained load: throughput, tail latency, allocation rate, GC pressure, RSS. `-impl go` or `-impl rust` (the latter needs `-tags rustffi`) |
-| `rust/sqllexer-runner --bin bench` | The same load driver for the Rust core with no FFI in the path |
-| `harness/rustffi` | The cgo binding itself, plus `FuzzParity`, which runs Go and Rust against the same input in one process |
+| `harness/cmd/gorunner` (`FuzzParity`) | Continuous differential fuzzing: the Go oracle in-process against the Rust runner over the protocol |
+| `harness/cmd/throughput` | Sustained load for the Go implementation: throughput, tail latency, allocation rate, GC pressure, RSS |
+| `rust/sqllexer-runner --bin bench` | The same load driver, same report format, for the Rust implementation |
 
 ## Usage
 
@@ -69,19 +72,18 @@ go run ./harness/cmd/differ \
   -report /tmp/mismatches.jsonl
 ```
 
-Anything built with `-tags rustffi` must be built with `go build -a`. Go's build
-cache keys on source content, so rebuilding `libsqllexer_ffi.a` alone is a cache hit
-and the binary silently keeps linking the previous Rust code:
+Fuzz the two implementations against each other continuously. The Rust runner is
+spawned once and answers over a pipe, so this needs the release binary built:
 
 ```sh
 (cd rust && cargo build --release)
-go build -a -tags rustffi -o /tmp/ffirunner ./harness/cmd/ffirunner
+go test -run xxx -fuzz FuzzParity -fuzztime 10m ./harness/cmd/gorunner/
 ```
 
 Measure sustained load. Reporting is split by workload class (short, medium, large,
-pathological) because short statements are dominated by per-call overhead — the
-place where cgo is most likely to erase a win — while large ones are dominated by
-scanning throughput:
+pathological) because short statements are dominated by per-statement setup while
+large ones are dominated by scanning throughput, and the two classes do not move
+together:
 
 ```sh
 go run ./harness/cmd/throughput \
@@ -90,16 +92,19 @@ go run ./harness/cmd/throughput \
 ```
 
 `-reuse=false` constructs the obfuscator and normalizer per call instead of once per
-worker. The gap between the two runs is the cost the FFI object model has to avoid.
+worker, which is the cost of not holding them.
 
-All three engines at once, into [`reports/`](reports/README.md):
+Both implementations, back to back on one host, into [`reports/`](reports/README.md):
 
 ```sh
 harness/reports/run.sh
 ```
 
 Runs are sequential by construction: two load drivers on one host measure each
-other. Latency percentiles come from a fixed-size histogram shared by both drivers
+other. Worker counts default to 1 and the host's core count, so a 4-vCPU runner is
+never asked to run 8 workers while an 8-core one runs the same 8 — comparing an
+oversubscribed host with a saturated one measures the scheduler, not the library.
+Latency percentiles come from a fixed-size histogram shared by both drivers
 (`internal/latency`, mirrored in `rust/sqllexer-runner/src/histogram.rs`) so the
 harness's own memory does not grow with the number of operations completed — which
 would otherwise make the faster engine look like the hungrier one.
@@ -108,4 +113,5 @@ would otherwise make the faster engine look like the hungrier one.
 
 See [ACCEPTANCE.md](ACCEPTANCE.md) for the full criteria. In short: zero mismatches
 on every corpus, no panics or sanitizer findings, and performance gates that are
-ratified from measured baselines rather than assumed up front.
+ratified from measured baselines rather than assumed up front, on both
+architectures rather than one.

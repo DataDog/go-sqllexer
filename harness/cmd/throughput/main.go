@@ -140,7 +140,7 @@ func main() {
 
 	newEngine, ok := engines[*impl]
 	if !ok {
-		log.Fatalf("unknown -impl %q; built with %s (the rust engine needs -tags rustffi)", *impl, engineNames())
+		log.Fatalf("unknown -impl %q; known implementations are %s", *impl, engineNames())
 	}
 	if *label == "" {
 		*label = *impl

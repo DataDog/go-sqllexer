@@ -1,9 +1,0 @@
-$ bash -c cd rust && cargo build --release
-    Finished `release` profile [optimized] target(s) in 0.01s
-[exit 0]
-$ go build -a -tags rustffi -o harness/sanitizers/.work-39506/ffirunner ./harness/cmd/ffirunner
-[exit 0]
-$ go build -o harness/sanitizers/.work-39506/gorunner ./harness/cmd/gorunner
-[exit 0]
-$ go build -a -tags rustffi -o harness/sanitizers/.work-39506/throughput ./harness/cmd/throughput
-[exit 0]

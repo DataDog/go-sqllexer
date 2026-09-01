@@ -1,11 +1,17 @@
 # Acceptance criteria for the Rust rewrite
 
-What the Rust implementation has to prove before it can replace the Go core, and
-how each item is measured. Everything here is checkable from the shell; nothing
-depends on judgement about whether the port "looks" faithful.
+What the Rust implementation has to prove before it can be considered a faithful,
+faster equivalent of the Go core, and how each item is measured. Everything here is
+checkable from the shell; nothing depends on judgement about whether the port
+"looks" faithful.
 
 The Go implementation is the oracle. Existing tests and `testdata/` are frozen: a
 disagreement is a bug in the port, never a reason to edit a fixture.
+
+**Scope.** The two implementations are validated as parallel implementations of the
+same specification. Consuming the Rust core *from* Go — cgo, a binding, a shared
+library — is explicitly a later phase, so no criterion here includes integration
+overhead. See [section D](#d-what-is-explicitly-out-of-scope).
 
 ## A. Correctness
 
@@ -17,8 +23,8 @@ disagreement is a bug in the port, never a reason to edit a fixture.
 | A4 | Same error / no-error outcome | compared per request by the differ | met |
 | A5 | Arbitrary bytes accepted, including invalid UTF-8, with byte-exact output | corpora carry non-UTF-8 through the `{"b64": …}` encoding | met — `pathological.jsonl`, `fuzzseeds.jsonl` |
 | A6 | Truncated and malformed input (unterminated strings, comments, identifiers, dollar-quoted bodies) behaves identically | `pathological.jsonl` | met — 0 mismatches over 288 requests |
-| A7 | No divergence under continuous differential fuzzing | `FuzzParity` runs both implementations in one process | met — 84.3M executions, 0 divergences |
-| A8 | The cgo binding agrees with the pure Rust core and with Go, in all four modes | `ffirunner` (tokenize, obfuscate, normalize, obfuscate+normalize all routed through cgo) diffed against `gorunner` over every corpus | met — 0 mismatches over 21,590 requests, re-run after the zero-copy binding and the concurrency guard landed |
+| A7 | No divergence under continuous differential fuzzing | `FuzzParity` answers each generated input from the Go oracle in-process and from the Rust runner over the protocol | met — 2.6M executions locally, plus the CI runs |
+| A8 | Parity holds on both architectures | every corpus is re-diffed on the ARM and x86 runners before their benchmark matrices | met — `.github/workflows/harness-throughput.yml` |
 | A9 | The frozen Go suite still passes unmodified | `go test ./...` | met |
 
 Corpora used (regenerate with `harness/cmd/corpusgen`):
@@ -31,101 +37,74 @@ Corpora used (regenerate with `harness/cmd/corpusgen`):
 | `matrix.jsonl` | 20,000 | Seeded sample of 2^7 obfuscator × 2^9 normalizer × 6 DBMS × 4 modes |
 | `fuzzseeds.jsonl` | 662 | Inputs imported from the Go fuzz corpus |
 
+Keyword parity is checked separately and exactly: `harness/keywordparity` compares
+every table the port had to transcribe (21 commands, 78 keywords, the table
+indicators, booleans, nulls, procedures, CTE and alias indicators) against the Go
+source, so a table can never drift silently between the two.
+
 ## B. Safety
 
 | # | Criterion | How it is checked | Status |
 | --- | --- | --- | --- |
-| B1 | No Rust panic may unwind into the Go runtime | every FFI entry point wraps its body in `catch_unwind` and returns a status code | met |
-| B2 | No use of a handle after free, and no result read after it is invalidated | results are copied into Go memory before returning; `TestResultsSurviveSubsequentCalls` pins this | met |
-| B3 | Null and closed-handle arguments are rejected, not dereferenced | `TestClosedProcessorReportsAnError`, FFI unit tests | met |
-| B4 | No leaks or undefined behavior under sanitizers | `cargo test` under ASan/LSan, Miri, and a real `ffirunner` under valgrind against a pure-Go baseline — [`sanitizers/README.md`](sanitizers/README.md) | met, x86_64 only — see below |
-| B5 | Clippy clean, `cargo fmt` clean, `go vet` clean with and without the `rustffi` tag | CI-equivalent commands | met |
-| B6 | Overlapping calls on one handle are rejected, not silently corrupted | `misuse_test.go`, and the recorded pre-fix run in `sanitizers/logs/misuse-guard-regression.log` | met — `ErrConcurrentUse` |
+| B1 | No undefined behavior in the Rust core | `cargo +nightly miri test -p sqllexer` over the parity suite | met — 18 tests, clean |
+| B2 | No panic on any input the library accepts, including malformed and non-UTF-8 | every corpus and the fuzzer would surface a panic as a runner crash | met |
+| B3 | The library crate contains no `unsafe` | `rg unsafe rust/sqllexer` | met — the only `unsafe` in the workspace is the benchmark driver's allocation counter and its `sysconf` call, neither of which is library code |
+| B4 | Clippy clean, `cargo fmt` clean, `go vet` clean | CI-equivalent commands | met |
 
-B4 in full: the Rust FFI surface is clean under AddressSanitizer + LeakSanitizer
-(`-Zbuild-std`) across a stress suite covering all four entry points, invalid UTF-8
-and pathological inputs, and clean under Miri for the pure crate and the Rust-side
-ABI functions. A real cgo binary under valgrind memcheck over 3,367 statements
-reports 0 bytes definitely or indirectly lost and 17,205 of 17,209 allocations
-freed; what stays live is the process-lifetime keyword trie and glibc TLS for cgo
-threads. 928M operations of sustained load leave RSS flat at 22.4–23.4 MB.
-Detection was validated with deliberate use-after-free, leak and aliasing controls,
-each of which fails the run as expected.
-
-What B4 does **not** cover: no tool instruments both runtimes across the crossing
-(Go's runtime and ASan fight over signal handling and stack switching), valgrind
-cannot see Go's heap at all, Miri never crosses the C ABI, the runs are x86_64 and
-debug-build only, and `Close()` racing an in-flight call remains unsupported and
-undetected.
-
-B6 came out of that audit: overlapping calls on a single handle used to return
-another statement's output (27,091 corrupted of 4,677,918 calls in the recorded
-log). A handle is still one-per-worker by contract — the guard turns the misuse
-into an error instead of undefined behavior, it does not make sharing supported.
+There is no C ABI to audit any more: with the cgo binding out of scope, the Rust
+side is a plain safe-Rust crate and the harness talks to it over a pipe. The
+sanitizer/valgrind audit of the previous FFI boundary was removed along with the
+binding; it is in the branch history if the integration phase revives it, and its
+one real finding (a shared handle used from two goroutines corrupting results) was
+a property of that binding, not of the core.
 
 ## C. Performance
 
 Gates were deliberately not fixed before there was data. They are ratified from the
 measured baseline in [`reports/`](reports/README.md) and are expressed as ratios
-against the Go implementation on the same corpus, same worker count, same host.
+against the Go implementation **on the same host, same corpus, same worker count,
+same run**. Absolute throughput is not comparable across machines; the ratio is.
 
-The arbiter is the `arm-8core-linux` runner. Every gate below was re-measured there,
-on a second dedicated x86_64 host, and on `ubuntu-latest` (informational), three
-full 60s runs each — [`reports/CROSS-PLATFORM.md`](reports/CROSS-PLATFORM.md).
-ARM numbers decide; x86 is corroboration.
+Both architectures count. A gate holds only if it holds on ARM *and* x86 — see
+[`reports/CROSS-PLATFORM.md`](reports/CROSS-PLATFORM.md). Worker counts follow each
+host's core count so that neither side is measured oversubscribed.
 
-| # | Gate | Rationale | Measured on the arbiter |
-| --- | --- | --- | --- |
-| C1 | Rust native ≥ 1.8× Go throughput on the mixed workload corpus | the rewrite has to be worth the integration cost | 1.86× (1 worker), 2.07× (8) — worst single run 1.84×, i.e. 3% of headroom |
-| C2 | Rust through cgo ≥ 1.3× Go throughput on the mixed workload corpus | the FFI tax must not eat the win | 1.48× (1 worker), 1.39× (8) |
-| C3 | p50 and p99 not worse than Go in any workload class, **with workers ≤ cores** | a throughput win that regresses tails is not a win | no violation on either dedicated host, in any class or worker count |
-| C4 | Short statements (≤256B) ≥ 1.1× Go through cgo | this is where per-call overhead dominates and cgo is most likely to lose | p50 1.10µs vs Go 1.41µs; the ratio is 0.78–0.84× of Go's p50 in all three environments, spread ≤3% |
-| C5 | Allocations per statement ≤ Go **on the mixed workload corpus** | 11.2 allocs/op today | 2.99 through cgo, 3.63 native |
-| C6 | Bytes per statement ≤ 50% of Go for the native core; the cgo path is exempt | 905 B/op today | 29 B/op native (3.2%); 423 B/op through cgo (47%), or 0.3 B/op via the borrowed API |
-| C7 | Steady-state RSS ≤ Go for the native core, ≤ 2× Go through cgo | GC-less memory behavior is a headline claim | native 3.9–5.8 MB vs Go 36 MB at 8 workers; cgo 43.5 MB vs Go 36.0 MB |
-| C8 | No workload class regresses by >5% in **throughput** between two 60s runs | protects against silent drift once the gates are green | worst drift 2.30% on the arbiter, 3.19% x86 |
+<!-- Ratified from the ARM and x86 CI matrix; see reports/CROSS-PLATFORM.md. -->
 
-Five of these were corrected by the cross-platform data rather than confirmed:
+| # | Gate | Rationale |
+| --- | --- | --- |
+| C1 | Rust ≥ 1.8× Go throughput on the mixed workload corpus, at 1 worker and at core-count workers | the rewrite has to be worth maintaining a second implementation |
+| C2 | Rust ≥ 1.5× Go throughput on the pathological corpus | the win must not depend on well-formed input |
+| C3 | p50 and p99 not worse than Go in any workload class | a throughput win that regresses tails is not a win |
+| C4 | Short statements (≤256B) ≥ 1.3× Go | this is the class where per-statement fixed costs dominate |
+| C5 | Bytes allocated per statement ≤ 25% of Go on the mixed workload corpus | the allocation profile is the headline claim, and Go is at 905 B/op |
+| C6 | Allocations per statement ≤ Go on the mixed workload corpus | counting allocations is only meaningful where sizes are comparable — see the pathological note below |
+| C7 | Steady-state RSS ≤ Go | a GC-less implementation that used more memory would be a bad trade |
+| C8 | No workload class regresses by >5% in throughput between two runs on the same host | protects against silent drift once the gates are green |
 
-- **C3** only holds when workers ≤ available cores. The only violations anywhere are
-  8 workers on the 4-vCPU shared runner, where W3-large p99 goes to 2,236µs (cgo)
-  and 3,074µs (native) against Go's 191µs. That is oversubscription, not this code,
-  but it means the gate is unenforceable on shared hardware.
-- **C5** as originally written ("≤ Go, native and through cgo") fails: the native
-  core is 43.1 allocs/op on the pathological corpus against Go's 9.1, while
-  allocating 266 B/op against Go's 77,300. Counting allocations is the wrong
-  measure for an arena-style allocator, so C5 is scoped to the mixed corpus and C6
-  carries the memory claim.
-- **C6** is met by the native core and formally exempts cgo. The zero-copy work
-  ([`reports/ZERO-COPY.md`](reports/ZERO-COPY.md)) took the same-API cgo path from
-  526 B/op / 7.21 allocs/op to 423 / 2.99, and the residual is the output bytes
-  themselves — an owned result has to be copied somewhere. The `Borrowed` API drops
-  it to 0.3 B/op / 0.00 allocs/op at the cost of a weaker lifetime (valid until the
-  next call on the handle).
-- **C7** had to be split by engine: through cgo RSS is *above* Go (two allocators,
-  neither returning pages eagerly), which the original single-column entry hid.
-- **C8** cannot be applied to latency. Worst run-to-run drift is 6.8% on p50, 27% on
-  p99 and 80% on p999. A latency guard, if wanted, is p50 within 10% and p99 within
-  30%; p999 is not gateable at n=3.
+Two measurement rules that came out of the earlier rounds and still apply:
 
-One architecture-specific finding: on ARM at 8 workers the pathological corpus
-inverts the usual ordering — rust-native (1.56×) is *slower* than rust-through-cgo
-(1.65×), reproduced in all three runs within ±0.1%.
-
-Two caveats on the numbers themselves. The cross-platform matrix was measured
-before the zero-copy binding landed, so its cgo columns show the old 526 B/op —
-throughput ratios are unaffected (the change made the cgo path faster, not slower),
-but the allocation columns in C5/C6 above come from the zero-copy report on x86.
-And variance is within-session only: three runs from one boot, so ratios are
-portable and absolute numbers are not.
+- **Allocation counts are not comparable on the pathological corpus.** Rust reports
+  ~43 allocs/op there against Go's ~9, while allocating ~266 B/op against Go's
+  ~77,300: an arena-style implementation grows reusable buffers in many small steps
+  where Go takes a few huge ones. Total bytes is the honest measure in that class,
+  which is why C6 is scoped to the mixed corpus.
+- **Tail latency beyond p99 is not gateable at n=3.** Run-to-run drift on p999 has
+  been observed at up to 80% on identical code. C3 stops at p99 deliberately.
 
 ## D. What is explicitly out of scope
 
-- `CGO_ENABLED=0`. The Rust core is consumed through cgo; a pure-Go fallback is a
-  separate decision.
-- Shipping the Rust CLI or the harness runners as supported artifacts. They exist to
-  produce this evidence.
-- Production-traffic shadow validation. No sanitized production corpus was
+- **Consuming the Rust core from Go.** cgo, the reusable-handle binding, its
+  zero-copy variants and the sanitizer audit of that boundary were removed from
+  this branch so that every number here is Rust-vs-Go and nothing else. That work
+  is in the branch history and is the input to a later integration decision, which
+  brings its own questions: FFI overhead per statement, handle lifetime, and the
+  fact that a shared handle is not safe to use from two goroutines while the Go
+  `Obfuscator`/`Normalizer` are.
+- **`CGO_ENABLED=0`** and any pure-Go-fallback question, for the same reason.
+- **Shipping the Rust CLI or the harness runners** as supported artifacts. They
+  exist to produce this evidence.
+- **Production-traffic shadow validation.** No sanitized production corpus was
   available, so the synthetic generator (seeded from testdata and the fuzz corpus)
   stands in for it. This is the weakest evidence in the set and worth revisiting if
   a real sample can be sourced.
@@ -137,33 +116,32 @@ portable and absolute numbers are not.
 go run ./harness/cmd/corpusgen -out harness/corpus \
   -fuzz-corpus "$(go env GOCACHE)/fuzz/github.com/DataDog/go-sqllexer/FuzzObfuscatorAndNormalizer"
 
-# build both candidates
+# build the Rust side
 (cd rust && cargo build --release)
 
-# A1-A6: pure Rust core against the Go oracle
+# A1-A6, A8: the Rust core against the Go oracle
+go build -o /tmp/gorunner ./harness/cmd/gorunner
 for c in testdata workloads pathological matrix fuzzseeds; do
   go run ./harness/cmd/differ -corpus harness/corpus/$c.jsonl \
-    -reference "go run ./harness/cmd/gorunner" \
+    -reference /tmp/gorunner \
     -candidate rust/target/release/sqllexer-runner
 done
 
-# A8: the cgo binding against the Go oracle.
-# -a is required: Go's build cache keys on source content, not on the contents of
-# the static archive named in CGO LDFLAGS, so a rebuilt libsqllexer_ffi.a alone
-# yields a cache hit and silently re-links the previous Rust code.
-go build -a -tags rustffi -o /tmp/ffirunner ./harness/cmd/ffirunner
-for c in testdata workloads pathological matrix fuzzseeds; do
-  go run ./harness/cmd/differ -corpus harness/corpus/$c.jsonl \
-    -reference "go run ./harness/cmd/gorunner" -candidate /tmp/ffirunner
-done
-
 # A7: continuous differential fuzzing
-go test -tags rustffi -run xxx -fuzz FuzzParity -fuzztime 10m ./harness/rustffi/
+go test -run xxx -fuzz FuzzParity -fuzztime 10m ./harness/cmd/gorunner/
 
-# B4: the sanitizer, Miri, valgrind and sustained-load stages
-harness/sanitizers/run.sh
+# A9 + keyword tables
+go test ./...
 
-# C1-C8. The published matrix is DURATION=60s WARMUP=10s, three full runs,
-# on the arm-8core-linux arbiter via .github/workflows/harness-throughput.yml.
+# B1-B4
+cargo +nightly miri test -p sqllexer   # in rust/
+cargo clippy --all-targets --all-features -- -D warnings
+cargo fmt --all --check
+go vet ./...
+
+# C1-C8. The published matrix is DURATION=60s WARMUP=10s, three full runs, on both
+# the arm-8core-linux runner and an x86_64 runner, via
+# .github/workflows/harness-throughput.yml.
 DURATION=60s WARMUP=10s harness/reports/run.sh
+python3 harness/reports/summarize.py harness/reports/ci-arm
 ```

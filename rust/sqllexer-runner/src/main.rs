@@ -8,7 +8,7 @@
 //!     cargo run --release -p sqllexer-runner < corpus/testdata.jsonl > rust.out.jsonl
 
 use std::collections::HashMap;
-use std::io::{self, BufWriter, Read, Write};
+use std::io::{self, BufRead, BufWriter, Write};
 
 use serde::{Deserialize, Serialize};
 use sqllexer::{
@@ -177,22 +177,37 @@ impl Handles {
 }
 
 fn main() {
-    let mut input = Vec::new();
-    if let Err(err) = io::stdin().read_to_end(&mut input) {
-        eprintln!("read failed: {err}");
-        std::process::exit(1);
-    }
+    // --stream answers each request before reading the next one, for callers that
+    // wait for the response (the differential fuzzer). Without it responses stay
+    // buffered, which is faster for a corpus replayed in bulk.
+    let stream = std::env::args().any(|arg| arg == "--stream");
+
+    let stdin = io::stdin();
+    let mut input = stdin.lock();
     let stdout = io::stdout();
     let mut out = BufWriter::with_capacity(1 << 20, stdout.lock());
     let mut handles = Handles::default();
     let mut sql = Vec::new();
     let mut metadata = StatementMetadata::default();
 
-    for line in input.split(|&b| b == b'\n') {
+    let mut line = Vec::new();
+    loop {
+        line.clear();
+        match input.read_until(b'\n', &mut line) {
+            Ok(0) => break,
+            Ok(_) => {}
+            Err(err) => {
+                eprintln!("read failed: {err}");
+                std::process::exit(1);
+            }
+        }
+        while line.last().is_some_and(|&b| b == b'\n' || b == b'\r') {
+            line.pop();
+        }
         if line.is_empty() {
             continue;
         }
-        let req: Request = match serde_json::from_slice(line) {
+        let req: Request = match serde_json::from_slice(&line) {
             Ok(req) => req,
             Err(err) => {
                 eprintln!("malformed request: {err}");
@@ -206,6 +221,12 @@ fn main() {
         }) {
             eprintln!("write failed: {err}");
             std::process::exit(1);
+        }
+        if stream {
+            if let Err(err) = out.flush() {
+                eprintln!("flush failed: {err}");
+                std::process::exit(1);
+            }
         }
     }
     if let Err(err) = out.flush() {

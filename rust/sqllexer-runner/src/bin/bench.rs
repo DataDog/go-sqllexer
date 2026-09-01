@@ -1,12 +1,12 @@
-//! Load driver for the Rust core with no FFI in the path.
+//! Load driver for the Rust core.
 //!
 //! It is the counterpart of `harness/cmd/throughput`: same corpora, same worker
-//! model, same workload classes, same histogram, same report fields, so the three
-//! engines (Go, Rust through cgo, Rust native) are comparable line by line.
+//! model, same workload classes, same histogram, same report fields, so the two
+//! implementations are comparable line by line.
 //!
 //!     cargo build --release
 //!     ./target/release/bench --corpus ../harness/corpus/workloads.jsonl \
-//!       --workers 8 --duration 60 --warmup 10 --json /tmp/rust-native.json
+//!       --workers 8 --duration 60 --warmup 10 --json /tmp/rust.json
 //!
 //! Allocation counting comes from a global allocator wrapping the system
 //! allocator — never a faster one, which would flatter the comparison — and is
@@ -172,7 +172,7 @@ fn parse_args() -> Args {
         duration: 30,
         warmup: 3,
         json: None,
-        label: "rust-native".to_string(),
+        label: "rust".to_string(),
     };
     let mut argv = std::env::args().skip(1);
     while let Some(flag) = argv.next() {
