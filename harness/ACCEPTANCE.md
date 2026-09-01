@@ -17,8 +17,8 @@ disagreement is a bug in the port, never a reason to edit a fixture.
 | A4 | Same error / no-error outcome | compared per request by the differ | met |
 | A5 | Arbitrary bytes accepted, including invalid UTF-8, with byte-exact output | corpora carry non-UTF-8 through the `{"b64": …}` encoding | met — `pathological.jsonl`, `fuzzseeds.jsonl` |
 | A6 | Truncated and malformed input (unterminated strings, comments, identifiers, dollar-quoted bodies) behaves identically | `pathological.jsonl` | met — 0 mismatches over 288 requests |
-| A7 | No divergence under continuous differential fuzzing | `FuzzParity` runs both implementations in one process | met — 28.3M executions, 0 divergences |
-| A8 | The cgo binding agrees with the pure Rust core and with Go | `ffirunner` diffed against `gorunner` | met — 0 mismatches over 6,161 requests |
+| A7 | No divergence under continuous differential fuzzing | `FuzzParity` runs both implementations in one process | met — 59.4M executions, 0 divergences |
+| A8 | The cgo binding agrees with the pure Rust core and with Go, in all four modes | `ffirunner` (tokenize, obfuscate, normalize, obfuscate+normalize all routed through cgo) diffed against `gorunner` over every corpus | met — 0 mismatches over 21,590 requests |
 | A9 | The frozen Go suite still passes unmodified | `go test ./...` | met |
 
 Corpora used (regenerate with `harness/cmd/corpusgen`):
@@ -99,10 +99,15 @@ for c in testdata workloads pathological matrix fuzzseeds; do
     -candidate rust/target/release/sqllexer-runner
 done
 
-# A8: the cgo binding against the Go oracle
-go build -tags rustffi -o /tmp/ffirunner ./harness/cmd/ffirunner
-go run ./harness/cmd/differ -corpus harness/corpus/testdata.jsonl \
-  -reference "go run ./harness/cmd/gorunner" -candidate /tmp/ffirunner
+# A8: the cgo binding against the Go oracle.
+# -a is required: Go's build cache keys on source content, not on the contents of
+# the static archive named in CGO LDFLAGS, so a rebuilt libsqllexer_ffi.a alone
+# yields a cache hit and silently re-links the previous Rust code.
+go build -a -tags rustffi -o /tmp/ffirunner ./harness/cmd/ffirunner
+for c in testdata workloads pathological matrix fuzzseeds; do
+  go run ./harness/cmd/differ -corpus harness/corpus/$c.jsonl \
+    -reference "go run ./harness/cmd/gorunner" -candidate /tmp/ffirunner
+done
 
 # A7: continuous differential fuzzing
 go test -tags rustffi -run xxx -fuzz FuzzParity -fuzztime 10m ./harness/rustffi/

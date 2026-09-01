@@ -69,6 +69,15 @@ go run ./harness/cmd/differ \
   -report /tmp/mismatches.jsonl
 ```
 
+Anything built with `-tags rustffi` must be built with `go build -a`. Go's build
+cache keys on source content, so rebuilding `libsqllexer_ffi.a` alone is a cache hit
+and the binary silently keeps linking the previous Rust code:
+
+```sh
+(cd rust && cargo build --release)
+go build -a -tags rustffi -o /tmp/ffirunner ./harness/cmd/ffirunner
+```
+
 Measure sustained load. Reporting is split by workload class (short, medium, large,
 pathological) because short statements are dominated by per-call overhead — the
 place where cgo is most likely to erase a win — while large ones are dominated by

@@ -5,8 +5,8 @@
 // the pure Rust core. A difference between this and sqllexer-runner is a bug in
 // the binding, not in the port.
 //
-// Only obfuscate_and_normalize is implemented: that is the surface the FFI
-// exposes, and the other modes are covered by the pure Rust runner.
+// All four protocol modes go through the binding, so the whole exported surface
+// is diffed against Go and not just the combined path.
 //
 //	cd rust && cargo build --release -p sqllexer-ffi
 //	go run -tags rustffi ./harness/cmd/ffirunner < corpus/testdata.jsonl
@@ -67,11 +67,6 @@ type configKey struct {
 
 func handle(req protocol.Request, processors map[configKey]*rustffi.Processor) protocol.Response {
 	resp := protocol.Response{ID: req.ID}
-	if req.Mode != protocol.ModeObfuscateAndNormalize {
-		resp.Error = fmt.Sprintf("unsupported mode %q", req.Mode)
-		return resp
-	}
-
 	key := configKey{obfuscator: protocol.DefaultObfuscatorConfig(), normalizer: protocol.DefaultNormalizerConfig()}
 	if req.Obfuscator != nil {
 		key.obfuscator = *req.Obfuscator
@@ -85,18 +80,46 @@ func handle(req protocol.Request, processors map[configKey]*rustffi.Processor) p
 		processors[key] = processor
 	}
 
-	output, metadata, err := processor.ObfuscateAndNormalize(string(req.SQL), sqllexer.DBMSType(req.DBMS))
+	dbms := sqllexer.DBMSType(req.DBMS)
+	var (
+		output   string
+		metadata *sqllexer.StatementMetadata
+		err      error
+	)
+	switch req.Mode {
+	case protocol.ModeTokenize:
+		tokens, err := processor.Tokenize(string(req.SQL), dbms)
+		if err != nil {
+			resp.Error = err.Error()
+			return resp
+		}
+		for _, token := range tokens {
+			resp.Tokens = append(resp.Tokens, protocol.Token{Type: int(token.Type), Value: protocol.Text(token.Value)})
+		}
+		return resp
+	case protocol.ModeObfuscate:
+		output, err = processor.Obfuscate(string(req.SQL), dbms)
+	case protocol.ModeNormalize:
+		output, metadata, err = processor.Normalize(string(req.SQL), dbms)
+	case protocol.ModeObfuscateAndNormalize:
+		output, metadata, err = processor.ObfuscateAndNormalize(string(req.SQL), dbms)
+	default:
+		resp.Error = fmt.Sprintf("unknown mode %q", req.Mode)
+		return resp
+	}
 	if err != nil {
 		resp.Error = err.Error()
 		return resp
 	}
 	resp.Output = protocol.Text(output)
-	resp.Metadata = &protocol.Metadata{
-		Size:       metadata.Size,
-		Tables:     texts(metadata.Tables),
-		Comments:   texts(metadata.Comments),
-		Commands:   texts(metadata.Commands),
-		Procedures: texts(metadata.Procedures),
+	if metadata != nil {
+		resp.Metadata = &protocol.Metadata{
+			Size:       metadata.Size,
+			Tables:     texts(metadata.Tables),
+			Comments:   texts(metadata.Comments),
+			Commands:   texts(metadata.Commands),
+			Procedures: texts(metadata.Procedures),
+		}
 	}
 	return resp
 }

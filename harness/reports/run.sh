@@ -9,7 +9,10 @@ duration=${DURATION:-20s}
 warmup=${WARMUP:-5s}
 
 (cd rust && cargo build --release)
-go build -tags rustffi -o "$out/.throughput" ./harness/cmd/throughput
+# -a: Go's build cache keys on source content, not on the static archive named in
+# CGO LDFLAGS, so a rebuilt libsqllexer_ffi.a would otherwise be a cache hit and the
+# binary would silently keep the previous Rust code.
+go build -a -tags rustffi -o "$out/.throughput" ./harness/cmd/throughput
 trap 'rm -f "$out/.throughput"' EXIT
 
 for workers in 1 8; do

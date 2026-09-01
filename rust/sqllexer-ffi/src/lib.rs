@@ -23,7 +23,8 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::ptr;
 
 use sqllexer::{
-    Dbms, Normalizer, NormalizerConfig, Obfuscator, ObfuscatorConfig, StatementMetadata,
+    Dbms, Lexer, Normalizer, NormalizerConfig, Obfuscator, ObfuscatorConfig, StatementMetadata,
+    TokenType,
 };
 
 /// Status codes returned by every entry point.
@@ -122,7 +123,31 @@ impl Result {
     };
 }
 
-/// A reusable obfuscate-and-normalize handle.
+/// One token, borrowing the input the caller passed in.
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct Token {
+    /// The numeric `TokenType`, identical to the Go constant of the same name.
+    pub token_type: u32,
+    pub value: Slice,
+}
+
+/// A borrowed list of tokens.
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct TokenList {
+    pub ptr: *const Token,
+    pub len: usize,
+}
+
+impl TokenList {
+    const EMPTY: TokenList = TokenList {
+        ptr: ptr::null(),
+        len: 0,
+    };
+}
+
+/// A reusable handle covering the whole package surface.
 pub struct Processor {
     obfuscator: Obfuscator,
     normalizer: Normalizer,
@@ -131,6 +156,10 @@ pub struct Processor {
     /// Slice descriptors handed back to the caller, kept alive by the handle and
     /// rebuilt in place on every call so no allocation is needed per statement.
     views: Vec<Slice>,
+    tokens: Vec<Token>,
+    /// Backing store for token values that the lexer had to materialize (the
+    /// unescaping paths); the rest borrow the caller's input directly.
+    token_values: Vec<u8>,
 }
 
 fn obfuscator_config(flags: u32) -> ObfuscatorConfig {
@@ -187,6 +216,8 @@ pub extern "C" fn sqllexer_processor_new(
             sql: Vec::with_capacity(1024),
             metadata: StatementMetadata::default(),
             views: Vec::new(),
+            tokens: Vec::new(),
+            token_values: Vec::new(),
         }))
     })
     .unwrap_or(ptr::null_mut())
@@ -223,17 +254,13 @@ pub unsafe extern "C" fn sqllexer_process(
     dbms: u32,
     out: *mut Result,
 ) -> i32 {
-    if processor.is_null() || out.is_null() || (sql.is_null() && sql_len != 0) {
+    if out.is_null() {
         return SQLLEXER_ERR_NULL;
     }
     *out = Result::EMPTY;
-    let processor = &mut *processor;
-    let input = if sql_len == 0 {
-        &[][..]
-    } else {
-        std::slice::from_raw_parts(sql, sql_len)
+    let Some((processor, input)) = args(processor, sql, sql_len) else {
+        return SQLLEXER_ERR_NULL;
     };
-
     let result = catch_unwind(AssertUnwindSafe(|| {
         processor.normalizer.obfuscate_and_normalize_into(
             input,
@@ -242,37 +269,183 @@ pub unsafe extern "C" fn sqllexer_process(
             &mut processor.sql,
             &mut processor.metadata,
         );
+        build_result(processor)
+    }));
+    finish(result, out)
+}
 
-        // Descriptors for all four lists live in one buffer so a call needs at
-        // most one growth, and none once the handle is warm.
-        let metadata = &processor.metadata;
-        let lists = [
-            metadata.tables.values(),
-            metadata.comments.values(),
-            metadata.commands.values(),
-            metadata.procedures.values(),
-        ];
-        processor.views.clear();
-        for list in lists {
-            processor.views.extend(list.iter().map(|v| Slice::of(v)));
+/// Publishes the handle's output buffers as borrowed slices. Descriptors for all
+/// four metadata lists live in one buffer so a call needs at most one growth, and
+/// none once the handle is warm.
+fn build_result(processor: &mut Processor) -> Result {
+    let metadata = &processor.metadata;
+    let lists = [
+        metadata.tables.values(),
+        metadata.comments.values(),
+        metadata.commands.values(),
+        metadata.procedures.values(),
+    ];
+    processor.views.clear();
+    for list in lists {
+        processor.views.extend(list.iter().map(|v| Slice::of(v)));
+    }
+
+    let mut offset = 0;
+    let mut next = |len: usize| {
+        let list = SliceList::of(&processor.views[offset..offset + len]);
+        offset += len;
+        list
+    };
+    Result {
+        sql: Slice::of(&processor.sql),
+        metadata_size: metadata.size,
+        tables: next(lists[0].len()),
+        comments: next(lists[1].len()),
+        commands: next(lists[2].len()),
+        procedures: next(lists[3].len()),
+    }
+}
+
+/// Obfuscates one statement, without normalizing it.
+///
+/// # Safety
+/// As [`sqllexer_process`], except that `out` is a single [`Slice`].
+#[no_mangle]
+pub unsafe extern "C" fn sqllexer_obfuscate(
+    processor: *mut Processor,
+    sql: *const u8,
+    sql_len: usize,
+    dbms: u32,
+    out: *mut Slice,
+) -> i32 {
+    if out.is_null() {
+        return SQLLEXER_ERR_NULL;
+    }
+    *out = Slice::EMPTY;
+    let Some((processor, input)) = args(processor, sql, sql_len) else {
+        return SQLLEXER_ERR_NULL;
+    };
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        // obfuscate_into appends, so the handle's buffer has to be reset first.
+        processor.sql.clear();
+        processor
+            .obfuscator
+            .obfuscate_into(input, dbms_from_code(dbms), &mut processor.sql);
+        Slice::of(&processor.sql)
+    }));
+    finish(result, out)
+}
+
+/// Normalizes one statement, without obfuscating it first.
+///
+/// # Safety
+/// As [`sqllexer_process`].
+#[no_mangle]
+pub unsafe extern "C" fn sqllexer_normalize(
+    processor: *mut Processor,
+    sql: *const u8,
+    sql_len: usize,
+    dbms: u32,
+    out: *mut Result,
+) -> i32 {
+    if out.is_null() {
+        return SQLLEXER_ERR_NULL;
+    }
+    *out = Result::EMPTY;
+    let Some((processor, input)) = args(processor, sql, sql_len) else {
+        return SQLLEXER_ERR_NULL;
+    };
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        processor.normalizer.normalize_into(
+            input,
+            dbms_from_code(dbms),
+            &mut processor.sql,
+            &mut processor.metadata,
+        );
+        build_result(processor)
+    }));
+    finish(result, out)
+}
+
+/// Scans one statement into tokens, the equivalent of driving `Lexer.Scan` to EOF.
+///
+/// The returned values borrow the handle's buffers *and* the caller's input, so
+/// `sql` must stay alive and unmodified for as long as the result is read.
+///
+/// # Safety
+/// As [`sqllexer_process`], except that `out` is a [`TokenList`].
+#[no_mangle]
+pub unsafe extern "C" fn sqllexer_tokenize(
+    processor: *mut Processor,
+    sql: *const u8,
+    sql_len: usize,
+    dbms: u32,
+    out: *mut TokenList,
+) -> i32 {
+    if out.is_null() {
+        return SQLLEXER_ERR_NULL;
+    }
+    *out = TokenList::EMPTY;
+    let Some((processor, input)) = args(processor, sql, sql_len) else {
+        return SQLLEXER_ERR_NULL;
+    };
+
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        processor.tokens.clear();
+        processor.token_values.clear();
+        // Owned values are collected into one buffer first: pushing to it while
+        // slices point into it would dangle on reallocation, so the descriptors
+        // are patched up in a second pass once the buffer has stopped moving.
+        let mut owned_ranges = Vec::new();
+        let mut lexer = Lexer::new(input, dbms_from_code(dbms));
+        loop {
+            let token = lexer.scan();
+            if token.token_type == TokenType::Eof {
+                break;
+            }
+            let value = match token.value {
+                std::borrow::Cow::Borrowed(bytes) => Slice::of(bytes),
+                std::borrow::Cow::Owned(bytes) => {
+                    let start = processor.token_values.len();
+                    processor.token_values.extend_from_slice(&bytes);
+                    owned_ranges.push((processor.tokens.len(), start, bytes.len()));
+                    Slice::EMPTY
+                }
+            };
+            processor.tokens.push(Token {
+                token_type: token.token_type as u32,
+                value,
+            });
         }
-
-        let mut offset = 0;
-        let mut next = |len: usize| {
-            let list = SliceList::of(&processor.views[offset..offset + len]);
-            offset += len;
-            list
-        };
-        Result {
-            sql: Slice::of(&processor.sql),
-            metadata_size: metadata.size,
-            tables: next(lists[0].len()),
-            comments: next(lists[1].len()),
-            commands: next(lists[2].len()),
-            procedures: next(lists[3].len()),
+        for (index, start, len) in owned_ranges {
+            processor.tokens[index].value = Slice::of(&processor.token_values[start..start + len]);
+        }
+        TokenList {
+            ptr: processor.tokens.as_ptr(),
+            len: processor.tokens.len(),
         }
     }));
+    finish(result, out)
+}
 
+/// Shared argument validation for the entry points that take a statement.
+unsafe fn args<'a>(
+    processor: *mut Processor,
+    sql: *const u8,
+    sql_len: usize,
+) -> Option<(&'a mut Processor, &'a [u8])> {
+    if processor.is_null() || (sql.is_null() && sql_len != 0) {
+        return None;
+    }
+    let input = if sql_len == 0 {
+        &[][..]
+    } else {
+        std::slice::from_raw_parts(sql, sql_len)
+    };
+    Some((&mut *processor, input))
+}
+
+unsafe fn finish<T>(result: std::thread::Result<T>, out: *mut T) -> i32 {
     match result {
         Ok(value) => {
             *out = value;
@@ -343,6 +516,69 @@ mod tests {
                 assert_eq!(tables, [expected.to_vec()]);
             }
         }
+        unsafe { sqllexer_processor_free(processor) };
+    }
+
+    #[test]
+    fn exposes_obfuscate_and_normalize_separately() {
+        let processor = sqllexer_processor_new(OBF_REPLACE_DIGITS, NORM_COLLECT_TABLES);
+        let sql = b"SELECT  *  FROM users1 WHERE id = 42";
+
+        let mut obfuscated = Slice::EMPTY;
+        assert_eq!(
+            unsafe { sqllexer_obfuscate(processor, sql.as_ptr(), sql.len(), 0, &mut obfuscated) },
+            SQLLEXER_OK
+        );
+        assert_eq!(
+            slice_bytes(obfuscated),
+            b"SELECT  *  FROM users? WHERE id = ?"
+        );
+        // Again on the same handle: the buffer must be reset, not appended to.
+        assert_eq!(
+            unsafe { sqllexer_obfuscate(processor, sql.as_ptr(), sql.len(), 0, &mut obfuscated) },
+            SQLLEXER_OK
+        );
+        assert_eq!(
+            slice_bytes(obfuscated),
+            b"SELECT  *  FROM users? WHERE id = ?"
+        );
+
+        let mut normalized = Result::EMPTY;
+        assert_eq!(
+            unsafe { sqllexer_normalize(processor, sql.as_ptr(), sql.len(), 0, &mut normalized) },
+            SQLLEXER_OK
+        );
+        assert_eq!(
+            slice_bytes(normalized.sql),
+            b"SELECT * FROM users1 WHERE id = 42"
+        );
+        assert_eq!(list_bytes(normalized.tables), [b"users1".to_vec()]);
+        unsafe { sqllexer_processor_free(processor) };
+    }
+
+    #[test]
+    fn tokenizes_including_values_the_lexer_had_to_materialize() {
+        let processor = sqllexer_processor_new(0, 0);
+        // The escaped quote forces an owned token value, which must survive being
+        // appended to the same buffer as its neighbours.
+        let sql = b"SELECT 'a''b', 'c' FROM t";
+        let mut tokens = TokenList::EMPTY;
+        assert_eq!(
+            unsafe { sqllexer_tokenize(processor, sql.as_ptr(), sql.len(), 0, &mut tokens) },
+            SQLLEXER_OK
+        );
+        let scanned = unsafe { std::slice::from_raw_parts(tokens.ptr, tokens.len) };
+        let values: Vec<Vec<u8>> = scanned.iter().map(|t| slice_bytes(t.value)).collect();
+        let joined = values.concat();
+        assert_eq!(joined, sql, "token values must reconstruct the input");
+        assert_eq!(scanned[0].token_type, TokenType::Command as u32);
+
+        let mut empty = TokenList::EMPTY;
+        assert_eq!(
+            unsafe { sqllexer_tokenize(processor, ptr::null(), 0, 0, &mut empty) },
+            SQLLEXER_OK
+        );
+        assert_eq!(empty.len, 0);
         unsafe { sqllexer_processor_free(processor) };
     }
 
