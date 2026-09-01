@@ -1,0 +1,1763 @@
+$ env SQLLEXER_FFI_MISUSE_STRESS=1 go test -a -count=1 -v -tags rustffi ./harness/rustffi/...
+=== RUN   TestClosedHandleIsRejectedByEveryEntryPoint
+--- PASS: TestClosedHandleIsRejectedByEveryEntryPoint (0.00s)
+=== RUN   TestEmptyInputPassesANullPointer
+--- PASS: TestEmptyInputPassesANullPointer (0.00s)
+=== RUN   TestResultsOutliveTheHandleThatProducedThem
+--- PASS: TestResultsOutliveTheHandleThatProducedThem (0.00s)
+=== RUN   TestTokenValuesDoNotBorrowTheInput
+--- PASS: TestTokenValuesDoNotBorrowTheInput (0.00s)
+=== RUN   TestConcurrentUseOfOneHandleIsRejected
+--- PASS: TestConcurrentUseOfOneHandleIsRejected (0.00s)
+=== RUN   TestOneHandlePerGoroutine
+--- PASS: TestOneHandlePerGoroutine (0.00s)
+=== RUN   TestConcurrentMisuseUnderLoad
+    misuse_test.go:217: concurrent misuse: 30916429 calls rejected, 4363645 completed, 0 produced wrong output
+--- PASS: TestConcurrentMisuseUnderLoad (5.00s)
+=== RUN   TestParityAgainstFixtures
+    rustffi_test.go:108: verified 339 fixtures through cgo
+--- PASS: TestParityAgainstFixtures (0.00s)
+=== RUN   TestParityOnEdgeCases
+--- PASS: TestParityOnEdgeCases (0.00s)
+=== RUN   TestSingleStageEntryPointsMatchGo
+--- PASS: TestSingleStageEntryPointsMatchGo (0.00s)
+=== RUN   TestRepeatedCallsDoNotAccumulate
+--- PASS: TestRepeatedCallsDoNotAccumulate (0.00s)
+=== RUN   TestClosedProcessorReportsAnError
+--- PASS: TestClosedProcessorReportsAnError (0.00s)
+=== RUN   TestResultsSurviveSubsequentCalls
+--- PASS: TestResultsSurviveSubsequentCalls (0.00s)
+=== RUN   FuzzParity
+=== RUN   FuzzParity/seed#0
+=== RUN   FuzzParity/seed#1
+=== RUN   FuzzParity/seed#2
+=== RUN   FuzzParity/seed#3
+=== RUN   FuzzParity/seed#4
+=== RUN   FuzzParity/seed#5
+=== RUN   FuzzParity/seed#6
+=== RUN   FuzzParity/seed#7
+=== RUN   FuzzParity/seed#8
+=== RUN   FuzzParity/seed#9
+=== RUN   FuzzParity/seed#10
+=== RUN   FuzzParity/seed#11
+=== RUN   FuzzParity/seed#12
+=== RUN   FuzzParity/seed#13
+=== RUN   FuzzParity/seed#14
+=== RUN   FuzzParity/seed#15
+=== RUN   FuzzParity/seed#16
+=== RUN   FuzzParity/seed#17
+=== RUN   FuzzParity/seed#18
+=== RUN   FuzzParity/seed#19
+=== RUN   FuzzParity/seed#20
+=== RUN   FuzzParity/seed#21
+=== RUN   FuzzParity/seed#22
+=== RUN   FuzzParity/seed#23
+=== RUN   FuzzParity/seed#24
+=== RUN   FuzzParity/seed#25
+=== RUN   FuzzParity/seed#26
+=== RUN   FuzzParity/seed#27
+=== RUN   FuzzParity/seed#28
+=== RUN   FuzzParity/seed#29
+=== RUN   FuzzParity/seed#30
+=== RUN   FuzzParity/seed#31
+=== RUN   FuzzParity/seed#32
+=== RUN   FuzzParity/seed#33
+=== RUN   FuzzParity/seed#34
+=== RUN   FuzzParity/seed#35
+=== RUN   FuzzParity/seed#36
+=== RUN   FuzzParity/seed#37
+=== RUN   FuzzParity/seed#38
+=== RUN   FuzzParity/seed#39
+=== RUN   FuzzParity/seed#40
+=== RUN   FuzzParity/seed#41
+=== RUN   FuzzParity/seed#42
+=== RUN   FuzzParity/seed#43
+=== RUN   FuzzParity/seed#44
+=== RUN   FuzzParity/seed#45
+=== RUN   FuzzParity/seed#46
+=== RUN   FuzzParity/seed#47
+=== RUN   FuzzParity/seed#48
+=== RUN   FuzzParity/seed#49
+=== RUN   FuzzParity/seed#50
+=== RUN   FuzzParity/seed#51
+=== RUN   FuzzParity/seed#52
+=== RUN   FuzzParity/seed#53
+=== RUN   FuzzParity/seed#54
+=== RUN   FuzzParity/seed#55
+=== RUN   FuzzParity/seed#56
+=== RUN   FuzzParity/seed#57
+=== RUN   FuzzParity/seed#58
+=== RUN   FuzzParity/seed#59
+=== RUN   FuzzParity/seed#60
+=== RUN   FuzzParity/seed#61
+=== RUN   FuzzParity/seed#62
+=== RUN   FuzzParity/seed#63
+=== RUN   FuzzParity/seed#64
+=== RUN   FuzzParity/seed#65
+=== RUN   FuzzParity/seed#66
+=== RUN   FuzzParity/seed#67
+=== RUN   FuzzParity/seed#68
+=== RUN   FuzzParity/seed#69
+=== RUN   FuzzParity/seed#70
+=== RUN   FuzzParity/seed#71
+=== RUN   FuzzParity/seed#72
+=== RUN   FuzzParity/seed#73
+=== RUN   FuzzParity/seed#74
+=== RUN   FuzzParity/seed#75
+=== RUN   FuzzParity/seed#76
+=== RUN   FuzzParity/seed#77
+=== RUN   FuzzParity/seed#78
+=== RUN   FuzzParity/seed#79
+=== RUN   FuzzParity/seed#80
+=== RUN   FuzzParity/seed#81
+=== RUN   FuzzParity/seed#82
+=== RUN   FuzzParity/seed#83
+=== RUN   FuzzParity/seed#84
+=== RUN   FuzzParity/seed#85
+=== RUN   FuzzParity/seed#86
+=== RUN   FuzzParity/seed#87
+=== RUN   FuzzParity/seed#88
+=== RUN   FuzzParity/seed#89
+=== RUN   FuzzParity/seed#90
+=== RUN   FuzzParity/seed#91
+=== RUN   FuzzParity/seed#92
+=== RUN   FuzzParity/seed#93
+=== RUN   FuzzParity/seed#94
+=== RUN   FuzzParity/seed#95
+=== RUN   FuzzParity/seed#96
+=== RUN   FuzzParity/seed#97
+=== RUN   FuzzParity/seed#98
+=== RUN   FuzzParity/seed#99
+=== RUN   FuzzParity/seed#100
+=== RUN   FuzzParity/seed#101
+=== RUN   FuzzParity/seed#102
+=== RUN   FuzzParity/seed#103
+=== RUN   FuzzParity/seed#104
+=== RUN   FuzzParity/seed#105
+=== RUN   FuzzParity/seed#106
+=== RUN   FuzzParity/seed#107
+=== RUN   FuzzParity/seed#108
+=== RUN   FuzzParity/seed#109
+=== RUN   FuzzParity/seed#110
+=== RUN   FuzzParity/seed#111
+=== RUN   FuzzParity/seed#112
+=== RUN   FuzzParity/seed#113
+=== RUN   FuzzParity/seed#114
+=== RUN   FuzzParity/seed#115
+=== RUN   FuzzParity/seed#116
+=== RUN   FuzzParity/seed#117
+=== RUN   FuzzParity/seed#118
+=== RUN   FuzzParity/seed#119
+=== RUN   FuzzParity/seed#120
+=== RUN   FuzzParity/seed#121
+=== RUN   FuzzParity/seed#122
+=== RUN   FuzzParity/seed#123
+=== RUN   FuzzParity/seed#124
+=== RUN   FuzzParity/seed#125
+=== RUN   FuzzParity/seed#126
+=== RUN   FuzzParity/seed#127
+=== RUN   FuzzParity/seed#128
+=== RUN   FuzzParity/seed#129
+=== RUN   FuzzParity/seed#130
+=== RUN   FuzzParity/seed#131
+=== RUN   FuzzParity/seed#132
+=== RUN   FuzzParity/seed#133
+=== RUN   FuzzParity/seed#134
+=== RUN   FuzzParity/seed#135
+=== RUN   FuzzParity/seed#136
+=== RUN   FuzzParity/seed#137
+=== RUN   FuzzParity/seed#138
+=== RUN   FuzzParity/seed#139
+=== RUN   FuzzParity/seed#140
+=== RUN   FuzzParity/seed#141
+=== RUN   FuzzParity/seed#142
+=== RUN   FuzzParity/seed#143
+=== RUN   FuzzParity/seed#144
+=== RUN   FuzzParity/seed#145
+=== RUN   FuzzParity/seed#146
+=== RUN   FuzzParity/seed#147
+=== RUN   FuzzParity/seed#148
+=== RUN   FuzzParity/seed#149
+=== RUN   FuzzParity/seed#150
+=== RUN   FuzzParity/seed#151
+=== RUN   FuzzParity/seed#152
+=== RUN   FuzzParity/seed#153
+=== RUN   FuzzParity/seed#154
+=== RUN   FuzzParity/seed#155
+=== RUN   FuzzParity/seed#156
+=== RUN   FuzzParity/seed#157
+=== RUN   FuzzParity/seed#158
+=== RUN   FuzzParity/seed#159
+=== RUN   FuzzParity/seed#160
+=== RUN   FuzzParity/seed#161
+=== RUN   FuzzParity/seed#162
+=== RUN   FuzzParity/seed#163
+=== RUN   FuzzParity/seed#164
+=== RUN   FuzzParity/seed#165
+=== RUN   FuzzParity/seed#166
+=== RUN   FuzzParity/seed#167
+=== RUN   FuzzParity/seed#168
+=== RUN   FuzzParity/seed#169
+=== RUN   FuzzParity/seed#170
+=== RUN   FuzzParity/seed#171
+=== RUN   FuzzParity/seed#172
+=== RUN   FuzzParity/seed#173
+=== RUN   FuzzParity/seed#174
+=== RUN   FuzzParity/seed#175
+=== RUN   FuzzParity/seed#176
+=== RUN   FuzzParity/seed#177
+=== RUN   FuzzParity/seed#178
+=== RUN   FuzzParity/seed#179
+=== RUN   FuzzParity/seed#180
+=== RUN   FuzzParity/seed#181
+=== RUN   FuzzParity/seed#182
+=== RUN   FuzzParity/seed#183
+=== RUN   FuzzParity/seed#184
+=== RUN   FuzzParity/seed#185
+=== RUN   FuzzParity/seed#186
+=== RUN   FuzzParity/seed#187
+=== RUN   FuzzParity/seed#188
+=== RUN   FuzzParity/seed#189
+=== RUN   FuzzParity/seed#190
+=== RUN   FuzzParity/seed#191
+=== RUN   FuzzParity/seed#192
+=== RUN   FuzzParity/seed#193
+=== RUN   FuzzParity/seed#194
+=== RUN   FuzzParity/seed#195
+=== RUN   FuzzParity/seed#196
+=== RUN   FuzzParity/seed#197
+=== RUN   FuzzParity/seed#198
+=== RUN   FuzzParity/seed#199
+=== RUN   FuzzParity/seed#200
+=== RUN   FuzzParity/seed#201
+=== RUN   FuzzParity/seed#202
+=== RUN   FuzzParity/seed#203
+=== RUN   FuzzParity/seed#204
+=== RUN   FuzzParity/seed#205
+=== RUN   FuzzParity/seed#206
+=== RUN   FuzzParity/seed#207
+=== RUN   FuzzParity/seed#208
+=== RUN   FuzzParity/seed#209
+=== RUN   FuzzParity/seed#210
+=== RUN   FuzzParity/seed#211
+=== RUN   FuzzParity/seed#212
+=== RUN   FuzzParity/seed#213
+=== RUN   FuzzParity/seed#214
+=== RUN   FuzzParity/seed#215
+=== RUN   FuzzParity/seed#216
+=== RUN   FuzzParity/seed#217
+=== RUN   FuzzParity/seed#218
+=== RUN   FuzzParity/seed#219
+=== RUN   FuzzParity/seed#220
+=== RUN   FuzzParity/seed#221
+=== RUN   FuzzParity/seed#222
+=== RUN   FuzzParity/seed#223
+=== RUN   FuzzParity/seed#224
+=== RUN   FuzzParity/seed#225
+=== RUN   FuzzParity/seed#226
+=== RUN   FuzzParity/seed#227
+=== RUN   FuzzParity/seed#228
+=== RUN   FuzzParity/seed#229
+=== RUN   FuzzParity/seed#230
+=== RUN   FuzzParity/seed#231
+=== RUN   FuzzParity/seed#232
+=== RUN   FuzzParity/seed#233
+=== RUN   FuzzParity/seed#234
+=== RUN   FuzzParity/seed#235
+=== RUN   FuzzParity/seed#236
+=== RUN   FuzzParity/seed#237
+=== RUN   FuzzParity/seed#238
+=== RUN   FuzzParity/seed#239
+=== RUN   FuzzParity/seed#240
+=== RUN   FuzzParity/seed#241
+=== RUN   FuzzParity/seed#242
+=== RUN   FuzzParity/seed#243
+=== RUN   FuzzParity/seed#244
+=== RUN   FuzzParity/seed#245
+=== RUN   FuzzParity/seed#246
+=== RUN   FuzzParity/seed#247
+=== RUN   FuzzParity/seed#248
+=== RUN   FuzzParity/seed#249
+=== RUN   FuzzParity/seed#250
+=== RUN   FuzzParity/seed#251
+=== RUN   FuzzParity/seed#252
+=== RUN   FuzzParity/seed#253
+=== RUN   FuzzParity/seed#254
+=== RUN   FuzzParity/seed#255
+=== RUN   FuzzParity/seed#256
+=== RUN   FuzzParity/seed#257
+=== RUN   FuzzParity/seed#258
+=== RUN   FuzzParity/seed#259
+=== RUN   FuzzParity/seed#260
+=== RUN   FuzzParity/seed#261
+=== RUN   FuzzParity/seed#262
+=== RUN   FuzzParity/seed#263
+=== RUN   FuzzParity/seed#264
+=== RUN   FuzzParity/seed#265
+=== RUN   FuzzParity/seed#266
+=== RUN   FuzzParity/seed#267
+=== RUN   FuzzParity/seed#268
+=== RUN   FuzzParity/seed#269
+=== RUN   FuzzParity/seed#270
+=== RUN   FuzzParity/seed#271
+=== RUN   FuzzParity/seed#272
+=== RUN   FuzzParity/seed#273
+=== RUN   FuzzParity/seed#274
+=== RUN   FuzzParity/seed#275
+=== RUN   FuzzParity/seed#276
+=== RUN   FuzzParity/seed#277
+=== RUN   FuzzParity/seed#278
+=== RUN   FuzzParity/seed#279
+=== RUN   FuzzParity/seed#280
+=== RUN   FuzzParity/seed#281
+=== RUN   FuzzParity/seed#282
+=== RUN   FuzzParity/seed#283
+=== RUN   FuzzParity/seed#284
+=== RUN   FuzzParity/seed#285
+=== RUN   FuzzParity/seed#286
+=== RUN   FuzzParity/seed#287
+=== RUN   FuzzParity/seed#288
+=== RUN   FuzzParity/seed#289
+=== RUN   FuzzParity/seed#290
+=== RUN   FuzzParity/seed#291
+=== RUN   FuzzParity/seed#292
+=== RUN   FuzzParity/seed#293
+=== RUN   FuzzParity/seed#294
+=== RUN   FuzzParity/seed#295
+=== RUN   FuzzParity/seed#296
+=== RUN   FuzzParity/seed#297
+=== RUN   FuzzParity/seed#298
+=== RUN   FuzzParity/seed#299
+=== RUN   FuzzParity/seed#300
+=== RUN   FuzzParity/seed#301
+=== RUN   FuzzParity/seed#302
+=== RUN   FuzzParity/seed#303
+=== RUN   FuzzParity/seed#304
+=== RUN   FuzzParity/seed#305
+=== RUN   FuzzParity/seed#306
+=== RUN   FuzzParity/seed#307
+=== RUN   FuzzParity/seed#308
+=== RUN   FuzzParity/seed#309
+=== RUN   FuzzParity/seed#310
+=== RUN   FuzzParity/seed#311
+=== RUN   FuzzParity/seed#312
+=== RUN   FuzzParity/seed#313
+=== RUN   FuzzParity/seed#314
+=== RUN   FuzzParity/seed#315
+=== RUN   FuzzParity/seed#316
+=== RUN   FuzzParity/seed#317
+=== RUN   FuzzParity/seed#318
+=== RUN   FuzzParity/seed#319
+=== RUN   FuzzParity/seed#320
+=== RUN   FuzzParity/seed#321
+=== RUN   FuzzParity/seed#322
+=== RUN   FuzzParity/seed#323
+=== RUN   FuzzParity/seed#324
+=== RUN   FuzzParity/seed#325
+=== RUN   FuzzParity/seed#326
+=== RUN   FuzzParity/seed#327
+=== RUN   FuzzParity/seed#328
+=== RUN   FuzzParity/seed#329
+=== RUN   FuzzParity/seed#330
+=== RUN   FuzzParity/seed#331
+=== RUN   FuzzParity/seed#332
+=== RUN   FuzzParity/seed#333
+=== RUN   FuzzParity/seed#334
+=== RUN   FuzzParity/seed#335
+=== RUN   FuzzParity/seed#336
+=== RUN   FuzzParity/seed#337
+=== RUN   FuzzParity/seed#338
+=== RUN   FuzzParity/seed#339
+=== RUN   FuzzParity/seed#340
+=== RUN   FuzzParity/seed#341
+=== RUN   FuzzParity/seed#342
+=== RUN   FuzzParity/seed#343
+=== RUN   FuzzParity/seed#344
+=== RUN   FuzzParity/seed#345
+=== RUN   FuzzParity/seed#346
+=== RUN   FuzzParity/seed#347
+=== RUN   FuzzParity/seed#348
+=== RUN   FuzzParity/seed#349
+=== RUN   FuzzParity/seed#350
+=== RUN   FuzzParity/seed#351
+=== RUN   FuzzParity/seed#352
+=== RUN   FuzzParity/seed#353
+=== RUN   FuzzParity/seed#354
+=== RUN   FuzzParity/seed#355
+=== RUN   FuzzParity/seed#356
+=== RUN   FuzzParity/seed#357
+=== RUN   FuzzParity/seed#358
+=== RUN   FuzzParity/seed#359
+=== RUN   FuzzParity/seed#360
+=== RUN   FuzzParity/seed#361
+=== RUN   FuzzParity/seed#362
+=== RUN   FuzzParity/seed#363
+=== RUN   FuzzParity/seed#364
+=== RUN   FuzzParity/seed#365
+=== RUN   FuzzParity/seed#366
+=== RUN   FuzzParity/seed#367
+=== RUN   FuzzParity/seed#368
+=== RUN   FuzzParity/seed#369
+=== RUN   FuzzParity/seed#370
+=== RUN   FuzzParity/seed#371
+=== RUN   FuzzParity/seed#372
+=== RUN   FuzzParity/seed#373
+=== RUN   FuzzParity/seed#374
+=== RUN   FuzzParity/seed#375
+=== RUN   FuzzParity/seed#376
+=== RUN   FuzzParity/seed#377
+=== RUN   FuzzParity/seed#378
+=== RUN   FuzzParity/seed#379
+=== RUN   FuzzParity/seed#380
+=== RUN   FuzzParity/seed#381
+=== RUN   FuzzParity/seed#382
+=== RUN   FuzzParity/seed#383
+=== RUN   FuzzParity/seed#384
+=== RUN   FuzzParity/seed#385
+=== RUN   FuzzParity/seed#386
+=== RUN   FuzzParity/seed#387
+=== RUN   FuzzParity/seed#388
+=== RUN   FuzzParity/seed#389
+=== RUN   FuzzParity/seed#390
+=== RUN   FuzzParity/seed#391
+=== RUN   FuzzParity/seed#392
+=== RUN   FuzzParity/seed#393
+=== RUN   FuzzParity/seed#394
+=== RUN   FuzzParity/seed#395
+=== RUN   FuzzParity/seed#396
+=== RUN   FuzzParity/seed#397
+=== RUN   FuzzParity/seed#398
+=== RUN   FuzzParity/seed#399
+=== RUN   FuzzParity/seed#400
+=== RUN   FuzzParity/seed#401
+=== RUN   FuzzParity/seed#402
+=== RUN   FuzzParity/seed#403
+=== RUN   FuzzParity/seed#404
+=== RUN   FuzzParity/seed#405
+=== RUN   FuzzParity/seed#406
+=== RUN   FuzzParity/seed#407
+=== RUN   FuzzParity/seed#408
+=== RUN   FuzzParity/seed#409
+=== RUN   FuzzParity/seed#410
+=== RUN   FuzzParity/seed#411
+=== RUN   FuzzParity/seed#412
+=== RUN   FuzzParity/seed#413
+=== RUN   FuzzParity/seed#414
+=== RUN   FuzzParity/seed#415
+=== RUN   FuzzParity/seed#416
+=== RUN   FuzzParity/seed#417
+=== RUN   FuzzParity/seed#418
+=== RUN   FuzzParity/seed#419
+=== RUN   FuzzParity/seed#420
+=== RUN   FuzzParity/seed#421
+=== RUN   FuzzParity/seed#422
+=== RUN   FuzzParity/seed#423
+=== RUN   FuzzParity/seed#424
+=== RUN   FuzzParity/seed#425
+=== RUN   FuzzParity/seed#426
+=== RUN   FuzzParity/seed#427
+=== RUN   FuzzParity/seed#428
+=== RUN   FuzzParity/seed#429
+=== RUN   FuzzParity/seed#430
+=== RUN   FuzzParity/seed#431
+=== RUN   FuzzParity/seed#432
+=== RUN   FuzzParity/seed#433
+=== RUN   FuzzParity/seed#434
+=== RUN   FuzzParity/seed#435
+=== RUN   FuzzParity/seed#436
+=== RUN   FuzzParity/seed#437
+=== RUN   FuzzParity/seed#438
+=== RUN   FuzzParity/seed#439
+=== RUN   FuzzParity/seed#440
+=== RUN   FuzzParity/seed#441
+=== RUN   FuzzParity/seed#442
+=== RUN   FuzzParity/seed#443
+=== RUN   FuzzParity/seed#444
+=== RUN   FuzzParity/seed#445
+=== RUN   FuzzParity/seed#446
+=== RUN   FuzzParity/seed#447
+=== RUN   FuzzParity/seed#448
+=== RUN   FuzzParity/seed#449
+=== RUN   FuzzParity/seed#450
+=== RUN   FuzzParity/seed#451
+=== RUN   FuzzParity/seed#452
+=== RUN   FuzzParity/seed#453
+=== RUN   FuzzParity/seed#454
+=== RUN   FuzzParity/seed#455
+=== RUN   FuzzParity/seed#456
+=== RUN   FuzzParity/seed#457
+=== RUN   FuzzParity/seed#458
+=== RUN   FuzzParity/seed#459
+=== RUN   FuzzParity/seed#460
+=== RUN   FuzzParity/seed#461
+=== RUN   FuzzParity/seed#462
+=== RUN   FuzzParity/seed#463
+=== RUN   FuzzParity/seed#464
+=== RUN   FuzzParity/seed#465
+=== RUN   FuzzParity/seed#466
+=== RUN   FuzzParity/seed#467
+=== RUN   FuzzParity/seed#468
+=== RUN   FuzzParity/seed#469
+=== RUN   FuzzParity/seed#470
+=== RUN   FuzzParity/seed#471
+=== RUN   FuzzParity/seed#472
+=== RUN   FuzzParity/seed#473
+=== RUN   FuzzParity/seed#474
+=== RUN   FuzzParity/seed#475
+=== RUN   FuzzParity/seed#476
+=== RUN   FuzzParity/seed#477
+=== RUN   FuzzParity/seed#478
+=== RUN   FuzzParity/seed#479
+=== RUN   FuzzParity/seed#480
+=== RUN   FuzzParity/seed#481
+=== RUN   FuzzParity/seed#482
+=== RUN   FuzzParity/seed#483
+=== RUN   FuzzParity/seed#484
+=== RUN   FuzzParity/seed#485
+=== RUN   FuzzParity/seed#486
+=== RUN   FuzzParity/seed#487
+=== RUN   FuzzParity/seed#488
+=== RUN   FuzzParity/seed#489
+=== RUN   FuzzParity/seed#490
+=== RUN   FuzzParity/seed#491
+=== RUN   FuzzParity/seed#492
+=== RUN   FuzzParity/seed#493
+=== RUN   FuzzParity/seed#494
+=== RUN   FuzzParity/seed#495
+=== RUN   FuzzParity/seed#496
+=== RUN   FuzzParity/seed#497
+=== RUN   FuzzParity/seed#498
+=== RUN   FuzzParity/seed#499
+=== RUN   FuzzParity/seed#500
+=== RUN   FuzzParity/seed#501
+=== RUN   FuzzParity/seed#502
+=== RUN   FuzzParity/seed#503
+=== RUN   FuzzParity/seed#504
+=== RUN   FuzzParity/seed#505
+=== RUN   FuzzParity/seed#506
+=== RUN   FuzzParity/seed#507
+=== RUN   FuzzParity/seed#508
+=== RUN   FuzzParity/seed#509
+=== RUN   FuzzParity/seed#510
+=== RUN   FuzzParity/seed#511
+=== RUN   FuzzParity/seed#512
+=== RUN   FuzzParity/seed#513
+=== RUN   FuzzParity/seed#514
+=== RUN   FuzzParity/seed#515
+=== RUN   FuzzParity/seed#516
+=== RUN   FuzzParity/seed#517
+=== RUN   FuzzParity/seed#518
+=== RUN   FuzzParity/seed#519
+=== RUN   FuzzParity/seed#520
+=== RUN   FuzzParity/seed#521
+=== RUN   FuzzParity/seed#522
+=== RUN   FuzzParity/seed#523
+=== RUN   FuzzParity/seed#524
+=== RUN   FuzzParity/seed#525
+=== RUN   FuzzParity/seed#526
+=== RUN   FuzzParity/seed#527
+=== RUN   FuzzParity/seed#528
+=== RUN   FuzzParity/seed#529
+=== RUN   FuzzParity/seed#530
+=== RUN   FuzzParity/seed#531
+=== RUN   FuzzParity/seed#532
+=== RUN   FuzzParity/seed#533
+=== RUN   FuzzParity/seed#534
+=== RUN   FuzzParity/seed#535
+=== RUN   FuzzParity/seed#536
+=== RUN   FuzzParity/seed#537
+=== RUN   FuzzParity/seed#538
+=== RUN   FuzzParity/seed#539
+=== RUN   FuzzParity/seed#540
+=== RUN   FuzzParity/seed#541
+=== RUN   FuzzParity/seed#542
+=== RUN   FuzzParity/seed#543
+=== RUN   FuzzParity/seed#544
+=== RUN   FuzzParity/seed#545
+=== RUN   FuzzParity/seed#546
+=== RUN   FuzzParity/seed#547
+=== RUN   FuzzParity/seed#548
+=== RUN   FuzzParity/seed#549
+=== RUN   FuzzParity/seed#550
+=== RUN   FuzzParity/seed#551
+=== RUN   FuzzParity/seed#552
+=== RUN   FuzzParity/seed#553
+=== RUN   FuzzParity/seed#554
+=== RUN   FuzzParity/seed#555
+=== RUN   FuzzParity/seed#556
+=== RUN   FuzzParity/seed#557
+=== RUN   FuzzParity/seed#558
+=== RUN   FuzzParity/seed#559
+=== RUN   FuzzParity/seed#560
+=== RUN   FuzzParity/seed#561
+=== RUN   FuzzParity/seed#562
+=== RUN   FuzzParity/seed#563
+=== RUN   FuzzParity/seed#564
+=== RUN   FuzzParity/seed#565
+=== RUN   FuzzParity/seed#566
+=== RUN   FuzzParity/seed#567
+=== RUN   FuzzParity/seed#568
+=== RUN   FuzzParity/seed#569
+=== RUN   FuzzParity/seed#570
+=== RUN   FuzzParity/seed#571
+=== RUN   FuzzParity/seed#572
+=== RUN   FuzzParity/seed#573
+=== RUN   FuzzParity/seed#574
+=== RUN   FuzzParity/seed#575
+=== RUN   FuzzParity/seed#576
+=== RUN   FuzzParity/seed#577
+=== RUN   FuzzParity/seed#578
+=== RUN   FuzzParity/seed#579
+=== RUN   FuzzParity/seed#580
+=== RUN   FuzzParity/seed#581
+=== RUN   FuzzParity/seed#582
+=== RUN   FuzzParity/seed#583
+=== RUN   FuzzParity/seed#584
+=== RUN   FuzzParity/seed#585
+=== RUN   FuzzParity/seed#586
+=== RUN   FuzzParity/seed#587
+=== RUN   FuzzParity/seed#588
+=== RUN   FuzzParity/seed#589
+=== RUN   FuzzParity/seed#590
+=== RUN   FuzzParity/seed#591
+=== RUN   FuzzParity/seed#592
+=== RUN   FuzzParity/seed#593
+=== RUN   FuzzParity/seed#594
+=== RUN   FuzzParity/seed#595
+=== RUN   FuzzParity/seed#596
+=== RUN   FuzzParity/seed#597
+=== RUN   FuzzParity/seed#598
+=== RUN   FuzzParity/seed#599
+=== RUN   FuzzParity/seed#600
+=== RUN   FuzzParity/seed#601
+=== RUN   FuzzParity/seed#602
+=== RUN   FuzzParity/seed#603
+=== RUN   FuzzParity/seed#604
+=== RUN   FuzzParity/seed#605
+=== RUN   FuzzParity/seed#606
+=== RUN   FuzzParity/seed#607
+=== RUN   FuzzParity/seed#608
+=== RUN   FuzzParity/seed#609
+=== RUN   FuzzParity/seed#610
+=== RUN   FuzzParity/seed#611
+=== RUN   FuzzParity/seed#612
+=== RUN   FuzzParity/seed#613
+=== RUN   FuzzParity/seed#614
+=== RUN   FuzzParity/seed#615
+=== RUN   FuzzParity/seed#616
+=== RUN   FuzzParity/seed#617
+=== RUN   FuzzParity/seed#618
+=== RUN   FuzzParity/seed#619
+=== RUN   FuzzParity/seed#620
+=== RUN   FuzzParity/seed#621
+=== RUN   FuzzParity/seed#622
+=== RUN   FuzzParity/seed#623
+=== RUN   FuzzParity/seed#624
+=== RUN   FuzzParity/seed#625
+=== RUN   FuzzParity/seed#626
+=== RUN   FuzzParity/seed#627
+=== RUN   FuzzParity/seed#628
+=== RUN   FuzzParity/seed#629
+=== RUN   FuzzParity/seed#630
+=== RUN   FuzzParity/seed#631
+=== RUN   FuzzParity/seed#632
+=== RUN   FuzzParity/seed#633
+=== RUN   FuzzParity/seed#634
+=== RUN   FuzzParity/seed#635
+=== RUN   FuzzParity/seed#636
+=== RUN   FuzzParity/seed#637
+=== RUN   FuzzParity/seed#638
+=== RUN   FuzzParity/seed#639
+=== RUN   FuzzParity/seed#640
+=== RUN   FuzzParity/seed#641
+=== RUN   FuzzParity/seed#642
+=== RUN   FuzzParity/seed#643
+=== RUN   FuzzParity/seed#644
+=== RUN   FuzzParity/seed#645
+=== RUN   FuzzParity/seed#646
+=== RUN   FuzzParity/seed#647
+=== RUN   FuzzParity/seed#648
+=== RUN   FuzzParity/seed#649
+=== RUN   FuzzParity/seed#650
+=== RUN   FuzzParity/seed#651
+=== RUN   FuzzParity/seed#652
+=== RUN   FuzzParity/seed#653
+=== RUN   FuzzParity/seed#654
+=== RUN   FuzzParity/seed#655
+=== RUN   FuzzParity/seed#656
+=== RUN   FuzzParity/seed#657
+=== RUN   FuzzParity/seed#658
+=== RUN   FuzzParity/seed#659
+=== RUN   FuzzParity/seed#660
+=== RUN   FuzzParity/seed#661
+=== RUN   FuzzParity/seed#662
+=== RUN   FuzzParity/seed#663
+=== RUN   FuzzParity/seed#664
+=== RUN   FuzzParity/seed#665
+=== RUN   FuzzParity/seed#666
+=== RUN   FuzzParity/seed#667
+=== RUN   FuzzParity/seed#668
+=== RUN   FuzzParity/seed#669
+=== RUN   FuzzParity/seed#670
+=== RUN   FuzzParity/seed#671
+=== RUN   FuzzParity/seed#672
+=== RUN   FuzzParity/seed#673
+=== RUN   FuzzParity/seed#674
+=== RUN   FuzzParity/seed#675
+=== RUN   FuzzParity/seed#676
+=== RUN   FuzzParity/seed#677
+=== RUN   FuzzParity/seed#678
+=== RUN   FuzzParity/seed#679
+=== RUN   FuzzParity/seed#680
+=== RUN   FuzzParity/seed#681
+=== RUN   FuzzParity/seed#682
+=== RUN   FuzzParity/seed#683
+=== RUN   FuzzParity/seed#684
+=== RUN   FuzzParity/seed#685
+=== RUN   FuzzParity/seed#686
+=== RUN   FuzzParity/seed#687
+=== RUN   FuzzParity/seed#688
+=== RUN   FuzzParity/seed#689
+=== RUN   FuzzParity/seed#690
+=== RUN   FuzzParity/seed#691
+=== RUN   FuzzParity/seed#692
+=== RUN   FuzzParity/seed#693
+=== RUN   FuzzParity/seed#694
+=== RUN   FuzzParity/seed#695
+=== RUN   FuzzParity/seed#696
+=== RUN   FuzzParity/seed#697
+=== RUN   FuzzParity/seed#698
+=== RUN   FuzzParity/seed#699
+=== RUN   FuzzParity/seed#700
+=== RUN   FuzzParity/seed#701
+=== RUN   FuzzParity/seed#702
+--- PASS: FuzzParity (0.01s)
+    --- PASS: FuzzParity/seed#0 (0.00s)
+    --- PASS: FuzzParity/seed#1 (0.00s)
+    --- PASS: FuzzParity/seed#2 (0.00s)
+    --- PASS: FuzzParity/seed#3 (0.00s)
+    --- PASS: FuzzParity/seed#4 (0.00s)
+    --- PASS: FuzzParity/seed#5 (0.00s)
+    --- PASS: FuzzParity/seed#6 (0.00s)
+    --- PASS: FuzzParity/seed#7 (0.00s)
+    --- PASS: FuzzParity/seed#8 (0.00s)
+    --- PASS: FuzzParity/seed#9 (0.00s)
+    --- PASS: FuzzParity/seed#10 (0.00s)
+    --- PASS: FuzzParity/seed#11 (0.00s)
+    --- PASS: FuzzParity/seed#12 (0.00s)
+    --- PASS: FuzzParity/seed#13 (0.00s)
+    --- PASS: FuzzParity/seed#14 (0.00s)
+    --- PASS: FuzzParity/seed#15 (0.00s)
+    --- PASS: FuzzParity/seed#16 (0.00s)
+    --- PASS: FuzzParity/seed#17 (0.00s)
+    --- PASS: FuzzParity/seed#18 (0.00s)
+    --- PASS: FuzzParity/seed#19 (0.00s)
+    --- PASS: FuzzParity/seed#20 (0.00s)
+    --- PASS: FuzzParity/seed#21 (0.00s)
+    --- PASS: FuzzParity/seed#22 (0.00s)
+    --- PASS: FuzzParity/seed#23 (0.00s)
+    --- PASS: FuzzParity/seed#24 (0.00s)
+    --- PASS: FuzzParity/seed#25 (0.00s)
+    --- PASS: FuzzParity/seed#26 (0.00s)
+    --- PASS: FuzzParity/seed#27 (0.00s)
+    --- PASS: FuzzParity/seed#28 (0.00s)
+    --- PASS: FuzzParity/seed#29 (0.00s)
+    --- PASS: FuzzParity/seed#30 (0.00s)
+    --- PASS: FuzzParity/seed#31 (0.00s)
+    --- PASS: FuzzParity/seed#32 (0.00s)
+    --- PASS: FuzzParity/seed#33 (0.00s)
+    --- PASS: FuzzParity/seed#34 (0.00s)
+    --- PASS: FuzzParity/seed#35 (0.00s)
+    --- PASS: FuzzParity/seed#36 (0.00s)
+    --- PASS: FuzzParity/seed#37 (0.00s)
+    --- PASS: FuzzParity/seed#38 (0.00s)
+    --- PASS: FuzzParity/seed#39 (0.00s)
+    --- PASS: FuzzParity/seed#40 (0.00s)
+    --- PASS: FuzzParity/seed#41 (0.00s)
+    --- PASS: FuzzParity/seed#42 (0.00s)
+    --- PASS: FuzzParity/seed#43 (0.00s)
+    --- PASS: FuzzParity/seed#44 (0.00s)
+    --- PASS: FuzzParity/seed#45 (0.00s)
+    --- PASS: FuzzParity/seed#46 (0.00s)
+    --- PASS: FuzzParity/seed#47 (0.00s)
+    --- PASS: FuzzParity/seed#48 (0.00s)
+    --- PASS: FuzzParity/seed#49 (0.00s)
+    --- PASS: FuzzParity/seed#50 (0.00s)
+    --- PASS: FuzzParity/seed#51 (0.00s)
+    --- PASS: FuzzParity/seed#52 (0.00s)
+    --- PASS: FuzzParity/seed#53 (0.00s)
+    --- PASS: FuzzParity/seed#54 (0.00s)
+    --- PASS: FuzzParity/seed#55 (0.00s)
+    --- PASS: FuzzParity/seed#56 (0.00s)
+    --- PASS: FuzzParity/seed#57 (0.00s)
+    --- PASS: FuzzParity/seed#58 (0.00s)
+    --- PASS: FuzzParity/seed#59 (0.00s)
+    --- PASS: FuzzParity/seed#60 (0.00s)
+    --- PASS: FuzzParity/seed#61 (0.00s)
+    --- PASS: FuzzParity/seed#62 (0.00s)
+    --- PASS: FuzzParity/seed#63 (0.00s)
+    --- PASS: FuzzParity/seed#64 (0.00s)
+    --- PASS: FuzzParity/seed#65 (0.00s)
+    --- PASS: FuzzParity/seed#66 (0.00s)
+    --- PASS: FuzzParity/seed#67 (0.00s)
+    --- PASS: FuzzParity/seed#68 (0.00s)
+    --- PASS: FuzzParity/seed#69 (0.00s)
+    --- PASS: FuzzParity/seed#70 (0.00s)
+    --- PASS: FuzzParity/seed#71 (0.00s)
+    --- PASS: FuzzParity/seed#72 (0.00s)
+    --- PASS: FuzzParity/seed#73 (0.00s)
+    --- PASS: FuzzParity/seed#74 (0.00s)
+    --- PASS: FuzzParity/seed#75 (0.00s)
+    --- PASS: FuzzParity/seed#76 (0.00s)
+    --- PASS: FuzzParity/seed#77 (0.00s)
+    --- PASS: FuzzParity/seed#78 (0.00s)
+    --- PASS: FuzzParity/seed#79 (0.00s)
+    --- PASS: FuzzParity/seed#80 (0.00s)
+    --- PASS: FuzzParity/seed#81 (0.00s)
+    --- PASS: FuzzParity/seed#82 (0.00s)
+    --- PASS: FuzzParity/seed#83 (0.00s)
+    --- PASS: FuzzParity/seed#84 (0.00s)
+    --- PASS: FuzzParity/seed#85 (0.00s)
+    --- PASS: FuzzParity/seed#86 (0.00s)
+    --- PASS: FuzzParity/seed#87 (0.00s)
+    --- PASS: FuzzParity/seed#88 (0.00s)
+    --- PASS: FuzzParity/seed#89 (0.00s)
+    --- PASS: FuzzParity/seed#90 (0.00s)
+    --- PASS: FuzzParity/seed#91 (0.00s)
+    --- PASS: FuzzParity/seed#92 (0.00s)
+    --- PASS: FuzzParity/seed#93 (0.00s)
+    --- PASS: FuzzParity/seed#94 (0.00s)
+    --- PASS: FuzzParity/seed#95 (0.00s)
+    --- PASS: FuzzParity/seed#96 (0.00s)
+    --- PASS: FuzzParity/seed#97 (0.00s)
+    --- PASS: FuzzParity/seed#98 (0.00s)
+    --- PASS: FuzzParity/seed#99 (0.00s)
+    --- PASS: FuzzParity/seed#100 (0.00s)
+    --- PASS: FuzzParity/seed#101 (0.00s)
+    --- PASS: FuzzParity/seed#102 (0.00s)
+    --- PASS: FuzzParity/seed#103 (0.00s)
+    --- PASS: FuzzParity/seed#104 (0.00s)
+    --- PASS: FuzzParity/seed#105 (0.00s)
+    --- PASS: FuzzParity/seed#106 (0.00s)
+    --- PASS: FuzzParity/seed#107 (0.00s)
+    --- PASS: FuzzParity/seed#108 (0.00s)
+    --- PASS: FuzzParity/seed#109 (0.00s)
+    --- PASS: FuzzParity/seed#110 (0.00s)
+    --- PASS: FuzzParity/seed#111 (0.00s)
+    --- PASS: FuzzParity/seed#112 (0.00s)
+    --- PASS: FuzzParity/seed#113 (0.00s)
+    --- PASS: FuzzParity/seed#114 (0.00s)
+    --- PASS: FuzzParity/seed#115 (0.00s)
+    --- PASS: FuzzParity/seed#116 (0.00s)
+    --- PASS: FuzzParity/seed#117 (0.00s)
+    --- PASS: FuzzParity/seed#118 (0.00s)
+    --- PASS: FuzzParity/seed#119 (0.00s)
+    --- PASS: FuzzParity/seed#120 (0.00s)
+    --- PASS: FuzzParity/seed#121 (0.00s)
+    --- PASS: FuzzParity/seed#122 (0.00s)
+    --- PASS: FuzzParity/seed#123 (0.00s)
+    --- PASS: FuzzParity/seed#124 (0.00s)
+    --- PASS: FuzzParity/seed#125 (0.00s)
+    --- PASS: FuzzParity/seed#126 (0.00s)
+    --- PASS: FuzzParity/seed#127 (0.00s)
+    --- PASS: FuzzParity/seed#128 (0.00s)
+    --- PASS: FuzzParity/seed#129 (0.00s)
+    --- PASS: FuzzParity/seed#130 (0.00s)
+    --- PASS: FuzzParity/seed#131 (0.00s)
+    --- PASS: FuzzParity/seed#132 (0.00s)
+    --- PASS: FuzzParity/seed#133 (0.00s)
+    --- PASS: FuzzParity/seed#134 (0.00s)
+    --- PASS: FuzzParity/seed#135 (0.00s)
+    --- PASS: FuzzParity/seed#136 (0.00s)
+    --- PASS: FuzzParity/seed#137 (0.00s)
+    --- PASS: FuzzParity/seed#138 (0.00s)
+    --- PASS: FuzzParity/seed#139 (0.00s)
+    --- PASS: FuzzParity/seed#140 (0.00s)
+    --- PASS: FuzzParity/seed#141 (0.00s)
+    --- PASS: FuzzParity/seed#142 (0.00s)
+    --- PASS: FuzzParity/seed#143 (0.00s)
+    --- PASS: FuzzParity/seed#144 (0.00s)
+    --- PASS: FuzzParity/seed#145 (0.00s)
+    --- PASS: FuzzParity/seed#146 (0.00s)
+    --- PASS: FuzzParity/seed#147 (0.00s)
+    --- PASS: FuzzParity/seed#148 (0.00s)
+    --- PASS: FuzzParity/seed#149 (0.00s)
+    --- PASS: FuzzParity/seed#150 (0.00s)
+    --- PASS: FuzzParity/seed#151 (0.00s)
+    --- PASS: FuzzParity/seed#152 (0.00s)
+    --- PASS: FuzzParity/seed#153 (0.00s)
+    --- PASS: FuzzParity/seed#154 (0.00s)
+    --- PASS: FuzzParity/seed#155 (0.00s)
+    --- PASS: FuzzParity/seed#156 (0.00s)
+    --- PASS: FuzzParity/seed#157 (0.00s)
+    --- PASS: FuzzParity/seed#158 (0.00s)
+    --- PASS: FuzzParity/seed#159 (0.00s)
+    --- PASS: FuzzParity/seed#160 (0.00s)
+    --- PASS: FuzzParity/seed#161 (0.00s)
+    --- PASS: FuzzParity/seed#162 (0.00s)
+    --- PASS: FuzzParity/seed#163 (0.00s)
+    --- PASS: FuzzParity/seed#164 (0.00s)
+    --- PASS: FuzzParity/seed#165 (0.00s)
+    --- PASS: FuzzParity/seed#166 (0.00s)
+    --- PASS: FuzzParity/seed#167 (0.00s)
+    --- PASS: FuzzParity/seed#168 (0.00s)
+    --- PASS: FuzzParity/seed#169 (0.00s)
+    --- PASS: FuzzParity/seed#170 (0.00s)
+    --- PASS: FuzzParity/seed#171 (0.00s)
+    --- PASS: FuzzParity/seed#172 (0.00s)
+    --- PASS: FuzzParity/seed#173 (0.00s)
+    --- PASS: FuzzParity/seed#174 (0.00s)
+    --- PASS: FuzzParity/seed#175 (0.00s)
+    --- PASS: FuzzParity/seed#176 (0.00s)
+    --- PASS: FuzzParity/seed#177 (0.00s)
+    --- PASS: FuzzParity/seed#178 (0.00s)
+    --- PASS: FuzzParity/seed#179 (0.00s)
+    --- PASS: FuzzParity/seed#180 (0.00s)
+    --- PASS: FuzzParity/seed#181 (0.00s)
+    --- PASS: FuzzParity/seed#182 (0.00s)
+    --- PASS: FuzzParity/seed#183 (0.00s)
+    --- PASS: FuzzParity/seed#184 (0.00s)
+    --- PASS: FuzzParity/seed#185 (0.00s)
+    --- PASS: FuzzParity/seed#186 (0.00s)
+    --- PASS: FuzzParity/seed#187 (0.00s)
+    --- PASS: FuzzParity/seed#188 (0.00s)
+    --- PASS: FuzzParity/seed#189 (0.00s)
+    --- PASS: FuzzParity/seed#190 (0.00s)
+    --- PASS: FuzzParity/seed#191 (0.00s)
+    --- PASS: FuzzParity/seed#192 (0.00s)
+    --- PASS: FuzzParity/seed#193 (0.00s)
+    --- PASS: FuzzParity/seed#194 (0.00s)
+    --- PASS: FuzzParity/seed#195 (0.00s)
+    --- PASS: FuzzParity/seed#196 (0.00s)
+    --- PASS: FuzzParity/seed#197 (0.00s)
+    --- PASS: FuzzParity/seed#198 (0.00s)
+    --- PASS: FuzzParity/seed#199 (0.00s)
+    --- PASS: FuzzParity/seed#200 (0.00s)
+    --- PASS: FuzzParity/seed#201 (0.00s)
+    --- PASS: FuzzParity/seed#202 (0.00s)
+    --- PASS: FuzzParity/seed#203 (0.00s)
+    --- PASS: FuzzParity/seed#204 (0.00s)
+    --- PASS: FuzzParity/seed#205 (0.00s)
+    --- PASS: FuzzParity/seed#206 (0.00s)
+    --- PASS: FuzzParity/seed#207 (0.00s)
+    --- PASS: FuzzParity/seed#208 (0.00s)
+    --- PASS: FuzzParity/seed#209 (0.00s)
+    --- PASS: FuzzParity/seed#210 (0.00s)
+    --- PASS: FuzzParity/seed#211 (0.00s)
+    --- PASS: FuzzParity/seed#212 (0.00s)
+    --- PASS: FuzzParity/seed#213 (0.00s)
+    --- PASS: FuzzParity/seed#214 (0.00s)
+    --- PASS: FuzzParity/seed#215 (0.00s)
+    --- PASS: FuzzParity/seed#216 (0.00s)
+    --- PASS: FuzzParity/seed#217 (0.00s)
+    --- PASS: FuzzParity/seed#218 (0.00s)
+    --- PASS: FuzzParity/seed#219 (0.00s)
+    --- PASS: FuzzParity/seed#220 (0.00s)
+    --- PASS: FuzzParity/seed#221 (0.00s)
+    --- PASS: FuzzParity/seed#222 (0.00s)
+    --- PASS: FuzzParity/seed#223 (0.00s)
+    --- PASS: FuzzParity/seed#224 (0.00s)
+    --- PASS: FuzzParity/seed#225 (0.00s)
+    --- PASS: FuzzParity/seed#226 (0.00s)
+    --- PASS: FuzzParity/seed#227 (0.00s)
+    --- PASS: FuzzParity/seed#228 (0.00s)
+    --- PASS: FuzzParity/seed#229 (0.00s)
+    --- PASS: FuzzParity/seed#230 (0.00s)
+    --- PASS: FuzzParity/seed#231 (0.00s)
+    --- PASS: FuzzParity/seed#232 (0.00s)
+    --- PASS: FuzzParity/seed#233 (0.00s)
+    --- PASS: FuzzParity/seed#234 (0.00s)
+    --- PASS: FuzzParity/seed#235 (0.00s)
+    --- PASS: FuzzParity/seed#236 (0.00s)
+    --- PASS: FuzzParity/seed#237 (0.00s)
+    --- PASS: FuzzParity/seed#238 (0.00s)
+    --- PASS: FuzzParity/seed#239 (0.00s)
+    --- PASS: FuzzParity/seed#240 (0.00s)
+    --- PASS: FuzzParity/seed#241 (0.00s)
+    --- PASS: FuzzParity/seed#242 (0.00s)
+    --- PASS: FuzzParity/seed#243 (0.00s)
+    --- PASS: FuzzParity/seed#244 (0.00s)
+    --- PASS: FuzzParity/seed#245 (0.00s)
+    --- PASS: FuzzParity/seed#246 (0.00s)
+    --- PASS: FuzzParity/seed#247 (0.00s)
+    --- PASS: FuzzParity/seed#248 (0.00s)
+    --- PASS: FuzzParity/seed#249 (0.00s)
+    --- PASS: FuzzParity/seed#250 (0.00s)
+    --- PASS: FuzzParity/seed#251 (0.00s)
+    --- PASS: FuzzParity/seed#252 (0.00s)
+    --- PASS: FuzzParity/seed#253 (0.00s)
+    --- PASS: FuzzParity/seed#254 (0.00s)
+    --- PASS: FuzzParity/seed#255 (0.00s)
+    --- PASS: FuzzParity/seed#256 (0.00s)
+    --- PASS: FuzzParity/seed#257 (0.00s)
+    --- PASS: FuzzParity/seed#258 (0.00s)
+    --- PASS: FuzzParity/seed#259 (0.00s)
+    --- PASS: FuzzParity/seed#260 (0.00s)
+    --- PASS: FuzzParity/seed#261 (0.00s)
+    --- PASS: FuzzParity/seed#262 (0.00s)
+    --- PASS: FuzzParity/seed#263 (0.00s)
+    --- PASS: FuzzParity/seed#264 (0.00s)
+    --- PASS: FuzzParity/seed#265 (0.00s)
+    --- PASS: FuzzParity/seed#266 (0.00s)
+    --- PASS: FuzzParity/seed#267 (0.00s)
+    --- PASS: FuzzParity/seed#268 (0.00s)
+    --- PASS: FuzzParity/seed#269 (0.00s)
+    --- PASS: FuzzParity/seed#270 (0.00s)
+    --- PASS: FuzzParity/seed#271 (0.00s)
+    --- PASS: FuzzParity/seed#272 (0.00s)
+    --- PASS: FuzzParity/seed#273 (0.00s)
+    --- PASS: FuzzParity/seed#274 (0.00s)
+    --- PASS: FuzzParity/seed#275 (0.00s)
+    --- PASS: FuzzParity/seed#276 (0.00s)
+    --- PASS: FuzzParity/seed#277 (0.00s)
+    --- PASS: FuzzParity/seed#278 (0.00s)
+    --- PASS: FuzzParity/seed#279 (0.00s)
+    --- PASS: FuzzParity/seed#280 (0.00s)
+    --- PASS: FuzzParity/seed#281 (0.00s)
+    --- PASS: FuzzParity/seed#282 (0.00s)
+    --- PASS: FuzzParity/seed#283 (0.00s)
+    --- PASS: FuzzParity/seed#284 (0.00s)
+    --- PASS: FuzzParity/seed#285 (0.00s)
+    --- PASS: FuzzParity/seed#286 (0.00s)
+    --- PASS: FuzzParity/seed#287 (0.00s)
+    --- PASS: FuzzParity/seed#288 (0.00s)
+    --- PASS: FuzzParity/seed#289 (0.00s)
+    --- PASS: FuzzParity/seed#290 (0.00s)
+    --- PASS: FuzzParity/seed#291 (0.00s)
+    --- PASS: FuzzParity/seed#292 (0.00s)
+    --- PASS: FuzzParity/seed#293 (0.00s)
+    --- PASS: FuzzParity/seed#294 (0.00s)
+    --- PASS: FuzzParity/seed#295 (0.00s)
+    --- PASS: FuzzParity/seed#296 (0.00s)
+    --- PASS: FuzzParity/seed#297 (0.00s)
+    --- PASS: FuzzParity/seed#298 (0.00s)
+    --- PASS: FuzzParity/seed#299 (0.00s)
+    --- PASS: FuzzParity/seed#300 (0.00s)
+    --- PASS: FuzzParity/seed#301 (0.00s)
+    --- PASS: FuzzParity/seed#302 (0.00s)
+    --- PASS: FuzzParity/seed#303 (0.00s)
+    --- PASS: FuzzParity/seed#304 (0.00s)
+    --- PASS: FuzzParity/seed#305 (0.00s)
+    --- PASS: FuzzParity/seed#306 (0.00s)
+    --- PASS: FuzzParity/seed#307 (0.00s)
+    --- PASS: FuzzParity/seed#308 (0.00s)
+    --- PASS: FuzzParity/seed#309 (0.00s)
+    --- PASS: FuzzParity/seed#310 (0.00s)
+    --- PASS: FuzzParity/seed#311 (0.00s)
+    --- PASS: FuzzParity/seed#312 (0.00s)
+    --- PASS: FuzzParity/seed#313 (0.00s)
+    --- PASS: FuzzParity/seed#314 (0.00s)
+    --- PASS: FuzzParity/seed#315 (0.00s)
+    --- PASS: FuzzParity/seed#316 (0.00s)
+    --- PASS: FuzzParity/seed#317 (0.00s)
+    --- PASS: FuzzParity/seed#318 (0.00s)
+    --- PASS: FuzzParity/seed#319 (0.00s)
+    --- PASS: FuzzParity/seed#320 (0.00s)
+    --- PASS: FuzzParity/seed#321 (0.00s)
+    --- PASS: FuzzParity/seed#322 (0.00s)
+    --- PASS: FuzzParity/seed#323 (0.00s)
+    --- PASS: FuzzParity/seed#324 (0.00s)
+    --- PASS: FuzzParity/seed#325 (0.00s)
+    --- PASS: FuzzParity/seed#326 (0.00s)
+    --- PASS: FuzzParity/seed#327 (0.00s)
+    --- PASS: FuzzParity/seed#328 (0.00s)
+    --- PASS: FuzzParity/seed#329 (0.00s)
+    --- PASS: FuzzParity/seed#330 (0.00s)
+    --- PASS: FuzzParity/seed#331 (0.00s)
+    --- PASS: FuzzParity/seed#332 (0.00s)
+    --- PASS: FuzzParity/seed#333 (0.00s)
+    --- PASS: FuzzParity/seed#334 (0.00s)
+    --- PASS: FuzzParity/seed#335 (0.00s)
+    --- PASS: FuzzParity/seed#336 (0.00s)
+    --- PASS: FuzzParity/seed#337 (0.00s)
+    --- PASS: FuzzParity/seed#338 (0.00s)
+    --- PASS: FuzzParity/seed#339 (0.00s)
+    --- PASS: FuzzParity/seed#340 (0.00s)
+    --- PASS: FuzzParity/seed#341 (0.00s)
+    --- PASS: FuzzParity/seed#342 (0.00s)
+    --- PASS: FuzzParity/seed#343 (0.00s)
+    --- PASS: FuzzParity/seed#344 (0.00s)
+    --- PASS: FuzzParity/seed#345 (0.00s)
+    --- PASS: FuzzParity/seed#346 (0.00s)
+    --- PASS: FuzzParity/seed#347 (0.00s)
+    --- PASS: FuzzParity/seed#348 (0.00s)
+    --- PASS: FuzzParity/seed#349 (0.00s)
+    --- PASS: FuzzParity/seed#350 (0.00s)
+    --- PASS: FuzzParity/seed#351 (0.00s)
+    --- PASS: FuzzParity/seed#352 (0.00s)
+    --- PASS: FuzzParity/seed#353 (0.00s)
+    --- PASS: FuzzParity/seed#354 (0.00s)
+    --- PASS: FuzzParity/seed#355 (0.00s)
+    --- PASS: FuzzParity/seed#356 (0.00s)
+    --- PASS: FuzzParity/seed#357 (0.00s)
+    --- PASS: FuzzParity/seed#358 (0.00s)
+    --- PASS: FuzzParity/seed#359 (0.00s)
+    --- PASS: FuzzParity/seed#360 (0.00s)
+    --- PASS: FuzzParity/seed#361 (0.00s)
+    --- PASS: FuzzParity/seed#362 (0.00s)
+    --- PASS: FuzzParity/seed#363 (0.00s)
+    --- PASS: FuzzParity/seed#364 (0.00s)
+    --- PASS: FuzzParity/seed#365 (0.00s)
+    --- PASS: FuzzParity/seed#366 (0.00s)
+    --- PASS: FuzzParity/seed#367 (0.00s)
+    --- PASS: FuzzParity/seed#368 (0.00s)
+    --- PASS: FuzzParity/seed#369 (0.00s)
+    --- PASS: FuzzParity/seed#370 (0.00s)
+    --- PASS: FuzzParity/seed#371 (0.00s)
+    --- PASS: FuzzParity/seed#372 (0.00s)
+    --- PASS: FuzzParity/seed#373 (0.00s)
+    --- PASS: FuzzParity/seed#374 (0.00s)
+    --- PASS: FuzzParity/seed#375 (0.00s)
+    --- PASS: FuzzParity/seed#376 (0.00s)
+    --- PASS: FuzzParity/seed#377 (0.00s)
+    --- PASS: FuzzParity/seed#378 (0.00s)
+    --- PASS: FuzzParity/seed#379 (0.00s)
+    --- PASS: FuzzParity/seed#380 (0.00s)
+    --- PASS: FuzzParity/seed#381 (0.00s)
+    --- PASS: FuzzParity/seed#382 (0.00s)
+    --- PASS: FuzzParity/seed#383 (0.00s)
+    --- PASS: FuzzParity/seed#384 (0.00s)
+    --- PASS: FuzzParity/seed#385 (0.00s)
+    --- PASS: FuzzParity/seed#386 (0.00s)
+    --- PASS: FuzzParity/seed#387 (0.00s)
+    --- PASS: FuzzParity/seed#388 (0.00s)
+    --- PASS: FuzzParity/seed#389 (0.00s)
+    --- PASS: FuzzParity/seed#390 (0.00s)
+    --- PASS: FuzzParity/seed#391 (0.00s)
+    --- PASS: FuzzParity/seed#392 (0.00s)
+    --- PASS: FuzzParity/seed#393 (0.00s)
+    --- PASS: FuzzParity/seed#394 (0.00s)
+    --- PASS: FuzzParity/seed#395 (0.00s)
+    --- PASS: FuzzParity/seed#396 (0.00s)
+    --- PASS: FuzzParity/seed#397 (0.00s)
+    --- PASS: FuzzParity/seed#398 (0.00s)
+    --- PASS: FuzzParity/seed#399 (0.00s)
+    --- PASS: FuzzParity/seed#400 (0.00s)
+    --- PASS: FuzzParity/seed#401 (0.00s)
+    --- PASS: FuzzParity/seed#402 (0.00s)
+    --- PASS: FuzzParity/seed#403 (0.00s)
+    --- PASS: FuzzParity/seed#404 (0.00s)
+    --- PASS: FuzzParity/seed#405 (0.00s)
+    --- PASS: FuzzParity/seed#406 (0.00s)
+    --- PASS: FuzzParity/seed#407 (0.00s)
+    --- PASS: FuzzParity/seed#408 (0.00s)
+    --- PASS: FuzzParity/seed#409 (0.00s)
+    --- PASS: FuzzParity/seed#410 (0.00s)
+    --- PASS: FuzzParity/seed#411 (0.00s)
+    --- PASS: FuzzParity/seed#412 (0.00s)
+    --- PASS: FuzzParity/seed#413 (0.00s)
+    --- PASS: FuzzParity/seed#414 (0.00s)
+    --- PASS: FuzzParity/seed#415 (0.00s)
+    --- PASS: FuzzParity/seed#416 (0.00s)
+    --- PASS: FuzzParity/seed#417 (0.00s)
+    --- PASS: FuzzParity/seed#418 (0.00s)
+    --- PASS: FuzzParity/seed#419 (0.00s)
+    --- PASS: FuzzParity/seed#420 (0.00s)
+    --- PASS: FuzzParity/seed#421 (0.00s)
+    --- PASS: FuzzParity/seed#422 (0.00s)
+    --- PASS: FuzzParity/seed#423 (0.00s)
+    --- PASS: FuzzParity/seed#424 (0.00s)
+    --- PASS: FuzzParity/seed#425 (0.00s)
+    --- PASS: FuzzParity/seed#426 (0.00s)
+    --- PASS: FuzzParity/seed#427 (0.00s)
+    --- PASS: FuzzParity/seed#428 (0.00s)
+    --- PASS: FuzzParity/seed#429 (0.00s)
+    --- PASS: FuzzParity/seed#430 (0.00s)
+    --- PASS: FuzzParity/seed#431 (0.00s)
+    --- PASS: FuzzParity/seed#432 (0.00s)
+    --- PASS: FuzzParity/seed#433 (0.00s)
+    --- PASS: FuzzParity/seed#434 (0.00s)
+    --- PASS: FuzzParity/seed#435 (0.00s)
+    --- PASS: FuzzParity/seed#436 (0.00s)
+    --- PASS: FuzzParity/seed#437 (0.00s)
+    --- PASS: FuzzParity/seed#438 (0.00s)
+    --- PASS: FuzzParity/seed#439 (0.00s)
+    --- PASS: FuzzParity/seed#440 (0.00s)
+    --- PASS: FuzzParity/seed#441 (0.00s)
+    --- PASS: FuzzParity/seed#442 (0.00s)
+    --- PASS: FuzzParity/seed#443 (0.00s)
+    --- PASS: FuzzParity/seed#444 (0.00s)
+    --- PASS: FuzzParity/seed#445 (0.00s)
+    --- PASS: FuzzParity/seed#446 (0.00s)
+    --- PASS: FuzzParity/seed#447 (0.00s)
+    --- PASS: FuzzParity/seed#448 (0.00s)
+    --- PASS: FuzzParity/seed#449 (0.00s)
+    --- PASS: FuzzParity/seed#450 (0.00s)
+    --- PASS: FuzzParity/seed#451 (0.00s)
+    --- PASS: FuzzParity/seed#452 (0.00s)
+    --- PASS: FuzzParity/seed#453 (0.00s)
+    --- PASS: FuzzParity/seed#454 (0.00s)
+    --- PASS: FuzzParity/seed#455 (0.00s)
+    --- PASS: FuzzParity/seed#456 (0.00s)
+    --- PASS: FuzzParity/seed#457 (0.00s)
+    --- PASS: FuzzParity/seed#458 (0.00s)
+    --- PASS: FuzzParity/seed#459 (0.00s)
+    --- PASS: FuzzParity/seed#460 (0.00s)
+    --- PASS: FuzzParity/seed#461 (0.00s)
+    --- PASS: FuzzParity/seed#462 (0.00s)
+    --- PASS: FuzzParity/seed#463 (0.00s)
+    --- PASS: FuzzParity/seed#464 (0.00s)
+    --- PASS: FuzzParity/seed#465 (0.00s)
+    --- PASS: FuzzParity/seed#466 (0.00s)
+    --- PASS: FuzzParity/seed#467 (0.00s)
+    --- PASS: FuzzParity/seed#468 (0.00s)
+    --- PASS: FuzzParity/seed#469 (0.00s)
+    --- PASS: FuzzParity/seed#470 (0.00s)
+    --- PASS: FuzzParity/seed#471 (0.00s)
+    --- PASS: FuzzParity/seed#472 (0.00s)
+    --- PASS: FuzzParity/seed#473 (0.00s)
+    --- PASS: FuzzParity/seed#474 (0.00s)
+    --- PASS: FuzzParity/seed#475 (0.00s)
+    --- PASS: FuzzParity/seed#476 (0.00s)
+    --- PASS: FuzzParity/seed#477 (0.00s)
+    --- PASS: FuzzParity/seed#478 (0.00s)
+    --- PASS: FuzzParity/seed#479 (0.00s)
+    --- PASS: FuzzParity/seed#480 (0.00s)
+    --- PASS: FuzzParity/seed#481 (0.00s)
+    --- PASS: FuzzParity/seed#482 (0.00s)
+    --- PASS: FuzzParity/seed#483 (0.00s)
+    --- PASS: FuzzParity/seed#484 (0.00s)
+    --- PASS: FuzzParity/seed#485 (0.00s)
+    --- PASS: FuzzParity/seed#486 (0.00s)
+    --- PASS: FuzzParity/seed#487 (0.00s)
+    --- PASS: FuzzParity/seed#488 (0.00s)
+    --- PASS: FuzzParity/seed#489 (0.00s)
+    --- PASS: FuzzParity/seed#490 (0.00s)
+    --- PASS: FuzzParity/seed#491 (0.00s)
+    --- PASS: FuzzParity/seed#492 (0.00s)
+    --- PASS: FuzzParity/seed#493 (0.00s)
+    --- PASS: FuzzParity/seed#494 (0.00s)
+    --- PASS: FuzzParity/seed#495 (0.00s)
+    --- PASS: FuzzParity/seed#496 (0.00s)
+    --- PASS: FuzzParity/seed#497 (0.00s)
+    --- PASS: FuzzParity/seed#498 (0.00s)
+    --- PASS: FuzzParity/seed#499 (0.00s)
+    --- PASS: FuzzParity/seed#500 (0.00s)
+    --- PASS: FuzzParity/seed#501 (0.00s)
+    --- PASS: FuzzParity/seed#502 (0.00s)
+    --- PASS: FuzzParity/seed#503 (0.00s)
+    --- PASS: FuzzParity/seed#504 (0.00s)
+    --- PASS: FuzzParity/seed#505 (0.00s)
+    --- PASS: FuzzParity/seed#506 (0.00s)
+    --- PASS: FuzzParity/seed#507 (0.00s)
+    --- PASS: FuzzParity/seed#508 (0.00s)
+    --- PASS: FuzzParity/seed#509 (0.00s)
+    --- PASS: FuzzParity/seed#510 (0.00s)
+    --- PASS: FuzzParity/seed#511 (0.00s)
+    --- PASS: FuzzParity/seed#512 (0.00s)
+    --- PASS: FuzzParity/seed#513 (0.00s)
+    --- PASS: FuzzParity/seed#514 (0.00s)
+    --- PASS: FuzzParity/seed#515 (0.00s)
+    --- PASS: FuzzParity/seed#516 (0.00s)
+    --- PASS: FuzzParity/seed#517 (0.00s)
+    --- PASS: FuzzParity/seed#518 (0.00s)
+    --- PASS: FuzzParity/seed#519 (0.00s)
+    --- PASS: FuzzParity/seed#520 (0.00s)
+    --- PASS: FuzzParity/seed#521 (0.00s)
+    --- PASS: FuzzParity/seed#522 (0.00s)
+    --- PASS: FuzzParity/seed#523 (0.00s)
+    --- PASS: FuzzParity/seed#524 (0.00s)
+    --- PASS: FuzzParity/seed#525 (0.00s)
+    --- PASS: FuzzParity/seed#526 (0.00s)
+    --- PASS: FuzzParity/seed#527 (0.00s)
+    --- PASS: FuzzParity/seed#528 (0.00s)
+    --- PASS: FuzzParity/seed#529 (0.00s)
+    --- PASS: FuzzParity/seed#530 (0.00s)
+    --- PASS: FuzzParity/seed#531 (0.00s)
+    --- PASS: FuzzParity/seed#532 (0.00s)
+    --- PASS: FuzzParity/seed#533 (0.00s)
+    --- PASS: FuzzParity/seed#534 (0.00s)
+    --- PASS: FuzzParity/seed#535 (0.00s)
+    --- PASS: FuzzParity/seed#536 (0.00s)
+    --- PASS: FuzzParity/seed#537 (0.00s)
+    --- PASS: FuzzParity/seed#538 (0.00s)
+    --- PASS: FuzzParity/seed#539 (0.00s)
+    --- PASS: FuzzParity/seed#540 (0.00s)
+    --- PASS: FuzzParity/seed#541 (0.00s)
+    --- PASS: FuzzParity/seed#542 (0.00s)
+    --- PASS: FuzzParity/seed#543 (0.00s)
+    --- PASS: FuzzParity/seed#544 (0.00s)
+    --- PASS: FuzzParity/seed#545 (0.00s)
+    --- PASS: FuzzParity/seed#546 (0.00s)
+    --- PASS: FuzzParity/seed#547 (0.00s)
+    --- PASS: FuzzParity/seed#548 (0.00s)
+    --- PASS: FuzzParity/seed#549 (0.00s)
+    --- PASS: FuzzParity/seed#550 (0.00s)
+    --- PASS: FuzzParity/seed#551 (0.00s)
+    --- PASS: FuzzParity/seed#552 (0.00s)
+    --- PASS: FuzzParity/seed#553 (0.00s)
+    --- PASS: FuzzParity/seed#554 (0.00s)
+    --- PASS: FuzzParity/seed#555 (0.00s)
+    --- PASS: FuzzParity/seed#556 (0.00s)
+    --- PASS: FuzzParity/seed#557 (0.00s)
+    --- PASS: FuzzParity/seed#558 (0.00s)
+    --- PASS: FuzzParity/seed#559 (0.00s)
+    --- PASS: FuzzParity/seed#560 (0.00s)
+    --- PASS: FuzzParity/seed#561 (0.00s)
+    --- PASS: FuzzParity/seed#562 (0.00s)
+    --- PASS: FuzzParity/seed#563 (0.00s)
+    --- PASS: FuzzParity/seed#564 (0.00s)
+    --- PASS: FuzzParity/seed#565 (0.00s)
+    --- PASS: FuzzParity/seed#566 (0.00s)
+    --- PASS: FuzzParity/seed#567 (0.00s)
+    --- PASS: FuzzParity/seed#568 (0.00s)
+    --- PASS: FuzzParity/seed#569 (0.00s)
+    --- PASS: FuzzParity/seed#570 (0.00s)
+    --- PASS: FuzzParity/seed#571 (0.00s)
+    --- PASS: FuzzParity/seed#572 (0.00s)
+    --- PASS: FuzzParity/seed#573 (0.00s)
+    --- PASS: FuzzParity/seed#574 (0.00s)
+    --- PASS: FuzzParity/seed#575 (0.00s)
+    --- PASS: FuzzParity/seed#576 (0.00s)
+    --- PASS: FuzzParity/seed#577 (0.00s)
+    --- PASS: FuzzParity/seed#578 (0.00s)
+    --- PASS: FuzzParity/seed#579 (0.00s)
+    --- PASS: FuzzParity/seed#580 (0.00s)
+    --- PASS: FuzzParity/seed#581 (0.00s)
+    --- PASS: FuzzParity/seed#582 (0.00s)
+    --- PASS: FuzzParity/seed#583 (0.00s)
+    --- PASS: FuzzParity/seed#584 (0.00s)
+    --- PASS: FuzzParity/seed#585 (0.00s)
+    --- PASS: FuzzParity/seed#586 (0.00s)
+    --- PASS: FuzzParity/seed#587 (0.00s)
+    --- PASS: FuzzParity/seed#588 (0.00s)
+    --- PASS: FuzzParity/seed#589 (0.00s)
+    --- PASS: FuzzParity/seed#590 (0.00s)
+    --- PASS: FuzzParity/seed#591 (0.00s)
+    --- PASS: FuzzParity/seed#592 (0.00s)
+    --- PASS: FuzzParity/seed#593 (0.00s)
+    --- PASS: FuzzParity/seed#594 (0.00s)
+    --- PASS: FuzzParity/seed#595 (0.00s)
+    --- PASS: FuzzParity/seed#596 (0.00s)
+    --- PASS: FuzzParity/seed#597 (0.00s)
+    --- PASS: FuzzParity/seed#598 (0.00s)
+    --- PASS: FuzzParity/seed#599 (0.00s)
+    --- PASS: FuzzParity/seed#600 (0.00s)
+    --- PASS: FuzzParity/seed#601 (0.00s)
+    --- PASS: FuzzParity/seed#602 (0.00s)
+    --- PASS: FuzzParity/seed#603 (0.00s)
+    --- PASS: FuzzParity/seed#604 (0.00s)
+    --- PASS: FuzzParity/seed#605 (0.00s)
+    --- PASS: FuzzParity/seed#606 (0.00s)
+    --- PASS: FuzzParity/seed#607 (0.00s)
+    --- PASS: FuzzParity/seed#608 (0.00s)
+    --- PASS: FuzzParity/seed#609 (0.00s)
+    --- PASS: FuzzParity/seed#610 (0.00s)
+    --- PASS: FuzzParity/seed#611 (0.00s)
+    --- PASS: FuzzParity/seed#612 (0.00s)
+    --- PASS: FuzzParity/seed#613 (0.00s)
+    --- PASS: FuzzParity/seed#614 (0.00s)
+    --- PASS: FuzzParity/seed#615 (0.00s)
+    --- PASS: FuzzParity/seed#616 (0.00s)
+    --- PASS: FuzzParity/seed#617 (0.00s)
+    --- PASS: FuzzParity/seed#618 (0.00s)
+    --- PASS: FuzzParity/seed#619 (0.00s)
+    --- PASS: FuzzParity/seed#620 (0.00s)
+    --- PASS: FuzzParity/seed#621 (0.00s)
+    --- PASS: FuzzParity/seed#622 (0.00s)
+    --- PASS: FuzzParity/seed#623 (0.00s)
+    --- PASS: FuzzParity/seed#624 (0.00s)
+    --- PASS: FuzzParity/seed#625 (0.00s)
+    --- PASS: FuzzParity/seed#626 (0.00s)
+    --- PASS: FuzzParity/seed#627 (0.00s)
+    --- PASS: FuzzParity/seed#628 (0.00s)
+    --- PASS: FuzzParity/seed#629 (0.00s)
+    --- PASS: FuzzParity/seed#630 (0.00s)
+    --- PASS: FuzzParity/seed#631 (0.00s)
+    --- PASS: FuzzParity/seed#632 (0.00s)
+    --- PASS: FuzzParity/seed#633 (0.00s)
+    --- PASS: FuzzParity/seed#634 (0.00s)
+    --- PASS: FuzzParity/seed#635 (0.00s)
+    --- PASS: FuzzParity/seed#636 (0.00s)
+    --- PASS: FuzzParity/seed#637 (0.00s)
+    --- PASS: FuzzParity/seed#638 (0.00s)
+    --- PASS: FuzzParity/seed#639 (0.00s)
+    --- PASS: FuzzParity/seed#640 (0.00s)
+    --- PASS: FuzzParity/seed#641 (0.00s)
+    --- PASS: FuzzParity/seed#642 (0.00s)
+    --- PASS: FuzzParity/seed#643 (0.00s)
+    --- PASS: FuzzParity/seed#644 (0.00s)
+    --- PASS: FuzzParity/seed#645 (0.00s)
+    --- PASS: FuzzParity/seed#646 (0.00s)
+    --- PASS: FuzzParity/seed#647 (0.00s)
+    --- PASS: FuzzParity/seed#648 (0.00s)
+    --- PASS: FuzzParity/seed#649 (0.00s)
+    --- PASS: FuzzParity/seed#650 (0.00s)
+    --- PASS: FuzzParity/seed#651 (0.00s)
+    --- PASS: FuzzParity/seed#652 (0.00s)
+    --- PASS: FuzzParity/seed#653 (0.00s)
+    --- PASS: FuzzParity/seed#654 (0.00s)
+    --- PASS: FuzzParity/seed#655 (0.00s)
+    --- PASS: FuzzParity/seed#656 (0.00s)
+    --- PASS: FuzzParity/seed#657 (0.00s)
+    --- PASS: FuzzParity/seed#658 (0.00s)
+    --- PASS: FuzzParity/seed#659 (0.00s)
+    --- PASS: FuzzParity/seed#660 (0.00s)
+    --- PASS: FuzzParity/seed#661 (0.00s)
+    --- PASS: FuzzParity/seed#662 (0.00s)
+    --- PASS: FuzzParity/seed#663 (0.00s)
+    --- PASS: FuzzParity/seed#664 (0.00s)
+    --- PASS: FuzzParity/seed#665 (0.00s)
+    --- PASS: FuzzParity/seed#666 (0.00s)
+    --- PASS: FuzzParity/seed#667 (0.00s)
+    --- PASS: FuzzParity/seed#668 (0.00s)
+    --- PASS: FuzzParity/seed#669 (0.00s)
+    --- PASS: FuzzParity/seed#670 (0.00s)
+    --- PASS: FuzzParity/seed#671 (0.00s)
+    --- PASS: FuzzParity/seed#672 (0.00s)
+    --- PASS: FuzzParity/seed#673 (0.00s)
+    --- PASS: FuzzParity/seed#674 (0.00s)
+    --- PASS: FuzzParity/seed#675 (0.00s)
+    --- PASS: FuzzParity/seed#676 (0.00s)
+    --- PASS: FuzzParity/seed#677 (0.00s)
+    --- PASS: FuzzParity/seed#678 (0.00s)
+    --- PASS: FuzzParity/seed#679 (0.00s)
+    --- PASS: FuzzParity/seed#680 (0.00s)
+    --- PASS: FuzzParity/seed#681 (0.00s)
+    --- PASS: FuzzParity/seed#682 (0.00s)
+    --- PASS: FuzzParity/seed#683 (0.00s)
+    --- PASS: FuzzParity/seed#684 (0.00s)
+    --- PASS: FuzzParity/seed#685 (0.00s)
+    --- PASS: FuzzParity/seed#686 (0.00s)
+    --- PASS: FuzzParity/seed#687 (0.00s)
+    --- PASS: FuzzParity/seed#688 (0.00s)
+    --- PASS: FuzzParity/seed#689 (0.00s)
+    --- PASS: FuzzParity/seed#690 (0.00s)
+    --- PASS: FuzzParity/seed#691 (0.00s)
+    --- PASS: FuzzParity/seed#692 (0.00s)
+    --- PASS: FuzzParity/seed#693 (0.00s)
+    --- PASS: FuzzParity/seed#694 (0.00s)
+    --- PASS: FuzzParity/seed#695 (0.00s)
+    --- PASS: FuzzParity/seed#696 (0.00s)
+    --- PASS: FuzzParity/seed#697 (0.00s)
+    --- PASS: FuzzParity/seed#698 (0.00s)
+    --- PASS: FuzzParity/seed#699 (0.00s)
+    --- PASS: FuzzParity/seed#700 (0.00s)
+    --- PASS: FuzzParity/seed#701 (0.00s)
+    --- PASS: FuzzParity/seed#702 (0.00s)
+PASS
+ok  	github.com/DataDog/go-sqllexer/harness/rustffi	5.020s
+[exit 0]
+$ env SQLLEXER_FFI_MISUSE_STRESS=1 go test -a -count=1 -race -tags rustffi ./harness/rustffi/...
+ok  	github.com/DataDog/go-sqllexer/harness/rustffi	6.096s
+[exit 0]
+$ bash -c cd rust && cargo build --release -p sqllexer-ffi --features panic-probe
+   Compiling sqllexer-ffi v0.1.0 (/home/ubuntu/go-sqllexer/rust/sqllexer-ffi)
+    Finished `release` profile [optimized] target(s) in 0.20s
+[exit 0]
+$ go test -a -count=1 -v -tags rustffi rustffi_panicprobe -run Panic ./harness/rustffi/...
+=== RUN   TestRustPanicIsContainedAtTheBoundary
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+
+thread '<unnamed>' (58179) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+--- PASS: TestRustPanicIsContainedAtTheBoundary (0.00s)
+=== RUN   TestRustPanicIsContainedOnAGoroutineStack
+
+thread '<unnamed>' (58185) panicked at sqllexer-ffi/src/lib.rs:470:9:
+sqllexer panic probe
+--- PASS: TestRustPanicIsContainedOnAGoroutineStack (0.00s)
+PASS
+ok  	github.com/DataDog/go-sqllexer/harness/rustffi	0.004s
+[exit 0]
+$ bash -c cd rust && cargo build --release -p sqllexer-ffi
+   Compiling sqllexer-ffi v0.1.0 (/home/ubuntu/go-sqllexer/rust/sqllexer-ffi)
+    Finished `release` profile [optimized] target(s) in 0.17s
+[exit 0]

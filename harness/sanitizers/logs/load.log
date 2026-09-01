@@ -1,0 +1,19 @@
+implementation  rust
+corpus          harness/corpus/workloads.jsonl
+workers         4 (GOMAXPROCS=8, reuse=true)
+throughput      1546286 ops/s  (384.8 MB/s of SQL)
+total ops       927775744
+
+class                     ops        ops/s        p50        p90        p99      p99.9
+W1-short            811220990      1352029      994ns    2.082µs    3.074µs    7.528µs
+W2-medium            88581610       147635    4.496µs    11.28µs    13.36µs   79.104µs
+W3-large             27973144        46622   23.616µs   28.288µs   34.816µs  394.752µs
+
+allocation      526 B/op, 7.2 allocs/op, 775.2 MB/s allocated
+gc              56217 cycles, 5033.0 ms total pause, 1.08% of CPU
+memory          heap peak 21.6 MB, RSS peak 26.2 MB, RSS final 26.2 MB
+
+json report: harness/sanitizers/logs/load-throughput.json
+[exit 0]
+RSS samples (kB): 122
+first=5616 last=22672 min=5616 max=23476 drift=17056 kB

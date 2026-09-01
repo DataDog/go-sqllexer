@@ -10,5 +10,10 @@ description = "C ABI for the Rust sqllexer, consumed from Go through cgo"
 name = "sqllexer_ffi"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
+[features]
+# Exports sqllexer_panic_probe, an entry point that panics on purpose so hosts
+# can test panic containment. Never enabled for a shipped build.
+panic-probe = []
+
 [dependencies]
 sqllexer = { path = "../sqllexer" }

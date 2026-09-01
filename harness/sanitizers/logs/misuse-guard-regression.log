@@ -1,0 +1,10 @@
+$ (guard released before the result is copied out; the defect this branch fixes)
+$ SQLLEXER_FFI_MISUSE_STRESS=1 go test -a -count=1 -v -run TestConcurrentMisuseUnderLoad -tags rustffi ./harness/rustffi/...
+=== RUN   TestConcurrentMisuseUnderLoad
+    misuse_test.go:217: concurrent misuse: 37247082 calls rejected, 4677918 completed, 27091 produced wrong output
+    misuse_test.go:219: 27091 calls produced corrupted output: the guard let overlapping calls through
+--- FAIL: TestConcurrentMisuseUnderLoad (5.00s)
+FAIL
+FAIL	github.com/DataDog/go-sqllexer/harness/rustffi	5.003s
+FAIL
+[exit 1]

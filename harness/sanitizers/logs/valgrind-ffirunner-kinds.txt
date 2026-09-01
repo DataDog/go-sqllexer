@@ -1,0 +1,17 @@
+      6 Conditional jump or move depends on uninitialised value(s)
+      2 Warning: ignored attempt to set SIGRT32 handler in sigaction();
+      1 Warning: set address range perms: large range [0x9809000, 0x29809000) (noaccess)
+      1 Warning: set address range perms: large range [0x29809000, 0x49809000) (noaccess)
+      1 Warning: client switching stacks?  SP change: 0xc000042740 --> 0x1fff000578
+      1 Warning: client switching stacks?  SP change: 0x1fff000578 --> 0xc000042740
+      1 Warning: client switching stacks?  SP change: 0x1fff0004c8 --> 0xc0000427d8
+      1 Using Valgrind-3.18.1 and LibVEX; rerun with -h for copyright info
+      1 Use --track-origins=yes to see where uninitialised values come from
+      1 Parent PID: 39407
+      1 Memcheck, a memory error detector
+      1 LEAK SUMMARY:
+      1 HEAP SUMMARY:
+      1 For lists of detected and suppressed errors, rerun with: -s
+      1 ERROR SUMMARY: 43 errors from 8 contexts (suppressed: 0 from 0)
+      1 Copyright (C) 2002-2017, and GNU GPL'd, by Julian Seward et al.
+      1 Command: harness/sanitizers/.work-37566/ffirunner

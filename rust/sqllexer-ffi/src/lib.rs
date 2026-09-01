@@ -65,7 +65,7 @@ pub struct Slice {
 }
 
 impl Slice {
-    const EMPTY: Slice = Slice {
+    pub const EMPTY: Slice = Slice {
         ptr: ptr::null(),
         len: 0,
     };
@@ -87,7 +87,7 @@ pub struct SliceList {
 }
 
 impl SliceList {
-    const EMPTY: SliceList = SliceList {
+    pub const EMPTY: SliceList = SliceList {
         ptr: ptr::null(),
         len: 0,
     };
@@ -113,7 +113,7 @@ pub struct Result {
 }
 
 impl Result {
-    const EMPTY: Result = Result {
+    pub const EMPTY: Result = Result {
         sql: Slice::EMPTY,
         metadata_size: 0,
         tables: SliceList::EMPTY,
@@ -187,7 +187,7 @@ pub struct TokenList {
 }
 
 impl TokenList {
-    const EMPTY: TokenList = TokenList {
+    pub const EMPTY: TokenList = TokenList {
         ptr: ptr::null(),
         len: 0,
     };
@@ -639,6 +639,33 @@ unsafe fn args<'a>(
         std::slice::from_raw_parts(sql, sql_len)
     };
     Some((&mut *processor, input))
+}
+
+/// Panics inside the same `catch_unwind` wrapper the real entry points use, so a
+/// host can prove that a Rust panic is contained at the boundary instead of
+/// unwinding into its runtime. Compiled only with the `panic-probe` feature, so
+/// the shipped archive does not export it.
+///
+/// # Safety
+/// As [`sqllexer_obfuscate`], minus the input arguments.
+#[cfg(feature = "panic-probe")]
+#[no_mangle]
+pub unsafe extern "C" fn sqllexer_panic_probe(processor: *mut Processor, out: *mut Slice) -> i32 {
+    if out.is_null() {
+        return SQLLEXER_ERR_NULL;
+    }
+    *out = Slice::EMPTY;
+    let Some((processor, _)) = args(processor, ptr::null(), 0) else {
+        return SQLLEXER_ERR_NULL;
+    };
+    let result = catch_unwind(AssertUnwindSafe(|| -> Slice {
+        // Mutating the handle first makes the panic happen mid-update, which is
+        // the state a real panic would leave behind.
+        processor.sql.clear();
+        processor.sql.extend_from_slice(b"partial");
+        panic!("sqllexer panic probe");
+    }));
+    finish(result, out)
 }
 
 unsafe fn finish<T>(result: std::thread::Result<T>, out: *mut T) -> i32 {

@@ -1,0 +1,373 @@
+$ bash -c cd rust && cargo +nightly test -Zbuild-std --target x86_64-unknown-linux-gnu -p sqllexer-ffi --features panic-probe --test stress -- --ignored --exact reading_a_result_after_free_is_a_use_after_free
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.02s
+     Running tests/stress.rs (target/x86_64-unknown-linux-gnu/debug/build/sqllexer-ffi/5914ba02fdd5a354/out/stress-5914ba02fdd5a354)
+
+running 1 test
+=================================================================
+==52720==ERROR: AddressSanitizer: heap-use-after-free on address 0x7d442bdeff80 at pc 0x55e3d7372a5c bp 0x7bb4299fd5f0 sp 0x7bb4299fcdb0
+READ of size 32 at 0x7d442bdeff80 thread T1
+    #0 0x55e3d7372a5b in __asan_memcpy (/home/ubuntu/go-sqllexer/rust/target/x86_64-unknown-linux-gnu/debug/build/sqllexer-ffi/5914ba02fdd5a354/out/stress-5914ba02fdd5a354+0x348a5b) (BuildId: 28aaa1757473f66354791cf645fe0b6d3870876f)
+    #1 0x55e3d785b2e6 in core::ptr::copy_nonoverlapping::<u8> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ptr/mod.rs:574:14
+    #2 0x55e3d785b2e6 in <*const u8>::copy_to_nonoverlapping /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ptr/const_ptr.rs:1236:18
+    #3 0x55e3d785b2e6 in <u8 as <[_]>::to_vec_in::ConvertVec>::to_vec::<alloc::alloc::Global> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/slice.rs:449:36
+    #4 0x55e3d785adcb in <[u8]>::to_vec_in::<alloc::alloc::Global> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/slice.rs:400:16
+    #5 0x55e3d785b4ea in <[u8]>::to_vec /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/slice.rs:376:14
+    #6 0x55e3d73b1e18 in stress::slice_bytes /home/ubuntu/go-sqllexer/rust/sqllexer-ffi/tests/stress.rs:20:65
+    #7 0x55e3d73b5e00 in stress::reading_a_result_after_free_is_a_use_after_free /home/ubuntu/go-sqllexer/rust/sqllexer-ffi/tests/stress.rs:242:17
+    #8 0x55e3d73afa06 in stress::reading_a_result_after_free_is_a_use_after_free::{closure#0} /home/ubuntu/go-sqllexer/rust/sqllexer-ffi/tests/stress.rs:232:53
+    #9 0x55e3d73bd725 in <stress::reading_a_result_after_free_is_a_use_after_free::{closure#0} as core::ops::function::FnOnce<()>>::call_once /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250:5
+    #10 0x55e3d7437941 in <fn() -> core::result::Result<(), alloc::string::String> as core::ops::function::FnOnce<()>>::call_once /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250:5
+    #11 0x55e3d73bf583 in test::__rust_begin_short_backtrace::<core::result::Result<(), alloc::string::String>, fn() -> core::result::Result<(), alloc::string::String>> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:733:18
+    #12 0x55e3d745e17a in <test::types::RunnableTest>::run /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/types.rs:145:40
+    #13 0x55e3d73ca412 in test::run_test_in_process::{closure#0} /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:756:74
+    #14 0x55e3d74e0362 in <core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275:9
+    #15 0x55e3d74e38c7 in std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}>, core::result::Result<(), alloc::string::String>> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:573:43
+    #16 0x55e3d74f3afa in __rust_try test.b092d41a49b7e701-cgu.12
+    #17 0x55e3d74e2535 in std::panicking::catch_unwind::<core::result::Result<(), alloc::string::String>, core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}>> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:541:19
+    #18 0x55e3d73c5c63 in std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}>, core::result::Result<(), alloc::string::String>> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359:14
+    #19 0x55e3d73cf1a2 in test::run_test_in_process /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:756:27
+    #20 0x55e3d73cbeba in test::run_test::{closure#0} /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:677:43
+    #21 0x55e3d73cc682 in test::run_test::{closure#1} /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:707:41
+    #22 0x55e3d73f5d7d in std::sys::backtrace::__rust_begin_short_backtrace::<test::run_test::{closure#1}, ()> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/backtrace.rs:166:18
+    #23 0x55e3d751695d in std::thread::lifecycle::spawn_unchecked::<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0} /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/lifecycle.rs:70:13
+    #24 0x55e3d74e01fe in <core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275:9
+    #25 0x55e3d74e35db in std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}>, ()> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:573:43
+    #26 0x55e3d74f3afa in __rust_try test.b092d41a49b7e701-cgu.12
+    #27 0x55e3d74e2951 in std::panicking::catch_unwind::<(), core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}>> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:541:19
+    #28 0x55e3d73c5ad2 in std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}>, ()> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359:14
+    #29 0x55e3d75148f8 in std::thread::lifecycle::spawn_unchecked::<test::run_test::{closure#1}, ()>::{closure#1} /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/lifecycle.rs:68:26
+    #30 0x55e3d742dd7e in <std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1} as core::ops::function::FnOnce<()>>::call_once::{shim:vtable#0} /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250:5
+    #31 0x55e3d7657378 in <alloc::boxed::Box<dyn core::ops::function::FnOnce<(), Output = ()> + core::marker::Send> as core::ops::function::FnOnce<()>>::call_once /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/boxed.rs:2343:9
+    #32 0x55e3d76804be in <std::sys::thread::unix::Thread>::new::thread_start /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/thread/unix.rs:127:17
+    #33 0x55e3d7372656 in asan_thread_start(void*) asan_interceptors.cpp
+    #34 0x7fb42ca25a82 in start_thread nptl/./nptl/pthread_create.c:442:8
+    #35 0x7fb42cab788f  misc/../sysdeps/unix/sysv/linux/x86_64/clone3.S:81
+
+0x7d442bdeff80 is located 0 bytes inside of 1024-byte region [0x7d442bdeff80,0x7d442bdf0380)
+freed by thread T1 here:
+    #0 0x55e3d7374d46 in free (/home/ubuntu/go-sqllexer/rust/target/x86_64-unknown-linux-gnu/debug/build/sqllexer-ffi/5914ba02fdd5a354/out/stress-5914ba02fdd5a354+0x34ad46) (BuildId: 28aaa1757473f66354791cf645fe0b6d3870876f)
+    #1 0x55e3d767ccc7 in std::sys::alloc::unix::dealloc /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/alloc/unix.rs:65:14
+    #2 0x55e3d7862e68 in <alloc::alloc::Global>::deallocate_impl_runtime /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/alloc.rs:327:22
+    #3 0x55e3d7861ee8 in <alloc::alloc::Global>::deallocate_impl /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/alloc.rs:442:9
+    #4 0x55e3d7860bc2 in <alloc::raw_vec::RawVec<u8> as core::ops::drop::Drop>::drop /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/raw_vec/mod.rs:429:29
+    #5 0x55e3d755927a in sqllexer_ffi::sqllexer_processor_free::{closure#0} /home/ubuntu/go-sqllexer/rust/sqllexer-ffi/src/lib.rs:237:51
+    #6 0x55e3d756344d in std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<sqllexer_ffi::sqllexer_processor_free::{closure#0}>, ()> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359:14
+    #7 0x55e3d73b5dde in stress::reading_a_result_after_free_is_a_use_after_free /home/ubuntu/go-sqllexer/rust/sqllexer-ffi/tests/stress.rs:240:14
+    #8 0x55e3d73afa06 in stress::reading_a_result_after_free_is_a_use_after_free::{closure#0} /home/ubuntu/go-sqllexer/rust/sqllexer-ffi/tests/stress.rs:232:53
+    #9 0x55e3d745e17a in <test::types::RunnableTest>::run /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/types.rs:145:40
+    #10 0x55e3d73ca412 in test::run_test_in_process::{closure#0} /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:756:74
+    #11 0x55e3d74e0362 in <core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275:9
+    #12 0x55e3d74e38c7 in std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}>, core::result::Result<(), alloc::string::String>> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:573:43
+    #13 0x55e3d74f3afa in __rust_try test.b092d41a49b7e701-cgu.12
+    #14 0x55e3d73c5c63 in std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}>, core::result::Result<(), alloc::string::String>> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359:14
+    #15 0x55e3d73cf1a2 in test::run_test_in_process /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:756:27
+    #16 0x55e3d73cbeba in test::run_test::{closure#0} /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:677:43
+    #17 0x55e3d73cc682 in test::run_test::{closure#1} /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:707:41
+    #18 0x55e3d73f5d7d in std::sys::backtrace::__rust_begin_short_backtrace::<test::run_test::{closure#1}, ()> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/backtrace.rs:166:18
+    #19 0x55e3d74e01fe in <core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275:9
+    #20 0x55e3d74e35db in std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}>, ()> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:573:43
+    #21 0x55e3d74f3afa in __rust_try test.b092d41a49b7e701-cgu.12
+    #22 0x55e3d73c5ad2 in std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}>, ()> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359:14
+    #23 0x55e3d75148f8 in std::thread::lifecycle::spawn_unchecked::<test::run_test::{closure#1}, ()>::{closure#1} /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/lifecycle.rs:68:26
+    #24 0x55e3d742dd7e in <std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1} as core::ops::function::FnOnce<()>>::call_once::{shim:vtable#0} /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250:5
+    #25 0x55e3d76804be in <std::sys::thread::unix::Thread>::new::thread_start /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/thread/unix.rs:127:17
+    #26 0x55e3d7372656 in asan_thread_start(void*) asan_interceptors.cpp
+
+previously allocated by thread T1 here:
+    #0 0x55e3d7375314 in malloc (/home/ubuntu/go-sqllexer/rust/target/x86_64-unknown-linux-gnu/debug/build/sqllexer-ffi/5914ba02fdd5a354/out/stress-5914ba02fdd5a354+0x34b314) (BuildId: 28aaa1757473f66354791cf645fe0b6d3870876f)
+    #1 0x55e3d767cc4f in std::sys::alloc::unix::alloc /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/alloc/unix.rs:31:18
+    #2 0x55e3d7784169 in __rustc::__rdl_alloc /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/alloc.rs:472:13
+    #3 0x55e3d78626ec in <alloc::alloc::Global>::alloc_impl_runtime /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/alloc.rs:308:73
+    #4 0x55e3d7861e2a in <alloc::alloc::Global>::alloc_impl /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/alloc.rs:430:9
+    #5 0x55e3d785f0d1 in <alloc::raw_vec::RawVecInner>::with_capacity_in /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/raw_vec/mod.rs:439:15
+    #6 0x55e3d785de89 in <alloc::raw_vec::RawVec<u8>>::with_capacity_in /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/raw_vec/mod.rs:179:20
+    #7 0x55e3d7566089 in std::panicking::catch_unwind::do_call::<sqllexer_ffi::sqllexer_processor_new::{closure#0}, *mut sqllexer_ffi::Processor> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:573:43
+    #8 0x55e3d756346a in std::panic::catch_unwind::<sqllexer_ffi::sqllexer_processor_new::{closure#0}, *mut sqllexer_ffi::Processor> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359:14
+    #9 0x55e3d73b5cd9 in stress::reading_a_result_after_free_is_a_use_after_free /home/ubuntu/go-sqllexer/rust/sqllexer-ffi/tests/stress.rs:233:21
+    #10 0x55e3d73afa06 in stress::reading_a_result_after_free_is_a_use_after_free::{closure#0} /home/ubuntu/go-sqllexer/rust/sqllexer-ffi/tests/stress.rs:232:53
+    #11 0x55e3d745e17a in <test::types::RunnableTest>::run /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/types.rs:145:40
+    #12 0x55e3d73ca412 in test::run_test_in_process::{closure#0} /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:756:74
+    #13 0x55e3d74e0362 in <core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275:9
+    #14 0x55e3d74e38c7 in std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}>, core::result::Result<(), alloc::string::String>> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:573:43
+    #15 0x55e3d74f3afa in __rust_try test.b092d41a49b7e701-cgu.12
+    #16 0x55e3d73c5c63 in std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}>, core::result::Result<(), alloc::string::String>> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359:14
+    #17 0x55e3d73cf1a2 in test::run_test_in_process /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:756:27
+    #18 0x55e3d73cbeba in test::run_test::{closure#0} /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:677:43
+    #19 0x55e3d73cc682 in test::run_test::{closure#1} /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:707:41
+    #20 0x55e3d73f5d7d in std::sys::backtrace::__rust_begin_short_backtrace::<test::run_test::{closure#1}, ()> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/backtrace.rs:166:18
+    #21 0x55e3d74e01fe in <core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275:9
+    #22 0x55e3d74e35db in std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}>, ()> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:573:43
+    #23 0x55e3d74f3afa in __rust_try test.b092d41a49b7e701-cgu.12
+    #24 0x55e3d73c5ad2 in std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}>, ()> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359:14
+    #25 0x55e3d75148f8 in std::thread::lifecycle::spawn_unchecked::<test::run_test::{closure#1}, ()>::{closure#1} /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/lifecycle.rs:68:26
+    #26 0x55e3d742dd7e in <std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1} as core::ops::function::FnOnce<()>>::call_once::{shim:vtable#0} /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250:5
+    #27 0x55e3d76804be in <std::sys::thread::unix::Thread>::new::thread_start /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/thread/unix.rs:127:17
+    #28 0x55e3d7372656 in asan_thread_start(void*) asan_interceptors.cpp
+
+Thread T1 created by T0 here:
+    #0 0x55e3d73580a1 in pthread_create (/home/ubuntu/go-sqllexer/rust/target/x86_64-unknown-linux-gnu/debug/build/sqllexer-ffi/5914ba02fdd5a354/out/stress-5914ba02fdd5a354+0x32e0a1) (BuildId: 28aaa1757473f66354791cf645fe0b6d3870876f)
+    #1 0x55e3d766bd14 in <std::sys::thread::unix::Thread>::new /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/thread/unix.rs:107:19
+    #2 0x55e3d750f63b in std::thread::lifecycle::spawn_unchecked::<test::run_test::{closure#1}, ()> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/lifecycle.rs:116:26
+    #3 0x55e3d74b38e1 in <std::thread::builder::Builder>::spawn_unchecked::<test::run_test::{closure#1}, ()> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/builder.rs:261:32
+    #4 0x55e3d74b3b5c in <std::thread::builder::Builder>::spawn::<test::run_test::{closure#1}, ()> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/builder.rs:191:23
+    #5 0x55e3d73d198b in test::run_test /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:707:27
+    #6 0x55e3d73c1fdd in test::run_tests::<test::console::run_tests_console::{closure#2}> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:470:21
+    #7 0x55e3d73fc921 in test::console::run_tests_console /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/console.rs:328:5
+    #8 0x55e3d73bee61 in test::test_main_inner::<test::test_main_static::{closure#0}> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:170:19
+    #9 0x55e3d73ce29c in test::test_main_static /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:195:5
+    #10 0x55e3d73b1e42 in stress::main /home/ubuntu/go-sqllexer/rust/sqllexer-ffi/tests/stress.rs:1
+    #11 0x55e3d76a750a in std::panic::catch_unwind::<&dyn core::ops::function::Fn<(), Output = i32> + core::panic::unwind_safe::RefUnwindSafe + core::marker::Sync, i32> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359:14
+    #12 0x55e3d764158e in std::panicking::catch_unwind::do_call::<std::rt::lang_start_internal::{closure#0}, isize> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:573:43
+    #13 0x55e3d765842a in __rust_try std.74bbf66dbdf636c7-cgu.04
+    #14 0x55e3d76a747b in std::panic::catch_unwind::<std::rt::lang_start_internal::{closure#0}, isize> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359:14
+    #15 0x55e3d769fe12 in std::rt::lang_start_internal /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/rt.rs:171:5
+    #16 0x55e3d73aee4f in std::rt::lang_start::<()> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/rt.rs:205:5
+    #17 0x55e3d73b6a4d in main (/home/ubuntu/go-sqllexer/rust/target/x86_64-unknown-linux-gnu/debug/build/sqllexer-ffi/5914ba02fdd5a354/out/stress-5914ba02fdd5a354+0x38ca4d) (BuildId: 28aaa1757473f66354791cf645fe0b6d3870876f)
+
+SUMMARY: AddressSanitizer: heap-use-after-free (/home/ubuntu/go-sqllexer/rust/target/x86_64-unknown-linux-gnu/debug/build/sqllexer-ffi/5914ba02fdd5a354/out/stress-5914ba02fdd5a354+0x348a5b) (BuildId: 28aaa1757473f66354791cf645fe0b6d3870876f) in __asan_memcpy
+Shadow bytes around the buggy address:
+  0x7d442bdefd00: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x7d442bdefd80: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x7d442bdefe00: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x7d442bdefe80: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x7d442bdeff00: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+=>0x7d442bdeff80:[fd]fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x7d442bdf0000: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x7d442bdf0080: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x7d442bdf0100: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x7d442bdf0180: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x7d442bdf0200: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==52720==ABORTING
+error: test failed, to rerun pass `-p sqllexer-ffi --test stress`
+
+Caused by:
+  process didn't exit successfully: `/home/ubuntu/go-sqllexer/rust/target/x86_64-unknown-linux-gnu/debug/build/sqllexer-ffi/5914ba02fdd5a354/out/stress-5914ba02fdd5a354 --ignored --exact reading_a_result_after_free_is_a_use_after_free` (exit status: 1)
+note: test exited abnormally; to see the full output pass --no-capture to the harness.
+[exit 1]
+$ bash -c cd rust && cargo +nightly test -Zbuild-std --target x86_64-unknown-linux-gnu -p sqllexer-ffi --features panic-probe --test stress -- --ignored --exact leaking_a_handle_is_reported
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.02s
+     Running tests/stress.rs (target/x86_64-unknown-linux-gnu/debug/build/sqllexer-ffi/5914ba02fdd5a354/out/stress-5914ba02fdd5a354)
+
+running 1 test
+test leaking_a_handle_is_reported ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.00s
+
+
+=================================================================
+==52742==ERROR: LeakSanitizer: detected memory leaks
+
+Direct leak of 344 byte(s) in 1 object(s) allocated from:
+    #0 0x55bfcda05314 in malloc (/home/ubuntu/go-sqllexer/rust/target/x86_64-unknown-linux-gnu/debug/build/sqllexer-ffi/5914ba02fdd5a354/out/stress-5914ba02fdd5a354+0x34b314) (BuildId: 28aaa1757473f66354791cf645fe0b6d3870876f)
+    #1 0x55bfcdd0cc4f in std::sys::alloc::unix::alloc /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/alloc/unix.rs:31:18
+    #2 0x55bfcde14169 in __rustc::__rdl_alloc /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/alloc.rs:472:13
+    #3 0x55bfcdbf0e0c in <alloc::alloc::Global>::alloc_impl_runtime /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/alloc.rs:308:73
+    #4 0x55bfcdbf0c9a in <alloc::alloc::Global>::alloc_impl /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/alloc.rs:430:9
+    #5 0x55bfcdbf6089 in std::panicking::catch_unwind::do_call::<sqllexer_ffi::sqllexer_processor_new::{closure#0}, *mut sqllexer_ffi::Processor> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:573:43
+    #6 0x55bfcdbf346a in std::panic::catch_unwind::<sqllexer_ffi::sqllexer_processor_new::{closure#0}, *mut sqllexer_ffi::Processor> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359:14
+    #7 0x55bfcda435fd in stress::leaking_a_handle_is_reported /home/ubuntu/go-sqllexer/rust/sqllexer-ffi/tests/stress.rs:276:21
+    #8 0x55bfcda3f946 in stress::leaking_a_handle_is_reported::{closure#0} /home/ubuntu/go-sqllexer/rust/sqllexer-ffi/tests/stress.rs:275:34
+    #9 0x55bfcdaee17a in <test::types::RunnableTest>::run /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/types.rs:145:40
+    #10 0x55bfcda5a412 in test::run_test_in_process::{closure#0} /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:756:74
+    #11 0x55bfcdb70362 in <core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275:9
+    #12 0x55bfcdb738c7 in std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}>, core::result::Result<(), alloc::string::String>> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:573:43
+    #13 0x55bfcdb83afa in __rust_try test.b092d41a49b7e701-cgu.12
+    #14 0x55bfcda55c63 in std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}>, core::result::Result<(), alloc::string::String>> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359:14
+    #15 0x55bfcda5f1a2 in test::run_test_in_process /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:756:27
+    #16 0x55bfcda5beba in test::run_test::{closure#0} /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:677:43
+    #17 0x55bfcda5c682 in test::run_test::{closure#1} /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:707:41
+    #18 0x55bfcda85d7d in std::sys::backtrace::__rust_begin_short_backtrace::<test::run_test::{closure#1}, ()> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/backtrace.rs:166:18
+    #19 0x55bfcdb701fe in <core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275:9
+    #20 0x55bfcdb735db in std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}>, ()> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:573:43
+    #21 0x55bfcdb83afa in __rust_try test.b092d41a49b7e701-cgu.12
+    #22 0x55bfcda55ad2 in std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}>, ()> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359:14
+    #23 0x55bfcdba48f8 in std::thread::lifecycle::spawn_unchecked::<test::run_test::{closure#1}, ()>::{closure#1} /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/lifecycle.rs:68:26
+    #24 0x55bfcdabdd7e in <std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1} as core::ops::function::FnOnce<()>>::call_once::{shim:vtable#0} /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250:5
+    #25 0x55bfcdd104be in <std::sys::thread::unix::Thread>::new::thread_start /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/thread/unix.rs:127:17
+    #26 0x55bfcda02656 in asan_thread_start(void*) asan_interceptors.cpp
+
+Indirect leak of 1024 byte(s) in 1 object(s) allocated from:
+    #0 0x55bfcda05314 in malloc (/home/ubuntu/go-sqllexer/rust/target/x86_64-unknown-linux-gnu/debug/build/sqllexer-ffi/5914ba02fdd5a354/out/stress-5914ba02fdd5a354+0x34b314) (BuildId: 28aaa1757473f66354791cf645fe0b6d3870876f)
+    #1 0x55bfcdd0cc4f in std::sys::alloc::unix::alloc /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/alloc/unix.rs:31:18
+    #2 0x55bfcde14169 in __rustc::__rdl_alloc /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/alloc.rs:472:13
+    #3 0x55bfcdef26ec in <alloc::alloc::Global>::alloc_impl_runtime /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/alloc.rs:308:73
+    #4 0x55bfcdef1e2a in <alloc::alloc::Global>::alloc_impl /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/alloc.rs:430:9
+    #5 0x55bfcdeef0d1 in <alloc::raw_vec::RawVecInner>::with_capacity_in /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/raw_vec/mod.rs:439:15
+    #6 0x55bfcdeede89 in <alloc::raw_vec::RawVec<u8>>::with_capacity_in /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/raw_vec/mod.rs:179:20
+    #7 0x55bfcdbf6089 in std::panicking::catch_unwind::do_call::<sqllexer_ffi::sqllexer_processor_new::{closure#0}, *mut sqllexer_ffi::Processor> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:573:43
+    #8 0x55bfcdbf346a in std::panic::catch_unwind::<sqllexer_ffi::sqllexer_processor_new::{closure#0}, *mut sqllexer_ffi::Processor> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359:14
+    #9 0x55bfcda435fd in stress::leaking_a_handle_is_reported /home/ubuntu/go-sqllexer/rust/sqllexer-ffi/tests/stress.rs:276:21
+    #10 0x55bfcda3f946 in stress::leaking_a_handle_is_reported::{closure#0} /home/ubuntu/go-sqllexer/rust/sqllexer-ffi/tests/stress.rs:275:34
+    #11 0x55bfcdaee17a in <test::types::RunnableTest>::run /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/types.rs:145:40
+    #12 0x55bfcda5a412 in test::run_test_in_process::{closure#0} /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:756:74
+    #13 0x55bfcdb70362 in <core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275:9
+    #14 0x55bfcdb738c7 in std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}>, core::result::Result<(), alloc::string::String>> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:573:43
+    #15 0x55bfcdb83afa in __rust_try test.b092d41a49b7e701-cgu.12
+    #16 0x55bfcda55c63 in std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}>, core::result::Result<(), alloc::string::String>> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359:14
+    #17 0x55bfcda5f1a2 in test::run_test_in_process /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:756:27
+    #18 0x55bfcda5beba in test::run_test::{closure#0} /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:677:43
+    #19 0x55bfcda5c682 in test::run_test::{closure#1} /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:707:41
+    #20 0x55bfcda85d7d in std::sys::backtrace::__rust_begin_short_backtrace::<test::run_test::{closure#1}, ()> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/backtrace.rs:166:18
+    #21 0x55bfcdb701fe in <core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275:9
+    #22 0x55bfcdb735db in std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}>, ()> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:573:43
+    #23 0x55bfcdb83afa in __rust_try test.b092d41a49b7e701-cgu.12
+    #24 0x55bfcda55ad2 in std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}>, ()> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359:14
+    #25 0x55bfcdba48f8 in std::thread::lifecycle::spawn_unchecked::<test::run_test::{closure#1}, ()>::{closure#1} /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/lifecycle.rs:68:26
+    #26 0x55bfcdabdd7e in <std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1} as core::ops::function::FnOnce<()>>::call_once::{shim:vtable#0} /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250:5
+    #27 0x55bfcdd104be in <std::sys::thread::unix::Thread>::new::thread_start /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/thread/unix.rs:127:17
+    #28 0x55bfcda02656 in asan_thread_start(void*) asan_interceptors.cpp
+
+Indirect leak of 96 byte(s) in 1 object(s) allocated from:
+    #0 0x55bfcda05314 in malloc (/home/ubuntu/go-sqllexer/rust/target/x86_64-unknown-linux-gnu/debug/build/sqllexer-ffi/5914ba02fdd5a354/out/stress-5914ba02fdd5a354+0x34b314) (BuildId: 28aaa1757473f66354791cf645fe0b6d3870876f)
+    #1 0x55bfcdd0cc4f in std::sys::alloc::unix::alloc /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/alloc/unix.rs:31:18
+    #2 0x55bfcde14169 in __rustc::__rdl_alloc /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/alloc.rs:472:13
+    #3 0x55bfcdef26ec in <alloc::alloc::Global>::alloc_impl_runtime /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/alloc.rs:308:73
+    #4 0x55bfcdef1e2a in <alloc::alloc::Global>::alloc_impl /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/alloc.rs:430:9
+    #5 0x55bfcdeee78e in <alloc::raw_vec::RawVecInner>::grow_amortized /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/raw_vec/mod.rs:535:33
+    #6 0x55bfcdeef274 in <alloc::raw_vec::RawVecInner>::grow_one /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/raw_vec/mod.rs:499:41
+    #7 0x55bfcdcb4366 in <alloc::vec::Vec<alloc::vec::Vec<u8>>>::push /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/vec/mod.rs:1004:22
+    #8 0x55bfcdc02e30 in <sqllexer::normalizer::MetadataList>::insert /home/ubuntu/go-sqllexer/rust/sqllexer/src/normalizer.rs:64:25
+    #9 0x55bfcdc06192 in <sqllexer::normalizer::Normalizer>::collect_metadata /home/ubuntu/go-sqllexer/rust/sqllexer/src/normalizer.rs:282:50
+    #10 0x55bfcdc0781f in <sqllexer::normalizer::Normalizer>::run /home/ubuntu/go-sqllexer/rust/sqllexer/src/normalizer.rs:189:22
+    #11 0x55bfcdc06989 in <sqllexer::normalizer::Normalizer>::obfuscate_and_normalize_into /home/ubuntu/go-sqllexer/rust/sqllexer/src/normalizer.rs:157:14
+    #12 0x55bfcdbf52ec in std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<sqllexer_ffi::sqllexer_process::{closure#0}>, sqllexer_ffi::Result> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:573:43
+    #13 0x55bfcdbf6a1a in __rust_try cs2wub0m3h8hx7ouga6rbcz5u
+    #14 0x55bfcdbf2f5d in std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<sqllexer_ffi::sqllexer_process::{closure#0}>, sqllexer_ffi::Result> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359:14
+    #15 0x55bfcdbf01cc in sqllexer_process /home/ubuntu/go-sqllexer/rust/sqllexer-ffi/src/lib.rs:264:18
+    #16 0x55bfcda43687 in stress::leaking_a_handle_is_reported /home/ubuntu/go-sqllexer/rust/sqllexer-ffi/tests/stress.rs:280:18
+    #17 0x55bfcda3f946 in stress::leaking_a_handle_is_reported::{closure#0} /home/ubuntu/go-sqllexer/rust/sqllexer-ffi/tests/stress.rs:275:34
+    #18 0x55bfcdaee17a in <test::types::RunnableTest>::run /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/types.rs:145:40
+    #19 0x55bfcda5a412 in test::run_test_in_process::{closure#0} /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:756:74
+    #20 0x55bfcdb70362 in <core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275:9
+    #21 0x55bfcdb738c7 in std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}>, core::result::Result<(), alloc::string::String>> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:573:43
+    #22 0x55bfcdb83afa in __rust_try test.b092d41a49b7e701-cgu.12
+    #23 0x55bfcda55c63 in std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}>, core::result::Result<(), alloc::string::String>> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359:14
+    #24 0x55bfcda5f1a2 in test::run_test_in_process /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:756:27
+    #25 0x55bfcda5beba in test::run_test::{closure#0} /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:677:43
+    #26 0x55bfcda5c682 in test::run_test::{closure#1} /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:707:41
+    #27 0x55bfcda85d7d in std::sys::backtrace::__rust_begin_short_backtrace::<test::run_test::{closure#1}, ()> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/backtrace.rs:166:18
+    #28 0x55bfcdb701fe in <core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275:9
+    #29 0x55bfcdb735db in std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}>, ()> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:573:43
+
+Indirect leak of 64 byte(s) in 1 object(s) allocated from:
+    #0 0x55bfcda05314 in malloc (/home/ubuntu/go-sqllexer/rust/target/x86_64-unknown-linux-gnu/debug/build/sqllexer-ffi/5914ba02fdd5a354/out/stress-5914ba02fdd5a354+0x34b314) (BuildId: 28aaa1757473f66354791cf645fe0b6d3870876f)
+    #1 0x55bfcdd0cc4f in std::sys::alloc::unix::alloc /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/alloc/unix.rs:31:18
+    #2 0x55bfcde14169 in __rustc::__rdl_alloc /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/alloc.rs:472:13
+    #3 0x55bfcdef26ec in <alloc::alloc::Global>::alloc_impl_runtime /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/alloc.rs:308:73
+    #4 0x55bfcdef1e2a in <alloc::alloc::Global>::alloc_impl /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/alloc.rs:430:9
+    #5 0x55bfcdeee78e in <alloc::raw_vec::RawVecInner>::grow_amortized /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/raw_vec/mod.rs:535:33
+    #6 0x55bfcdeeb022 in <alloc::raw_vec::RawVecInner<_>>::reserve::do_reserve_and_handle::<alloc::alloc::Global> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/raw_vec/mod.rs:675:44
+    #7 0x55bfcdbeaa77 in <alloc::vec::Vec<sqllexer_ffi::Slice> as alloc::vec::spec_extend::SpecExtend<sqllexer_ffi::Slice, core::iter::adapters::map::Map<core::slice::iter::Iter<alloc::vec::Vec<u8>>, sqllexer_ffi::build_result::{closure#0}>>>::spec_extend /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/vec/spec_extend.rs:27:14
+    #8 0x55bfcdbe78ee in sqllexer_ffi::sqllexer_process::{closure#0} /home/ubuntu/go-sqllexer/rust/sqllexer-ffi/src/lib.rs:272:9
+    #9 0x55bfcdbf52ec in std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<sqllexer_ffi::sqllexer_process::{closure#0}>, sqllexer_ffi::Result> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:573:43
+    #10 0x55bfcdbf6a1a in __rust_try cs2wub0m3h8hx7ouga6rbcz5u
+    #11 0x55bfcdbf2f5d in std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<sqllexer_ffi::sqllexer_process::{closure#0}>, sqllexer_ffi::Result> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359:14
+    #12 0x55bfcdbf01cc in sqllexer_process /home/ubuntu/go-sqllexer/rust/sqllexer-ffi/src/lib.rs:264:18
+    #13 0x55bfcda43687 in stress::leaking_a_handle_is_reported /home/ubuntu/go-sqllexer/rust/sqllexer-ffi/tests/stress.rs:280:18
+    #14 0x55bfcda3f946 in stress::leaking_a_handle_is_reported::{closure#0} /home/ubuntu/go-sqllexer/rust/sqllexer-ffi/tests/stress.rs:275:34
+    #15 0x55bfcdaee17a in <test::types::RunnableTest>::run /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/types.rs:145:40
+    #16 0x55bfcda5a412 in test::run_test_in_process::{closure#0} /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:756:74
+    #17 0x55bfcdb70362 in <core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275:9
+    #18 0x55bfcdb738c7 in std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}>, core::result::Result<(), alloc::string::String>> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:573:43
+    #19 0x55bfcdb83afa in __rust_try test.b092d41a49b7e701-cgu.12
+    #20 0x55bfcda55c63 in std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}>, core::result::Result<(), alloc::string::String>> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359:14
+    #21 0x55bfcda5f1a2 in test::run_test_in_process /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:756:27
+    #22 0x55bfcda5beba in test::run_test::{closure#0} /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:677:43
+    #23 0x55bfcda5c682 in test::run_test::{closure#1} /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:707:41
+    #24 0x55bfcda85d7d in std::sys::backtrace::__rust_begin_short_backtrace::<test::run_test::{closure#1}, ()> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/backtrace.rs:166:18
+    #25 0x55bfcdb701fe in <core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275:9
+    #26 0x55bfcdb735db in std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}>, ()> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:573:43
+    #27 0x55bfcdb83afa in __rust_try test.b092d41a49b7e701-cgu.12
+    #28 0x55bfcda55ad2 in std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}>, ()> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359:14
+    #29 0x55bfcdba48f8 in std::thread::lifecycle::spawn_unchecked::<test::run_test::{closure#1}, ()>::{closure#1} /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/lifecycle.rs:68:26
+
+Indirect leak of 32 byte(s) in 1 object(s) allocated from:
+    #0 0x55bfcda05314 in malloc (/home/ubuntu/go-sqllexer/rust/target/x86_64-unknown-linux-gnu/debug/build/sqllexer-ffi/5914ba02fdd5a354/out/stress-5914ba02fdd5a354+0x34b314) (BuildId: 28aaa1757473f66354791cf645fe0b6d3870876f)
+    #1 0x55bfcdd0cc4f in std::sys::alloc::unix::alloc /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/alloc/unix.rs:31:18
+    #2 0x55bfcde14169 in __rustc::__rdl_alloc /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/alloc.rs:472:13
+    #3 0x55bfcdef26ec in <alloc::alloc::Global>::alloc_impl_runtime /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/alloc.rs:308:73
+    #4 0x55bfcdef1e2a in <alloc::alloc::Global>::alloc_impl /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/alloc.rs:430:9
+    #5 0x55bfcdeee78e in <alloc::raw_vec::RawVecInner>::grow_amortized /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/raw_vec/mod.rs:535:33
+    #6 0x55bfcdeef274 in <alloc::raw_vec::RawVecInner>::grow_one /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/raw_vec/mod.rs:499:41
+    #7 0x55bfcdc06192 in <sqllexer::normalizer::Normalizer>::collect_metadata /home/ubuntu/go-sqllexer/rust/sqllexer/src/normalizer.rs:282:50
+    #8 0x55bfcdc0781f in <sqllexer::normalizer::Normalizer>::run /home/ubuntu/go-sqllexer/rust/sqllexer/src/normalizer.rs:189:22
+    #9 0x55bfcdc06989 in <sqllexer::normalizer::Normalizer>::obfuscate_and_normalize_into /home/ubuntu/go-sqllexer/rust/sqllexer/src/normalizer.rs:157:14
+    #10 0x55bfcdbf52ec in std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<sqllexer_ffi::sqllexer_process::{closure#0}>, sqllexer_ffi::Result> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:573:43
+    #11 0x55bfcdbf6a1a in __rust_try cs2wub0m3h8hx7ouga6rbcz5u
+    #12 0x55bfcdbf2f5d in std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<sqllexer_ffi::sqllexer_process::{closure#0}>, sqllexer_ffi::Result> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359:14
+    #13 0x55bfcdbf01cc in sqllexer_process /home/ubuntu/go-sqllexer/rust/sqllexer-ffi/src/lib.rs:264:18
+    #14 0x55bfcda43687 in stress::leaking_a_handle_is_reported /home/ubuntu/go-sqllexer/rust/sqllexer-ffi/tests/stress.rs:280:18
+    #15 0x55bfcda3f946 in stress::leaking_a_handle_is_reported::{closure#0} /home/ubuntu/go-sqllexer/rust/sqllexer-ffi/tests/stress.rs:275:34
+    #16 0x55bfcdaee17a in <test::types::RunnableTest>::run /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/types.rs:145:40
+    #17 0x55bfcda5a412 in test::run_test_in_process::{closure#0} /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:756:74
+    #18 0x55bfcdb70362 in <core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275:9
+    #19 0x55bfcdb738c7 in std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}>, core::result::Result<(), alloc::string::String>> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:573:43
+    #20 0x55bfcdb83afa in __rust_try test.b092d41a49b7e701-cgu.12
+    #21 0x55bfcda55c63 in std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}>, core::result::Result<(), alloc::string::String>> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359:14
+    #22 0x55bfcda5f1a2 in test::run_test_in_process /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:756:27
+    #23 0x55bfcda5beba in test::run_test::{closure#0} /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:677:43
+    #24 0x55bfcda5c682 in test::run_test::{closure#1} /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:707:41
+    #25 0x55bfcda85d7d in std::sys::backtrace::__rust_begin_short_backtrace::<test::run_test::{closure#1}, ()> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/backtrace.rs:166:18
+    #26 0x55bfcdb701fe in <core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275:9
+    #27 0x55bfcdb735db in std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}>, ()> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:573:43
+    #28 0x55bfcdb83afa in __rust_try test.b092d41a49b7e701-cgu.12
+    #29 0x55bfcda55ad2 in std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}>, ()> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359:14
+
+Indirect leak of 6 byte(s) in 1 object(s) allocated from:
+    #0 0x55bfcda05314 in malloc (/home/ubuntu/go-sqllexer/rust/target/x86_64-unknown-linux-gnu/debug/build/sqllexer-ffi/5914ba02fdd5a354/out/stress-5914ba02fdd5a354+0x34b314) (BuildId: 28aaa1757473f66354791cf645fe0b6d3870876f)
+    #1 0x55bfcdd0cc4f in std::sys::alloc::unix::alloc /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/alloc/unix.rs:31:18
+    #2 0x55bfcde14169 in __rustc::__rdl_alloc /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/alloc.rs:472:13
+    #3 0x55bfcdef26ec in <alloc::alloc::Global>::alloc_impl_runtime /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/alloc.rs:308:73
+    #4 0x55bfcdef1e2a in <alloc::alloc::Global>::alloc_impl /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/alloc.rs:430:9
+    #5 0x55bfcdeef0d1 in <alloc::raw_vec::RawVecInner>::with_capacity_in /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/raw_vec/mod.rs:439:15
+    #6 0x55bfcdeede89 in <alloc::raw_vec::RawVec<u8>>::with_capacity_in /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/raw_vec/mod.rs:179:20
+    #7 0x55bfcdeeadcb in <[u8]>::to_vec_in::<alloc::alloc::Global> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/slice.rs:400:16
+    #8 0x55bfcdc06192 in <sqllexer::normalizer::Normalizer>::collect_metadata /home/ubuntu/go-sqllexer/rust/sqllexer/src/normalizer.rs:282:50
+    #9 0x55bfcdc0781f in <sqllexer::normalizer::Normalizer>::run /home/ubuntu/go-sqllexer/rust/sqllexer/src/normalizer.rs:189:22
+    #10 0x55bfcdc06989 in <sqllexer::normalizer::Normalizer>::obfuscate_and_normalize_into /home/ubuntu/go-sqllexer/rust/sqllexer/src/normalizer.rs:157:14
+    #11 0x55bfcdbf52ec in std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<sqllexer_ffi::sqllexer_process::{closure#0}>, sqllexer_ffi::Result> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:573:43
+    #12 0x55bfcdbf6a1a in __rust_try cs2wub0m3h8hx7ouga6rbcz5u
+    #13 0x55bfcdbf2f5d in std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<sqllexer_ffi::sqllexer_process::{closure#0}>, sqllexer_ffi::Result> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359:14
+    #14 0x55bfcdbf01cc in sqllexer_process /home/ubuntu/go-sqllexer/rust/sqllexer-ffi/src/lib.rs:264:18
+    #15 0x55bfcda43687 in stress::leaking_a_handle_is_reported /home/ubuntu/go-sqllexer/rust/sqllexer-ffi/tests/stress.rs:280:18
+    #16 0x55bfcda3f946 in stress::leaking_a_handle_is_reported::{closure#0} /home/ubuntu/go-sqllexer/rust/sqllexer-ffi/tests/stress.rs:275:34
+    #17 0x55bfcdaee17a in <test::types::RunnableTest>::run /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/types.rs:145:40
+    #18 0x55bfcda5a412 in test::run_test_in_process::{closure#0} /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:756:74
+    #19 0x55bfcdb70362 in <core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275:9
+    #20 0x55bfcdb738c7 in std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}>, core::result::Result<(), alloc::string::String>> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:573:43
+    #21 0x55bfcdb83afa in __rust_try test.b092d41a49b7e701-cgu.12
+    #22 0x55bfcda55c63 in std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}>, core::result::Result<(), alloc::string::String>> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359:14
+    #23 0x55bfcda5f1a2 in test::run_test_in_process /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:756:27
+    #24 0x55bfcda5beba in test::run_test::{closure#0} /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:677:43
+    #25 0x55bfcda5c682 in test::run_test::{closure#1} /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:707:41
+    #26 0x55bfcda85d7d in std::sys::backtrace::__rust_begin_short_backtrace::<test::run_test::{closure#1}, ()> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/backtrace.rs:166:18
+    #27 0x55bfcdb701fe in <core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275:9
+    #28 0x55bfcdb735db in std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}>, ()> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:573:43
+    #29 0x55bfcdb83afa in __rust_try test.b092d41a49b7e701-cgu.12
+
+SUMMARY: AddressSanitizer: 1566 byte(s) leaked in 6 allocation(s).
+error: test failed, to rerun pass `-p sqllexer-ffi --test stress`
+
+Caused by:
+  process didn't exit successfully: `/home/ubuntu/go-sqllexer/rust/target/x86_64-unknown-linux-gnu/debug/build/sqllexer-ffi/5914ba02fdd5a354/out/stress-5914ba02fdd5a354 --ignored --exact leaking_a_handle_is_reported` (exit status: 1)
+note: test exited abnormally; to see the full output pass --no-capture to the harness.
+[exit 1]
