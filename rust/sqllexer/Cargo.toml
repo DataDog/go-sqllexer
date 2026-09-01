@@ -1,0 +1,12 @@
+[package]
+name = "sqllexer"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Rust implementation of the go-sqllexer SQL lexer, obfuscator and normalizer"
+
+[dependencies]
+
+[lints.clippy]
+all = "deny"

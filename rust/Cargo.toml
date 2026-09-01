@@ -1,0 +1,15 @@
+[workspace]
+resolver = "2"
+members = ["sqllexer", "sqllexer-runner"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+license = "MIT"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"

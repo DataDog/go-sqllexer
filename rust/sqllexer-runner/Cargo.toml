@@ -1,0 +1,12 @@
+[package]
+name = "sqllexer-runner"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Harness protocol runner for the Rust sqllexer implementation"
+
+[dependencies]
+sqllexer = { path = "../sqllexer" }
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.140"

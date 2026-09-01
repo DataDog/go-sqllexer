@@ -26,3 +26,9 @@ testdata/fuzz/
 
 # Benchmark files
 bench
+
+# Rust build output
+rust/target/
+
+# Generated harness corpora and reports (reproducible via harness/cmd/corpusgen)
+harness/corpus/
