@@ -32,6 +32,12 @@ on:
   push:
     branches:
       - "devin/**-rust-migration-harness"
+    # Committing the reports the workflow itself produced must not start another
+    # 40-minute matrix.
+    paths-ignore:
+      - "harness/reports/**.md"
+      - "harness/reports/ci-*/**"
+      - "harness/*.md"
 
 concurrency:
   group: harness-throughput-${{ github.ref }}
