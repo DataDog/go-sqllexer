@@ -4,7 +4,8 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/../.."
-out=harness/reports
+out=${OUT:-harness/reports}
+mkdir -p "$out"
 duration=${DURATION:-20s}
 warmup=${WARMUP:-5s}
 
