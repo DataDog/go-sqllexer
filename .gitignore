@@ -3,6 +3,8 @@
 #
 # Binaries for programs and plugins
 bin/
+# Cargo's src/bin directories are source, not build output.
+!rust/**/src/bin/
 *.exe
 *.exe~
 *.dll

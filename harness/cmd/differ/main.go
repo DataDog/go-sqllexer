@@ -16,12 +16,14 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"strings"
+	"syscall"
 
 	"github.com/DataDog/go-sqllexer/harness/internal/corpus"
 	"github.com/DataDog/go-sqllexer/harness/internal/protocol"
@@ -284,7 +286,7 @@ func run(command string, requests []protocol.Request) ([]protocol.Response, erro
 		cmd.Wait()
 		return nil, err
 	}
-	if err := <-writeErr; err != nil {
+	if err := <-writeErr; err != nil && !isBrokenPipe(err) {
 		cmd.Wait()
 		return nil, err
 	}
@@ -292,6 +294,15 @@ func run(command string, requests []protocol.Request) ([]protocol.Response, erro
 		return nil, err
 	}
 	return responses, nil
+}
+
+// isBrokenPipe reports whether a write failed because the implementation had
+// already closed its stdin. That is not an error by itself: an implementation
+// that answered every request and exited wins the race against the feeder on a
+// fast machine. The missing-response check and the exit status decide the run.
+func isBrokenPipe(err error) bool {
+	return errors.Is(err, syscall.EPIPE) || errors.Is(err, io.ErrClosedPipe) ||
+		errors.Is(err, os.ErrClosed)
 }
 
 func readResponses(r io.Reader, requests []protocol.Request) ([]protocol.Response, error) {
