@@ -1,0 +1,88 @@
+$ bash -c cd rust && cargo +nightly miri test -p sqllexer-ffi --features panic-probe --test stress -- --ignored --exact feeding_a_result_back_as_input_aliases_handle_memory
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.00s
+     Running tests/stress.rs (target/miri/x86_64-unknown-linux-gnu/debug/build/sqllexer-ffi/02f4fc92ba1d6952/out/stress-02f4fc92ba1d6952)
+
+running 1 test
+test feeding_a_result_back_as_input_aliases_handle_memory ... error: Undefined Behavior: not granting access to tag <141653> because that would remove [SharedReadOnly for <285973>] which is strongly protected
+    --> /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/vec/mod.rs:1916:13
+     |
+1916 |             &mut *core::intrinsics::aggregate_raw_ptr::<*mut [T], _, _>(self.as_mut_ptr(), self.len)
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Undefined Behavior occurred here
+     |
+     = help: this indicates a potential bug in the program: it performed an invalid operation, but the Stacked Borrows rules it violated are still experimental
+     = help: see https://github.com/rust-lang/unsafe-code-guidelines/blob/master/wip/stacked-borrows.md for further information
+help: <141653> was created here, as the root tag for alloc45028
+    --> sqllexer-ffi/src/lib.rs:216:17
+help: <285973> is this argument
+    --> sqllexer/src/normalizer.rs:162:8
+     = note: this is on thread `feeding_a_resul`
+     = note: stack backtrace:
+             0: std::vec::Vec::<u8>::as_mut_slice
+                 at /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/vec/mod.rs:1916:13: 1916:101
+             1: std::vec::Vec::<u8>::clear
+                 at /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/vec/mod.rs:3112:31: 3112:50
+             2: sqllexer::normalizer::Normalizer::run
+                 at sqllexer/src/normalizer.rs:168:9: 168:20
+             3: sqllexer::normalizer::Normalizer::obfuscate_and_normalize_into
+                 at sqllexer/src/normalizer.rs:157:9: 157:63
+             4: sqllexer_ffi::sqllexer_process::{closure#0}
+                 at sqllexer-ffi/src/lib.rs:265:9: 271:10
+             5: <{closure@sqllexer_ffi::sqllexer_process::{closure#0}} as std::ops::FnOnce<()>>::call_once - shim
+                 at /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250:5: 250:71
+             6: <std::panic::AssertUnwindSafe<{closure@sqllexer_ffi::sqllexer_process::{closure#0}}> as std::ops::FnOnce<()>>::call_once
+                 at /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275:9: 275:19
+             7: std::panicking::catch_unwind::do_call::<std::panic::AssertUnwindSafe<{closure@sqllexer_ffi::sqllexer_process::{closure#0}}>, sqllexer_ffi::Result>
+                 at /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:573:43: 573:46
+             8: std::panicking::catch_unwind::<sqllexer_ffi::Result, std::panic::AssertUnwindSafe<{closure@sqllexer_ffi::sqllexer_process::{closure#0}}>>
+                 at /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:541:19: 541:77
+             9: std::panic::catch_unwind::<std::panic::AssertUnwindSafe<{closure@sqllexer_ffi::sqllexer_process::{closure#0}}>, sqllexer_ffi::Result>
+                 at /home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359:14: 359:40
+             10: sqllexer_ffi::sqllexer_process
+                 at sqllexer-ffi/src/lib.rs:264:18: 273:8
+             11: feeding_a_result_back_as_input_aliases_handle_memory
+                 at sqllexer-ffi/tests/stress.rs:264:18: 264:92
+             12: feeding_a_result_back_as_input_aliases_handle_memory::{closure#0}
+                 at sqllexer-ffi/tests/stress.rs:254:58: 254:58
+
+note: some details are omitted, run with `MIRIFLAGS=-Zmiri-backtrace=full` for a verbose backtrace
+
+error: aborting due to 1 previous error
+
+error: test failed, to rerun pass `-p sqllexer-ffi --test stress`
+
+Caused by:
+  process didn't exit successfully: `/home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/bin/cargo-miri runner /home/ubuntu/go-sqllexer/rust/target/miri/x86_64-unknown-linux-gnu/debug/build/sqllexer-ffi/02f4fc92ba1d6952/out/stress-02f4fc92ba1d6952 --ignored --exact feeding_a_result_back_as_input_aliases_handle_memory` (exit status: 1)
+note: test exited abnormally; to see the full output pass --no-capture to the harness.
+[exit 1]
+$ bash -c cd rust && cargo +nightly miri test -p sqllexer-ffi --features panic-probe --test stress -- --ignored --exact reading_a_result_after_free_is_a_use_after_free
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.00s
+     Running tests/stress.rs (target/miri/x86_64-unknown-linux-gnu/debug/build/sqllexer-ffi/02f4fc92ba1d6952/out/stress-02f4fc92ba1d6952)
+
+running 1 test
+test reading_a_result_after_free_is_a_use_after_free ... error: Undefined Behavior: constructing invalid value of type &[u8]: encountered a dangling reference (use-after-free)
+  --> sqllexer-ffi/tests/stress.rs:20:14
+   |
+20 |     unsafe { std::slice::from_raw_parts(slice.ptr, slice.len) }.to_vec()
+   |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Undefined Behavior occurred here
+   |
+   = help: this indicates a bug in the program: it performed an invalid operation, and caused Undefined Behavior
+   = help: see https://doc.rust-lang.org/nightly/reference/behavior-considered-undefined.html for further information
+   = note: this is on thread `reading_a_resul`
+   = note: stack backtrace:
+           0: slice_bytes
+               at sqllexer-ffi/tests/stress.rs:20:14: 20:62
+           1: reading_a_result_after_free_is_a_use_after_free
+               at sqllexer-ffi/tests/stress.rs:242:17: 242:40
+           2: reading_a_result_after_free_is_a_use_after_free::{closure#0}
+               at sqllexer-ffi/tests/stress.rs:232:53: 232:53
+
+note: some details are omitted, run with `MIRIFLAGS=-Zmiri-backtrace=full` for a verbose backtrace
+
+error: aborting due to 1 previous error
+
+error: test failed, to rerun pass `-p sqllexer-ffi --test stress`
+
+Caused by:
+  process didn't exit successfully: `/home/ubuntu/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/bin/cargo-miri runner /home/ubuntu/go-sqllexer/rust/target/miri/x86_64-unknown-linux-gnu/debug/build/sqllexer-ffi/02f4fc92ba1d6952/out/stress-02f4fc92ba1d6952 --ignored --exact reading_a_result_after_free_is_a_use_after_free` (exit status: 1)
+note: test exited abnormally; to see the full output pass --no-capture to the harness.
+[exit 1]

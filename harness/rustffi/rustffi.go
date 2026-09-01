@@ -49,6 +49,7 @@ import "C"
 import (
 	"errors"
 	"runtime"
+	"sync/atomic"
 	"unsafe"
 
 	"github.com/DataDog/go-sqllexer"
@@ -93,12 +94,27 @@ const (
 // normalizer, which recovers panics into an error.
 var ErrPanic = errors.New("sqllexer: rust panicked")
 
+// ErrConcurrentUse is returned when a second call starts on a handle while the
+// first is still running or still copying its result out. A handle owns the
+// buffers its results are written into, so overlapping calls would corrupt each
+// other's output and race on Rust memory that neither the Go race detector nor a
+// memory sanitizer inspects.
+// Rejecting the call turns that undefined behavior into an error; it does not
+// make a shared handle supported. One handle per goroutine remains the model.
+var ErrConcurrentUse = errors.New("sqllexer: processor used concurrently by more than one goroutine")
+
 var errNull = errors.New("sqllexer: invalid argument passed to rust")
+
+var errClosed = errors.New("sqllexer: processor is closed")
 
 // Processor is a reusable handle. It is not safe for concurrent use: it owns the
 // buffers results are written into, so each goroutine needs its own.
 type Processor struct {
 	handle unsafe.Pointer
+	// busy is held from the start of a call until its result has been copied
+	// into Go memory. Its only purpose is to detect misuse; it never makes a
+	// caller wait.
+	busy atomic.Bool
 }
 
 // NewProcessor creates a handle for one obfuscator/normalizer configuration.
@@ -111,7 +127,9 @@ func NewProcessor(obfuscatorFlags, normalizerFlags uint32) *Processor {
 	return &Processor{handle: handle}
 }
 
-// Close releases the handle. It is idempotent.
+// Close releases the handle. It is idempotent. Closing a handle while another
+// goroutine is calling into it is unsupported and not detected: the guard only
+// covers overlapping calls.
 func (p *Processor) Close() {
 	if p.handle == nil {
 		return
@@ -125,6 +143,11 @@ func (p *Processor) Close() {
 // The returned values are copied out of the Rust buffers, so they stay valid
 // after the next call.
 func (p *Processor) ObfuscateAndNormalize(sql string, dbms sqllexer.DBMSType) (string, *sqllexer.StatementMetadata, error) {
+	if err := p.acquire(); err != nil {
+		return "", nil, err
+	}
+	defer p.release()
+
 	var result C.sqllexer_result
 	err := p.call(sql, dbms, func(ptr *C.uint8_t, length C.size_t, code C.uint32_t) C.int32_t {
 		return C.sqllexer_process(p.handle, ptr, length, code, &result)
@@ -137,6 +160,11 @@ func (p *Processor) ObfuscateAndNormalize(sql string, dbms sqllexer.DBMSType) (s
 
 // Normalize is the Rust equivalent of (*sqllexer.Normalizer).Normalize.
 func (p *Processor) Normalize(sql string, dbms sqllexer.DBMSType) (string, *sqllexer.StatementMetadata, error) {
+	if err := p.acquire(); err != nil {
+		return "", nil, err
+	}
+	defer p.release()
+
 	var result C.sqllexer_result
 	err := p.call(sql, dbms, func(ptr *C.uint8_t, length C.size_t, code C.uint32_t) C.int32_t {
 		return C.sqllexer_normalize(p.handle, ptr, length, code, &result)
@@ -149,6 +177,11 @@ func (p *Processor) Normalize(sql string, dbms sqllexer.DBMSType) (string, *sqll
 
 // Obfuscate is the Rust equivalent of (*sqllexer.Obfuscator).Obfuscate.
 func (p *Processor) Obfuscate(sql string, dbms sqllexer.DBMSType) (string, error) {
+	if err := p.acquire(); err != nil {
+		return "", err
+	}
+	defer p.release()
+
 	var result C.sqllexer_slice
 	err := p.call(sql, dbms, func(ptr *C.uint8_t, length C.size_t, code C.uint32_t) C.int32_t {
 		return C.sqllexer_obfuscate(p.handle, ptr, length, code, &result)
@@ -168,6 +201,11 @@ type Token struct {
 // Tokenize is the Rust equivalent of driving sqllexer.Lexer.Scan to EOF. The EOF
 // token is not included, matching how callers loop.
 func (p *Processor) Tokenize(sql string, dbms sqllexer.DBMSType) ([]Token, error) {
+	if err := p.acquire(); err != nil {
+		return nil, err
+	}
+	defer p.release()
+
 	var list C.sqllexer_token_list
 	err := p.call(sql, dbms, func(ptr *C.uint8_t, length C.size_t, code C.uint32_t) C.int32_t {
 		return C.sqllexer_tokenize(p.handle, ptr, length, code, &list)
@@ -190,12 +228,26 @@ func (p *Processor) Tokenize(sql string, dbms sqllexer.DBMSType) ([]Token, error
 	return tokens, nil
 }
 
-// call handles the parts every entry point shares: the closed-handle check, the
-// borrowed input pointer and its lifetime, and the status code.
-func (p *Processor) call(sql string, dbms sqllexer.DBMSType, invoke func(*C.uint8_t, C.size_t, C.uint32_t) C.int32_t) error {
-	if p.handle == nil {
-		return errors.New("sqllexer: processor is closed")
+// acquire claims the handle for one call. The claim has to outlive the call
+// itself: the result descriptors point into buffers the handle owns, so a second
+// call that starts while the first is still copying them out overwrites the
+// bytes being read. Every entry point holds it until it has finished copying.
+func (p *Processor) acquire() error {
+	if !p.busy.CompareAndSwap(false, true) {
+		return ErrConcurrentUse
 	}
+	if p.handle == nil {
+		p.busy.Store(false)
+		return errClosed
+	}
+	return nil
+}
+
+func (p *Processor) release() { p.busy.Store(false) }
+
+// call handles the parts every entry point shares once the handle is claimed:
+// the borrowed input pointer and its lifetime, and the status code.
+func (p *Processor) call(sql string, dbms sqllexer.DBMSType, invoke func(*C.uint8_t, C.size_t, C.uint32_t) C.int32_t) error {
 	var ptr *C.uint8_t
 	if len(sql) > 0 {
 		ptr = (*C.uint8_t)(unsafe.Pointer(unsafe.StringData(sql)))
