@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["sqllexer", "sqllexer-runner"]
+members = ["sqllexer", "sqllexer-ffi", "sqllexer-runner"]
 
 [workspace.package]
 version = "0.1.0"
@@ -12,4 +12,6 @@ license = "MIT"
 opt-level = 3
 lto = "fat"
 codegen-units = 1
-panic = "abort"
+# Unwinding stays enabled: the FFI layer catches panics at the boundary and
+# reports them as errors, which is safer inside a host process than aborting it.
+panic = "unwind"

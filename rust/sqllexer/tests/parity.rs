@@ -95,7 +95,12 @@ fn run(
 }
 
 fn normalize(sql: &str, dbms: Dbms) -> Result {
-    run(sql, dbms, &default_obfuscator(), default_normalizer_config())
+    run(
+        sql,
+        dbms,
+        &default_obfuscator(),
+        default_normalizer_config(),
+    )
 }
 
 #[test]
@@ -238,11 +243,7 @@ fn oracle_binds_and_snowflake_stages_are_dbms_specific() {
     assert_tokens(
         "SELECT @bind",
         Dbms::None,
-        &[
-            (Command, "SELECT"),
-            (Space, " "),
-            (BindParameter, "@bind"),
-        ],
+        &[(Command, "SELECT"), (Space, " "), (BindParameter, "@bind")],
     );
 }
 
@@ -366,7 +367,10 @@ fn invalid_utf8_is_preserved_byte_for_byte() {
 
 #[test]
 fn obfuscates_and_normalizes_with_metadata() {
-    let result = normalize("SELECT * FROM users WHERE id = 42 AND name = 'x'", Dbms::None);
+    let result = normalize(
+        "SELECT * FROM users WHERE id = 42 AND name = 'x'",
+        Dbms::None,
+    );
     assert_eq!(result.sql, "SELECT * FROM users WHERE id = ? AND name = ?");
     assert_eq!(result.tables, ["users"]);
     assert_eq!(result.commands, ["SELECT"]);
