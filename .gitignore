@@ -34,3 +34,4 @@ rust/target/
 
 # Generated harness corpora and reports (reproducible via harness/cmd/corpusgen)
 harness/corpus/
+__pycache__/

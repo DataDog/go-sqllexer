@@ -61,17 +61,15 @@ a property of that binding, not of the core.
 ## C. Performance
 
 Gates were deliberately not fixed before there was data. They are ratified from the
-measured baseline in [`reports/`](reports/README.md) and are expressed as ratios
-against the Go implementation **on the same host, same corpus, same worker count,
-same run**. Absolute throughput is not comparable across machines; the ratio is.
+measured matrices in [`reports/benchmarks.html`](reports/benchmarks.html) (ARM and
+x86, 3 repeats each, 60s after 10s warmup, raw JSON in `reports/ci-arm/` and
+`reports/ci-x86/`) and are expressed as ratios against the Go implementation **on
+the same host, same corpus, same worker count, same run**. Absolute throughput is
+not comparable across machines; the ratio is.
 
-Both architectures count. A gate holds only if it holds on ARM *and* x86 — see
-[`reports/CROSS-PLATFORM.md`](reports/CROSS-PLATFORM.md). Worker counts follow each
-host's core count so that neither side is measured oversubscribed.
-
-Ratified from the ARM and x86 matrices in
-[`reports/CROSS-PLATFORM.md`](reports/CROSS-PLATFORM.md) (3 repeats each, 60s after
-10s warmup). "Worst observed" is the weaker of the two architectures.
+Both architectures count: a gate holds only if it holds on ARM *and* x86, and
+"worst observed" below is the weaker of the two. Worker counts follow each host's
+core count so that neither side is measured oversubscribed.
 
 | # | Gate | Worst observed | Rationale |
 | --- | --- | --- | --- |
@@ -111,44 +109,26 @@ Two measurement rules that came out of the earlier rounds and still apply:
 - **`CGO_ENABLED=0`** and any pure-Go-fallback question, for the same reason.
 - **Shipping the Rust CLI or the harness runners** as supported artifacts. They
   exist to produce this evidence.
-- **Production-traffic shadow validation.** No sanitized production corpus was
-  available, so the synthetic generator (seeded from testdata and the fuzz corpus)
-  stands in for it. This is the weakest evidence in the set and worth revisiting if
-  a real sample can be sourced.
+- **Production-traffic shadow validation.** Synthetic corpora (seeded from testdata
+  and the fuzz corpus) are accepted as sufficient for this phase. They cover the
+  option space exhaustively where real traffic would not; what they cannot show is
+  the *distribution* of real queries, which matters for the benchmark ratios rather
+  than for parity.
 
 ## E. Reproducing the whole thing
 
+The A and C commands are in [README.md](README.md) — parity suite, differential
+fuzzing and the benchmark matrix, copy-pasteable from the repository root. Section
+B is the rest:
+
 ```sh
-# corpora
-go run ./harness/cmd/corpusgen -out harness/corpus \
-  -fuzz-corpus "$(go env GOCACHE)/fuzz/github.com/DataDog/go-sqllexer/FuzzObfuscatorAndNormalizer"
-
-# build the Rust side
-(cd rust && cargo build --release)
-
-# A1-A6, A8: the Rust core against the Go oracle
-go build -o /tmp/gorunner ./harness/cmd/gorunner
-for c in testdata workloads pathological matrix fuzzseeds; do
-  go run ./harness/cmd/differ -corpus harness/corpus/$c.jsonl \
-    -reference /tmp/gorunner \
-    -candidate rust/target/release/sqllexer-runner
-done
-
-# A7: continuous differential fuzzing
-go test -run xxx -fuzz FuzzParity -fuzztime 10m ./harness/cmd/gorunner/
-
-# A9 + keyword tables
-go test ./...
-
-# B1-B4
-cargo +nightly miri test -p sqllexer   # in rust/
-cargo clippy --all-targets --all-features -- -D warnings
-cargo fmt --all --check
-go vet ./...
-
-# C1-C8. The published matrix is DURATION=60s WARMUP=10s, three full runs, on both
-# the arm-8core-linux runner and an x86_64 runner, via
-# .github/workflows/harness-throughput.yml.
-DURATION=60s WARMUP=10s harness/reports/run.sh
-python3 harness/reports/summarize.py harness/reports/ci-arm
+cd rust
+cargo +nightly miri test -p sqllexer                        # B1
+cargo clippy --all-targets --all-features -- -D warnings    # B4
+cargo fmt --all --check                                     # B4
+cd .. && go vet ./...                                       # B4
 ```
+
+The published matrix is `DURATION=60s WARMUP=10s`, three full runs on the
+`arm-8core-linux` runner and on x86, produced by
+[`harness-throughput.yml`](../.github/workflows/harness-throughput.yml).

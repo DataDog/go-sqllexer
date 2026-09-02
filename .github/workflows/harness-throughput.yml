@@ -36,6 +36,7 @@ on:
     # 40-minute matrix.
     paths-ignore:
       - "harness/reports/**.md"
+      - "harness/reports/benchmarks.html"
       - "harness/reports/ci-*/**"
       - "harness/*.md"
 
@@ -114,7 +115,12 @@ jobs:
             OUT="harness/reports/${{ matrix.key }}/run$i" harness/reports/run.sh
           done
       - name: Summarize
-        run: python3 harness/reports/summarize.py "harness/reports/${{ matrix.key }}" | tee "$GITHUB_STEP_SUMMARY"
+        run: |
+          python3 harness/reports/summarize.py "harness/reports/${{ matrix.key }}" |
+            tee "$GITHUB_STEP_SUMMARY"
+          python3 harness/reports/summarize.py \
+            --html "harness/reports/${{ matrix.key }}/benchmarks.html" \
+            "harness/reports/${{ matrix.key }}"
       - name: Upload reports
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
