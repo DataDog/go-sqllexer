@@ -47,11 +47,12 @@ pub use normalizer::{MetadataList, Normalizer, NormalizerConfig, StatementMetada
 pub use obfuscator::{Obfuscator, ObfuscatorConfig, NUMBER_PLACEHOLDER, STRING_PLACEHOLDER};
 pub use token::{Token, TokenType};
 
-/// A reusable obfuscate-and-normalize pipeline.
+/// A reusable obfuscate-and-normalize pipeline: one per worker.
 ///
-/// The FFI boundary hands out one of these per caller so that configuration
-/// parsing, buffer allocation and metadata storage happen once instead of on every
-/// statement; `process` reuses the same buffers across calls.
+/// Configuration, buffers and metadata storage are set up once instead of per
+/// statement, and `process` reuses the same buffers across calls, which is where
+/// most of the throughput difference against a construct-per-call pattern comes
+/// from. Not `Sync`: `process` takes `&mut self`.
 pub struct Processor {
     obfuscator: Obfuscator,
     normalizer: Normalizer,

@@ -1,0 +1,183 @@
+#!/usr/bin/env bash
+# One entry point for every claim this branch makes. Each subcommand echoes the
+# commands it runs, so the transcript is also the documentation: nothing here is
+# doing anything you could not have typed yourself.
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+readonly corpora=(testdata workloads pathological matrix fuzzseeds)
+
+usage() {
+  cat <<'EOF'
+Usage: harness/harness <command> [options]
+
+  parity            Prove the Rust implementation answers exactly like the Go one:
+                    every corpus through both, plus the keyword tables and the
+                    frozen library suite. Takes ~3 minutes.
+  fuzz [duration]   Differential fuzzing: generated inputs answered by the Go
+                    oracle in-process and by the Rust runner over a pipe.
+                    Default 10m.
+  bench [options]   Both implementations under sustained load on this host, back
+                    to back. Writes one JSON report per configuration.
+  report [dirs...]  Rebuild the tables and harness/reports/benchmarks.html from
+                    JSON reports. Defaults to the committed CI evidence.
+  check             Lint, format, vet and Miri, as CI runs them.
+
+bench options:
+  --duration 60s    Measured window per configuration  (default 20s)
+  --warmup 10s      Discarded window before measuring  (default 5s)
+  --workers "1 8"   Worker counts                      (default: 1 and this
+                                                        host's core count)
+  --out DIR         Where the JSON lands               (default
+                                                        harness/reports/local)
+
+Everything runs from the repository root and needs only Go and a stable Rust
+toolchain. Results and the criteria they are judged against:
+harness/reports/benchmarks.html and harness/ACCEPTANCE.md.
+EOF
+}
+
+# Echo before running: a reviewer should be able to lift any line out of the
+# output and run it directly.
+run() {
+  printf '\n$ %s\n' "$*" >&2
+  "$@"
+}
+
+build_both() {
+  run cargo build --release --manifest-path rust/Cargo.toml
+  run go build -o "$tmp/gorunner" ./harness/cmd/gorunner
+}
+
+# The corpora are generated rather than committed: 26MB of derived data, all of it
+# reproducible from testdata/ and the benchmark files.
+generate_corpora() {
+  local args=(-out harness/corpus)
+  # The fuzz corpus only exists once someone has run the library's fuzz targets
+  # locally; without it fuzzseeds.jsonl is simply skipped.
+  local fuzzdir
+  fuzzdir="$(go env GOCACHE)/fuzz/github.com/DataDog/go-sqllexer/FuzzObfuscatorAndNormalizer"
+  if [ -d "$fuzzdir" ]; then
+    args+=(-fuzz-corpus "$fuzzdir")
+  fi
+  run go run ./harness/cmd/corpusgen "${args[@]}"
+}
+
+cmd_parity() {
+  build_both
+  generate_corpora
+
+  local corpus
+  for corpus in "${corpora[@]}"; do
+    [ -f "harness/corpus/$corpus.jsonl" ] || continue
+    # Exits non-zero on the first mismatch; the report file holds the offending
+    # request and both answers, replayable straight back through either runner.
+    run go run ./harness/cmd/differ \
+      -corpus "harness/corpus/$corpus.jsonl" \
+      -reference "$tmp/gorunner" \
+      -candidate rust/target/release/sqllexer-runner \
+      -report "$tmp/mismatches-$corpus.jsonl"
+  done
+
+  # The keyword tables were transcribed by hand, so they are compared against the
+  # Go source directly rather than only through behavior.
+  run go test ./harness/keywordparity/
+  run go test ./...
+
+  echo
+  echo "parity: every corpus matched the Go oracle"
+}
+
+cmd_fuzz() {
+  local duration=${1:-10m}
+  build_both
+  run go test -run xxx -fuzz FuzzParity -fuzztime "$duration" ./harness/cmd/gorunner/
+}
+
+cmd_bench() {
+  local duration=20s warmup=5s out=harness/reports/local workers=
+  while [ $# -gt 0 ]; do
+    case $1 in
+      --duration) duration=$2; shift 2 ;;
+      --warmup) warmup=$2; shift 2 ;;
+      --workers) workers=$2; shift 2 ;;
+      --out) out=$2; shift 2 ;;
+      *) echo "bench: unknown option $1" >&2; exit 2 ;;
+    esac
+  done
+
+  # Worker counts follow the host's core count rather than a fixed number:
+  # comparing an oversubscribed host against a merely saturated one measures the
+  # scheduler, not the library.
+  local cores; cores=$(getconf _NPROCESSORS_ONLN)
+  local counts; read -r -a counts <<<"${workers:-1 $cores}"
+
+  mkdir -p "$out"
+  out=$(cd "$out" && pwd)                       # the Rust driver runs from rust/
+  local corpus_dir; corpus_dir=$(cd harness/corpus && pwd)
+
+  run cargo build --release --manifest-path rust/Cargo.toml
+  run go build -o "$tmp/throughput" ./harness/cmd/throughput
+
+  {
+    echo "cores=$cores"
+    echo "workers=${counts[*]}"
+    echo "duration=$duration warmup=$warmup"
+    echo "arch=$(uname -m) kernel=$(uname -r)"
+    go version
+    (cd rust && cargo --version && rustc --version)
+  } >"$out/environment.txt"
+
+  local w corpus
+  for w in "${counts[@]}"; do
+    for corpus in workloads pathological; do
+      # Strictly sequential: two load drivers on one host would measure each other
+      # rather than the implementations.
+      run "$tmp/throughput" -corpus "$corpus_dir/$corpus.jsonl" -workers "$w" \
+        -duration "$duration" -warmup "$warmup" \
+        -json "$out/$corpus-w$w-go.json"
+      run rust/target/release/bench \
+        --corpus "$corpus_dir/$corpus.jsonl" --workers "$w" \
+        --duration "${duration%s}" --warmup "${warmup%s}" \
+        --json "$out/$corpus-w$w-rust.json"
+    done
+  done
+
+  echo
+  echo "bench: JSON reports in $out — summarize with: harness/harness report $out"
+}
+
+cmd_report() {
+  if [ $# -eq 0 ]; then
+    set -- harness/reports/ci-arm harness/reports/ci-x86
+    run python3 harness/reports/summarize.py --html harness/reports/benchmarks.html "$@"
+  fi
+  run python3 harness/reports/summarize.py "$@"
+}
+
+cmd_check() {
+  run cargo fmt --all --check --manifest-path rust/Cargo.toml
+  run cargo clippy --manifest-path rust/Cargo.toml --all-targets --all-features -- -D warnings
+  run cargo test --manifest-path rust/Cargo.toml --workspace
+  run go vet ./...
+  run gofmt -l harness/
+  # Undefined behavior in the core, over the crate's own parity suite. Needs a
+  # nightly toolchain with the miri component.
+  run cargo +nightly miri test --manifest-path rust/Cargo.toml -p sqllexer
+}
+
+command=${1:-help}
+[ $# -gt 0 ] && shift
+
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+
+case $command in
+  parity) cmd_parity "$@" ;;
+  fuzz) cmd_fuzz "$@" ;;
+  bench) cmd_bench "$@" ;;
+  report) cmd_report "$@" ;;
+  check) cmd_check "$@" ;;
+  help | -h | --help) usage ;;
+  *) usage >&2; exit 2 ;;
+esac

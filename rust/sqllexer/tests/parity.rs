@@ -105,8 +105,8 @@ fn normalize(sql: &str, dbms: Dbms) -> Result {
 
 #[test]
 fn token_type_discriminants_match_go() {
-    // The wire protocol and the FFI boundary both transmit token types as
-    // integers, so the iota ordering in sqllexer.go is part of the contract.
+    // The wire protocol transmits token types as integers, so the iota ordering
+    // in sqllexer.go is part of the contract.
     assert_eq!(TokenType::Error as u8, 0);
     assert_eq!(TokenType::Eof as u8, 1);
     assert_eq!(TokenType::Space as u8, 2);
@@ -484,7 +484,7 @@ fn honors_obfuscator_options() {
 #[test]
 fn handles_degenerate_input() {
     for input in ["", "   ", "-- only a comment", "/*", "'", "((((", "\u{a0}"] {
-        // Any panic here would cross the FFI boundary in production.
+        // A panic on input the Go library accepts is a parity failure by itself.
         let _ = normalize(input, Dbms::None);
     }
     assert_eq!(normalize("", Dbms::None).sql, "");

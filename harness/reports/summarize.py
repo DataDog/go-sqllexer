@@ -41,14 +41,20 @@ from pathlib import Path
 
 ENGINES = ["go", "rust"]
 CORPORA = ["workloads", "pathological"]
-CLASSES = ["W1-short", "W2-medium", "W3-large", "W4-pathological"]
+CLASSES = ["short", "medium", "large", "pathological"]
 
 CLASS_BOUNDS = {
-    "W1-short": "input ≤ 256 B",
-    "W2-medium": "256 B – 2 KB",
-    "W3-large": "2 KB – 16 KB",
-    "W4-pathological": "larger than 16 KB",
+    "short": "statement ≤ 256 B",
+    "medium": "256 B – 2 KB",
+    "large": "2 KB – 16 KB",
+    "pathological": "larger than 16 KB",
 }
+
+
+def class_name(name: str) -> str:
+    """Reports written before the classes were renamed use `W1-short` and friends."""
+    return name.split("-", 1)[1] if name[:1] == "W" and name[1:2].isdigit() else name
+
 
 CORPUS_BLURB = {
     "workloads": (
@@ -63,9 +69,14 @@ CORPUS_BLURB = {
 }
 
 
+def run_dirs(root: Path) -> list[Path]:
+    """A directory of run1/, run2/… repeats, or a single run written directly."""
+    return sorted(root.glob("run*")) or [root]
+
+
 def load(root: Path) -> dict[tuple[str, int, str], list[dict]]:
     runs: dict[tuple[str, int, str], list[dict]] = {}
-    for run_dir in sorted(root.glob("run*")):
+    for run_dir in run_dirs(root):
         for path in run_dir.glob("*.json"):
             corpus, workers, engine = path.stem.split("-", 2)
             runs.setdefault((corpus, int(workers[1:]), engine), []).append(
@@ -75,7 +86,7 @@ def load(root: Path) -> dict[tuple[str, int, str], list[dict]]:
 
 
 def environment(root: Path) -> str:
-    for run_dir in sorted(root.glob("run*")):
+    for run_dir in run_dirs(root):
         env = run_dir / "environment.txt"
         if env.exists():
             return env.read_text().strip()
@@ -93,7 +104,7 @@ def classes(reports):
     out = {}
     for report in reports:
         for c in report["classes"]:
-            out.setdefault(c["class"], []).append(c)
+            out.setdefault(class_name(c["class"]), []).append(c)
     return out
 
 
@@ -119,7 +130,7 @@ def print_markdown(root: Path):
     runs = load(root)
     # Worker counts come from the reports: they follow the host's core count.
     workers_seen = sorted({key[1] for key in runs})
-    print(f"# {root.name}  ({len(list(root.glob('run*')))} runs)\n")
+    print(f"# {root.name}  ({len(run_dirs(root))} run(s))\n")
     for corpus in CORPORA:
         for workers in workers_seen:
             rows = []
@@ -283,7 +294,7 @@ class Environment:
             elif line.startswith("rustc"):
                 self.meta["rustc"] = line.split()[1]
         self.workers = sorted({key[1] for key in self.runs})
-        self.repeats = len(list(root.glob("run*")))
+        self.repeats = len(run_dirs(root))
 
     @property
     def label(self) -> str:
@@ -405,8 +416,8 @@ def ratio_chart(rows, threshold: float | None, title: str) -> str:
 def latency_chart(env: Environment, corpus: str, workers: int) -> str:
     """Grouped bars of p50 and p99 per workload class, log-scaled.
 
-    Latencies span three orders of magnitude between W1 and W4, so a linear axis
-    would render the short classes as invisible slivers.
+    Latencies span three orders of magnitude between the short and pathological
+    classes, so a linear axis would render the short ones as invisible slivers.
     """
     go, rust = env.pair(corpus, workers)
     go_c, rust_c = classes(go), classes(rust)
@@ -536,67 +547,61 @@ def gate_rows(envs):
 
     rows = [
         (
-            "C1",
-            (
-                "Rust ≥ 1.8× Go throughput on the mixed corpus, at 1 worker and at "
-                "core-count workers"
-            ),
+            "Throughput, mixed corpus",
+            "at least 1.8× Go, at every worker count",
             "{:.2f}×".format(worst_throughput("workloads")),
             worst_throughput("workloads") >= 1.8,
         ),
         (
-            "C2",
-            "Rust ≥ 1.45× Go throughput on the pathological corpus",
+            "Throughput, pathological corpus",
+            "at least 1.45× Go",
             "{:.2f}×".format(worst_throughput("pathological")),
             worst_throughput("pathological") >= 1.45,
         ),
         (
-            "C3",
-            "p50 and p99 not worse than Go in any workload class",
-            f"{worst_tail:.2f}× (weakest class)",
+            "Latency",
+            "p50 and p99 no worse than Go in any size class",
+            f"{worst_tail:.2f}× in the weakest class",
             worst_tail >= 1.0,
         ),
         (
-            "C4",
-            "Short statements (≤256 B) ≥ 1.3× Go on p50",
-            "{:.2f}×".format(worst_class("p50_ns", only="W1-short")),
-            worst_class("p50_ns", only="W1-short") >= 1.3,
+            "Latency, short statements",
+            "p50 at least 1.3× Go for statements ≤ 256 B",
+            "{:.2f}×".format(worst_class("p50_ns", only="short")),
+            worst_class("p50_ns", only="short") >= 1.3,
         ),
         (
-            "C5",
-            "Bytes allocated per statement ≤ 25% of Go on the mixed corpus",
+            "Bytes allocated",
+            "at most 25% of Go per statement, mixed corpus",
             "%.1f%% of Go"
             % (100 / worst_memory(("memory", "bytes_per_op"), "workloads")),
             worst_memory(("memory", "bytes_per_op"), "workloads") >= 4.0,
         ),
         (
-            "C6",
-            "Allocations per statement ≤ Go on the mixed corpus",
+            "Allocation count",
+            "no more than Go per statement, mixed corpus",
             "{:.2f}× fewer".format(
                 worst_memory(("memory", "allocs_per_op"), "workloads")
             ),
             worst_memory(("memory", "allocs_per_op"), "workloads") >= 1.0,
         ),
         (
-            "C7",
-            "Peak RSS ≤ Go",
+            "Peak memory",
+            "resident set no larger than Go",
             "{:.2f}× lower".format(worst_memory(("memory", "rss_peak_mb"))),
             worst_memory(("memory", "rss_peak_mb")) >= 1.0,
         ),
         (
-            "C8",
-            (
-                "No configuration drifts by more than 5% in throughput between runs "
-                "on one host"
-            ),
-            f"±{worst_drift:.1f}% worst",
+            "Stability",
+            "throughput drifts less than 5% between repeats on one host",
+            f"±{worst_drift:.1f}% at worst",
             worst_drift <= 5.0,
         ),
     ]
     out = []
-    for gate, text, observed, ok in rows:
+    for name, text, observed, ok in rows:
         out.append(
-            f'<tr><td class="left">{gate}</td><td class="left">{esc(text)}</td>'
+            f'<tr><td class="left">{esc(name)}</td><td class="left">{esc(text)}</td>'
             f"<td>{esc(observed)}</td>"
             f'<td class="{"pass" if ok else "fail"}">{"pass" if ok else "FAIL"}</td>'
             "</tr>"
@@ -610,42 +615,30 @@ def gate_rows(envs):
 
 
 def section_intro(envs) -> str:
-    hosts = ", ".join(f"{env.label}" for env in envs)
+    hosts = "; ".join(f"{env.label}" for env in envs)
     repeats = {env.repeats for env in envs}
     return f"""
 <h1>go-sqllexer: Rust rewrite versus the Go implementation</h1>
-<p class="lede">Sustained-load benchmark report. Generated from the committed JSON
-in <code>harness/reports/</code>; every figure on this page is recomputed from those
-files.</p>
-<nav><a href="#what">What was measured</a><a href="#result">Result</a>
+<p class="lede">{hosts}. {"/".join(str(r) for r in sorted(repeats))} repeats per
+host, 60&nbsp;s of load per configuration. Every figure is recomputed from the
+committed JSON in <code>harness/reports/</code>.</p>
+<nav><a href="#result">Result</a><a href="#gates">Acceptance gates</a>
 <a href="#read">How to read this</a><a href="#method">Methodology</a>
-<a href="#gates">Acceptance gates</a><a href="#detail">Per-configuration numbers</a>
-<a href="#caveats">Caveats</a></nav>
+<a href="#detail">Per-configuration numbers</a><a href="#caveats">Caveats</a></nav>
 
-<h2 id="what">What was measured, and why</h2>
-<p><code>go-sqllexer</code> is a Go library that lexes, obfuscates and normalizes SQL
-statements: it turns a query into a canonical form with literals masked, and
-extracts metadata about it. Its core has been rewritten in Rust as a
-<strong>parallel implementation</strong> — not a binding, no cgo, no FFI. The two are
-separate programs that must produce byte-identical output for the same input, and
-they are measured separately.</p>
-<p>The question this report answers is narrow: <em>is the Rust implementation fast
-enough to justify maintaining a second implementation of the same
-specification?</em> Correctness parity is established elsewhere (differential
-testing over five corpora and continuous differential fuzzing, section A of
-<code>harness/ACCEPTANCE.md</code>) and is assumed here. Whether the Rust core would
-eventually be called <em>from</em> Go, and what that would cost per statement, is a
-separate decision and is not measured here.</p>
-<p>The benchmark is a load test rather than a microbenchmark. Two load drivers, one
-per implementation, replay a corpus of SQL statements through the full
-obfuscate-and-normalize path on N worker threads for a fixed duration after a
-warmup, and each writes the same JSON report: throughput, latency percentiles per
-workload class, bytes and allocations per statement, and peak RSS. A pass is a
-throughput ratio large enough to be worth the maintenance cost, with no regression
-in tail latency or memory; the thresholds were fixed after the first measurements
-and are listed under <a href="#gates">acceptance gates</a>.</p>
-<p>Evidence base: {hosts}; {"/".join(str(r) for r in sorted(repeats))} full repeats
-of the matrix per host.</p>
+<p><code>go-sqllexer</code> masks the literals in a SQL statement, canonicalizes it
+and extracts metadata about it. Its core has been rewritten in Rust as a
+<strong>parallel implementation</strong>: two separate programs, no binding between
+them, required to produce byte-identical output for the same input. This report
+answers one question — <em>is the Rust one fast enough to justify maintaining a
+second implementation?</em> Output parity is established separately (five
+differential corpora and continuous differential fuzzing, section A of
+<code>harness/ACCEPTANCE.md</code>) and assumed here.</p>
+<p>The measurement is a load test, not a microbenchmark: each implementation replays
+a corpus of SQL statements through the full obfuscate-and-normalize path on N worker
+threads and reports throughput, latency per statement-size class, allocation and
+peak memory. Thresholds for a pass were fixed after the first measurements and are
+listed under <a href="#gates">acceptance gates</a>.</p>
 """
 
 
@@ -696,10 +689,9 @@ def section_headline(envs) -> str:
 
     return f"""
 <h2 id="result">Result</h2>
-<p>Rust is faster in every configuration measured, on both architectures, on both
-corpora, at every worker count. The throughput ratios below are geometric means
-over the eight measured configurations; the range is the lowest and highest ratio
-observed in any single repeat.</p>
+<p>Rust is faster in every configuration measured: both architectures, both corpora,
+every worker count. Throughput figures are geometric means over the four
+configurations of that corpus; the range is the lowest and highest single repeat.</p>
 <div class="cards">
   <div class="card"><div class="t">Mixed corpus throughput</div>
     <div class="k win">{mixed[0]:.2f}×</div>
@@ -719,13 +711,13 @@ observed in any single repeat.</p>
 <figure>{ratio_chart(rows, None, "Rust throughput relative to Go")}
 <figcaption>Rust throughput divided by Go throughput, same host, same corpus, same
 worker count, measured back to back. Bar is the mean of {envs[0].repeats} repeats;
-the whisker spans the lowest and highest single-repeat ratio. Higher is better;
-1.00× is parity.</figcaption></figure>
-<p>The allocation picture is the larger difference and the less obvious one: on the
-mixed corpus Rust allocates {geomean(bytes_ratios):.0f}× fewer bytes per statement
-and {geomean(allocs):.1f}× fewer allocations, and has no garbage collector at all,
-so the GC columns below are Go-only. It does not hold in that form
-on the pathological corpus — see <a href="#caveats">caveats</a>.</p>
+the whisker spans the lowest and highest single repeat. Higher is better; 1.00× is
+parity.</figcaption></figure>
+<p>Allocation is the larger and less obvious difference: on the mixed corpus Rust
+allocates {geomean(bytes_ratios):.0f}× fewer bytes and
+{geomean(allocs):.1f}× fewer times per statement, with no garbage collector to run
+afterwards. The allocation <em>count</em> advantage does not survive on the
+pathological corpus — see <a href="#caveats">caveats</a>.</p>
 """
 
 
@@ -733,30 +725,21 @@ def section_reading() -> str:
     return """
 <h2 id="read">How to read this report</h2>
 <ul>
-<li><strong>Ratios lead, absolutes follow.</strong> Only the Go-versus-Rust ratio
-measured on one host, in one sitting, is comparable between hosts. The absolute
-ops/s of the ARM runner and the x86 runner say more about the two runners than about
-the two implementations, so no ratio on this page is ever computed across hosts.</li>
-<li><strong>Every ratio is oriented so that above 1.00× favours Rust</strong>, whether
-the underlying metric is higher-is-better (throughput) or lower-is-better (latency,
-bytes, RSS). Each table states the direction of its metric.</li>
-<li><strong>"±x%" is the observed spread, not a confidence interval.</strong> It is
-half the distance between the smallest and largest of the repeats, as a percentage
-of their mean. With n=3 there is no basis for a confidence interval, and none is
-shown.</li>
-<li><strong>No statistical significance is claimed anywhere.</strong> The convention
-in Go's <code>benchstat</code> is at least ten runs before a difference can be called
-significant. Three runs support a much weaker statement: the effect is large
-relative to the run-to-run spread — throughput drifts by a couple of percent between
-repeats while the effect is 50–150% — and it reproduces in the same direction on
-two architectures. Differences of a few percent visible in these tables should be
-treated as noise.</li>
-<li><strong>Aggregates across configurations are geometric means</strong>, which is
-the correct average for ratios; an arithmetic mean of ratios would overweight the
-configurations where Rust does best.</li>
-<li><strong>Figures are shown to three significant figures at most.</strong> The
-inputs move by percent between repeats and more digits would imply precision the
-data does not have.</li>
+<li><strong>Ratios are comparable between hosts; absolute numbers are not.</strong>
+The ops/s of the ARM runner against the x86 runner says more about the runners than
+about the implementations, so no ratio here is computed across hosts — each one
+compares Go and Rust on one host, in one sitting.</li>
+<li><strong>Above 1.00× always favours Rust</strong>, whether the metric is
+higher-is-better (throughput) or lower-is-better (latency, bytes, memory). Each
+table states its direction.</li>
+<li><strong>"±x%" is the observed spread, not a confidence interval</strong>: half the
+distance between the smallest and largest repeat, over their mean.</li>
+<li><strong>Nothing here is a significance test.</strong> <code>benchstat</code>
+wants ten or more runs for that. Three support a weaker claim: the effect (50–150%)
+is an order of magnitude larger than the drift between repeats (a few percent) and
+reproduces on two architectures. Treat single-digit percentages as noise.</li>
+<li><strong>Aggregates are geometric means</strong> — the correct average for ratios
+— and figures are capped at three significant figures.</li>
 </ul>
 """
 
@@ -794,37 +777,35 @@ def section_method(envs) -> str:
 <th>cores</th><th>worker counts</th><th>repeats</th>
 <th class="left">toolchains</th></tr></thead>
 <tbody>{"".join(host_rows)}</tbody></table>
-<p>Worker counts follow each host's core count rather than being fixed, so no host
-is measured oversubscribed while another is merely saturated; that would compare
-schedulers, not libraries. Each host is also measured at a single worker, which
-isolates per-statement cost from any scaling behaviour.</p>
+<p>Worker counts follow each host's core count rather than being fixed: measuring one
+host oversubscribed against another merely saturated would compare schedulers, not
+libraries. Each host is also measured at a single worker, which isolates
+per-statement cost from scaling behaviour.</p>
 
 <h3>Load</h3>
-<p>Each driver replays its corpus round-robin across N worker threads (workers start
-at different corpus offsets so they do not march through it in lockstep), for
-<strong>60 s of measurement after a 10 s warmup</strong>, repeated three times per
-host. The warmup exists so the measured window reflects steady state: allocator
-behaviour, and on the Go side the garbage collector, rather than startup. Both
-drivers construct one obfuscator/normalizer per worker and reuse it, which is how the
-library is meant to be used.</p>
-<p>Go and Rust run <strong>sequentially on the same host, within the same
-invocation</strong> of <code>harness/reports/run.sh</code>. Two load drivers running
-at once would measure each other. The implementations exercised are
-<code>sqllexer.ObfuscateAndNormalize</code> on the Go side
-(<code>harness/cmd/throughput</code>) and the equivalent entry point on the Rust side
-(<code>rust/sqllexer-runner --bin bench</code>); neither driver includes any
-inter-process protocol overhead, and the JSON schema they emit is identical.</p>
+<p>Each driver replays its corpus round-robin across N worker threads (each starting
+at a different corpus offset, so they do not march through it in lockstep) for
+<strong>60 s after a 10 s warmup</strong>, three times per host. The warmup keeps
+startup out of the measured window: what is measured is steady-state allocator, and
+on the Go side garbage collector, behaviour. Both drivers build one
+obfuscator/normalizer per worker and reuse it, which is how the library is meant to
+be used.</p>
+<p>Go and Rust run <strong>sequentially on the same host in one invocation</strong> of
+<code>harness/harness bench</code> — two load drivers at once would measure each
+other. The code under load is <code>sqllexer.ObfuscateAndNormalize</code> via
+<code>harness/cmd/throughput</code> and its Rust equivalent via
+<code>rust/sqllexer-runner --bin bench</code>: no inter-process protocol is involved
+on either side, and both emit the same JSON schema.</p>
 
 <h3>Corpora</h3>
 <table><thead><tr><th class="left">corpus</th><th class="left">contents</th></tr>
 </thead><tbody>{corpus_rows}</tbody></table>
 
-<h3>Workload classes</h3>
-<p>Latency is reported per class rather than in aggregate: a corpus mixing 40-byte
-statements with 100-kilobyte ones has a meaningless overall percentile, since the
-percentile then reports the input mix instead of the implementation. Statements are
-bucketed by input length.</p>
-<table><thead><tr><th class="left">class</th><th class="left">statement size</th>
+<h3>Statement size classes</h3>
+<p>Latency is reported per size class rather than in aggregate: in a corpus mixing
+40-byte statements with 100-kilobyte ones, an overall percentile reports the input
+mix rather than the implementation. Statements are bucketed by input length.</p>
+<table><thead><tr><th class="left">size class</th><th class="left">input length</th>
 </tr></thead><tbody>{class_rows}</tbody></table>
 <p>Percentiles come from a fixed-size histogram shared by both drivers
 (<code>harness/internal/latency</code>, mirrored in
@@ -833,8 +814,7 @@ the harness's own memory a function of how many operations completed, which woul
 penalize the faster implementation.</p>
 
 <h3>Counting allocations</h3>
-<p>The two runtimes are instrumented differently, because there is no shared
-mechanism:</p>
+<p>There is no shared mechanism, so the two runtimes are instrumented separately:</p>
 <ul>
 <li><strong>Go</strong>: <code>runtime.MemStats</code>, differencing
 <code>TotalAlloc</code> and <code>Mallocs</code> across the measured window after a
@@ -846,11 +826,10 @@ Go's <code>Mallocs</code>/<code>TotalAlloc</code> account for the same operation
 allocation figures come from a second pass with latency recording switched off, so
 the histogram is not counted against the library.</li>
 </ul>
-<p>Bytes per statement is therefore closely comparable between the two. Allocation
-<em>counts</em> are comparable only where the sizes being allocated are comparable,
-which they are on the mixed corpus and are not on the pathological one — see
-<a href="#caveats">caveats</a>. Peak RSS is sampled from the OS in both cases and is
-directly comparable.</p>
+<p>Bytes per statement is therefore closely comparable, and peak RSS comes from the
+OS on both sides. Allocation <em>counts</em> are comparable only where the sizes
+being allocated are — true on the mixed corpus, false on the pathological one (see
+<a href="#caveats">caveats</a>).</p>
 
 <h3>Recorded host details</h3>
 {envs_pre}
@@ -860,16 +839,13 @@ directly comparable.</p>
 def section_gates(envs) -> str:
     return f"""
 <h2 id="gates">Acceptance gates</h2>
-<p>The thresholds are the performance gates of <code>harness/ACCEPTANCE.md</code>
-(section C). They were deliberately not fixed before there was data; they are
-ratified from these matrices and expressed as ratios against Go on the same host,
-same corpus, same worker count, same run. A gate holds only if it holds on both
-architectures, so "worst observed" is the weakest configuration of the eight.</p>
-<table><thead><tr><th class="left">#</th><th class="left">gate</th>
+<p>Section C of <code>harness/ACCEPTANCE.md</code>. A gate holds only if it holds on
+both architectures, so "worst observed" is the weakest of the eight configurations;
+status is recomputed from the JSON on every regeneration rather than copied from
+that document.</p>
+<table><thead><tr><th class="left">gate</th><th class="left">threshold</th>
 <th>worst observed</th><th>status</th></tr></thead>
 <tbody>{gate_rows(envs)}</tbody></table>
-<p class="note">The status column is recomputed from the JSON on every regeneration
-of this page rather than copied from the acceptance document.</p>
 """
 
 
@@ -959,7 +935,7 @@ def config_tables(env: Environment, corpus: str, workers: int) -> str:
     if latency_rows:
         out += [
             (
-                '<table><thead><tr><th class="left" rowspan="2">class</th>'
+                '<table><thead><tr><th class="left" rowspan="2">size class</th>'
                 '<th colspan="3">p50</th><th colspan="3">p90</th><th colspan="3">p99</th>'
                 '<th colspan="2">p999 (not gateable)</th></tr>'
                 "<tr><th>Go</th><th>Rust</th><th>adv.</th>"
@@ -995,10 +971,10 @@ def section_detail(envs) -> str:
     parts = [
         '<h2 id="detail">Per-configuration numbers</h2>',
         (
-            "<p>Every configuration measured, in full. Each cell is the mean over the "
-            "repeats on that host, with the observed spread; the last column of the "
-            "first table lists the individual Rust repeats so the run-to-run variation "
-            "is visible rather than summarized away.</p>"
+            "<p>Every configuration measured, in full. Cells are the mean over that "
+            "host's repeats with the observed spread; the last column lists the "
+            "individual Rust repeats, so run-to-run variation is visible rather than "
+            "summarized away.</p>"
         ),
     ]
     for env in envs:
@@ -1046,50 +1022,43 @@ def section_caveats(envs) -> str:
 <h2 id="caveats">Caveats</h2>
 <div class="callout">
 <h4>Allocation count inverts on the pathological corpus</h4>
-<p>On adversarial input Rust reports {rust_allocs:.0f} allocations per statement
-against Go's {go_allocs:.0f} — it loses this metric by a factor of
-{rust_allocs / go_allocs:.0f} — while allocating {go_bytes / rust_bytes:.0f}× fewer
-bytes ({rust_bytes:,.0f} B/op against {go_bytes:,.0f} B/op). The cause is
-structural, not a measurement artifact: the Rust implementation grows reusable
-buffers in many small steps where Go takes a few very large ones, and a reallocation
-is counted as one allocation on both sides. Total bytes is the meaningful measure on
-this corpus, which is why the acceptance gate on allocation count is scoped to the
-mixed corpus only.</p>
+<p>On adversarial input Rust makes {rust_allocs:.0f} allocations per statement against
+Go's {go_allocs:.0f} — it loses that metric {rust_allocs / go_allocs:.0f}× — while
+allocating {go_bytes / rust_bytes:.0f}× fewer bytes ({rust_bytes:,.0f} B against
+{go_bytes:,.0f} B). The cause is structural rather than a measurement artifact: Rust
+grows reusable buffers in many small steps where Go takes a few very large ones, and
+both sides count a reallocation as one allocation. Total bytes is the meaningful
+measure here, which is why the allocation-count gate is scoped to the mixed
+corpus.</p>
 </div>
 <div class="callout">
 <h4>Tail latency past p99 is not gateable at this sample size</h4>
 <p>p999 drifts by up to {p999_drift:.0f}% between repeats of identical code on the
-same host. It is reported above for completeness and excluded from every gate. Any
-conclusion that depends on p999, or on <code>max_ns</code>, needs more repeats than
-were run here.</p>
+same host, so it is reported for completeness and excluded from every gate. Any
+conclusion resting on p999 or on <code>max_ns</code> needs more repeats than were run
+here.</p>
 </div>
 <div class="callout">
 <h4>The corpora are synthetic</h4>
-<p>Both corpora are generated: the mixed one from SQL literals in the repository's
-own benchmark files, the pathological one from constructed adversarial input. They
-cover the option space more exhaustively than production traffic would, but they do
-not reproduce the <em>distribution</em> of real queries. That distribution affects
-these ratios — a workload of nothing but 40-byte statements would land near the
-short-class numbers, not the aggregate — although it does not affect correctness
-parity, which is established per statement. No production-traffic shadow validation
-has been run.</p>
+<p>The mixed corpus is built from SQL literals in the repository's own benchmark
+files, the pathological one from constructed adversarial input. They cover the
+option space more exhaustively than production traffic would, but not the
+<em>distribution</em> of real queries — and distribution moves these ratios, since a
+workload of nothing but 40-byte statements lands near the short-class numbers rather
+than the aggregate. It does not affect correctness parity, which is established per
+statement. No production-traffic shadow validation has been run.</p>
 </div>
 <div class="callout">
-<h4>Three repeats, two hosts, one benchmark shape</h4>
-<p>n=3 supports "the effect is far larger than the observed drift, in the same
-direction, on two architectures". It does not support a confidence interval, and
-nothing here is a statistical test. Both hosts are cloud CI runners
-(Azure-hosted GitHub Actions), which are noisier than dedicated hardware; the
-mitigation is that Go and Rust are measured minutes apart on the same instance,
-so slow-runner effects hit both sides. The benchmark also measures one shape of
-work — steady-state sustained load with reused instances. It says nothing about
-cold-start cost, about constructing a new obfuscator per statement, or about
-memory behaviour beyond one minute.</p>
+<h4>Three repeats, two hosts, one shape of work</h4>
+<p>Both hosts are cloud CI runners, noisier than dedicated hardware; the mitigation
+is that Go and Rust are measured minutes apart on the same instance, so a slow
+runner penalizes both. The benchmark covers steady-state sustained load with reused
+instances and says nothing about cold start, about constructing an obfuscator per
+statement, or about memory behaviour beyond a minute.</p>
 </div>
-<p>Not measured, and out of scope for this report: calling the Rust core from Go
-(cgo, handle lifetime, per-statement FFI overhead), the <code>CGO_ENABLED=0</code>
-question, and shipping either the Rust CLI or this harness as a supported
-artifact.</p>
+<p>Out of scope here: calling the Rust core from Go (cgo, handle lifetime,
+per-statement FFI overhead), the <code>CGO_ENABLED=0</code> question, and shipping
+either the Rust CLI or this harness as a supported artifact.</p>
 """
 
 
@@ -1108,9 +1077,9 @@ def write_html(roots, out_path: Path):
         f"<style>{STYLE}</style></head><body>",
         section_intro(envs),
         section_headline(envs),
+        section_gates(envs),
         section_reading(),
         section_method(envs),
-        section_gates(envs),
         section_detail(envs),
         section_caveats(envs),
         "<footer>Generated by <code>harness/reports/summarize.py</code> from the "

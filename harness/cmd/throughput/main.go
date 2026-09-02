@@ -38,10 +38,10 @@ type workloadClass struct {
 }
 
 var classes = []workloadClass{
-	{"W1-short", 256},
-	{"W2-medium", 2048},
-	{"W3-large", 16384},
-	{"W4-pathological", 1 << 30},
+	{"short", 256},
+	{"medium", 2048},
+	{"large", 16384},
+	{"pathological", 1 << 30},
 }
 
 func classify(size int) string {

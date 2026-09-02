@@ -9,8 +9,8 @@ name: Harness parity and throughput
 #   - Go and Rust always run back to back on the same runner, same corpus, same
 #     duration, so only the ratio is compared across hosts. Absolute ops/s between
 #     an 8-core ARM box and a 4-vCPU x86 one means nothing.
-#   - Worker counts come from the host's core count (see harness/reports/run.sh),
-#     so neither host is oversubscribed while the other is merely saturated.
+#   - Worker counts come from the host's core count (see harness/harness), so
+#     neither host is oversubscribed while the other is merely saturated.
 #
 # It never touches the library build: everything lives under harness/ and rust/.
 
@@ -89,22 +89,12 @@ jobs:
       - name: Rust unit tests
         run: cargo test --workspace
         working-directory: rust
-      - name: Generate corpora
-        run: go run ./harness/cmd/corpusgen -out harness/corpus
       # Parity is architecture-dependent in principle (endianness, char signedness,
       # float formatting), so it is re-proven on each runner rather than assumed
-      # from the x86 developer machine.
+      # from the x86 developer machine. This also generates the corpora the
+      # benchmark step replays.
       - name: Differential parity against the Go oracle
-        run: |
-          go build -o /tmp/gorunner ./harness/cmd/gorunner
-          for corpus in harness/corpus/*.jsonl; do
-            echo "== $corpus"
-            go run ./harness/cmd/differ \
-              -corpus "$corpus" \
-              -reference /tmp/gorunner \
-              -candidate rust/target/release/sqllexer-runner \
-              -report "/tmp/mismatches-$(basename "$corpus")"
-          done
+        run: harness/harness parity
       - name: Run the report matrix
         env:
           DURATION: ${{ github.event.inputs.duration || '60s' }}
@@ -112,7 +102,8 @@ jobs:
           REPEATS: ${{ github.event.inputs.repeats || '3' }}
         run: |
           for i in $(seq 1 "$REPEATS"); do
-            OUT="harness/reports/${{ matrix.key }}/run$i" harness/reports/run.sh
+            harness/harness bench --duration "$DURATION" --warmup "$WARMUP" \
+              --out "harness/reports/${{ matrix.key }}/run$i"
           done
       - name: Summarize
         run: |
