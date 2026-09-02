@@ -723,8 +723,8 @@ the whisker spans the lowest and highest single-repeat ratio. Higher is better;
 1.00× is parity.</figcaption></figure>
 <p>The allocation picture is the larger difference and the less obvious one: on the
 mixed corpus Rust allocates {geomean(bytes_ratios):.0f}× fewer bytes per statement
-and {geomean(allocs):.1f}× fewer allocations, and runs without a garbage collector
-at all (<code>num_gc</code> is 0 in every Rust report). It does not hold in that form
+and {geomean(allocs):.1f}× fewer allocations, and has no garbage collector at all,
+so the GC columns below are Go-only. It does not hold in that form
 on the pathological corpus — see <a href="#caveats">caveats</a>.</p>
 """
 
@@ -924,7 +924,7 @@ def config_tables(env: Environment, corpus: str, workers: int) -> str:
         (
             f'<p class="note">Go spent {gc:.1f} ms in GC pauses over the measured window '
             f"({mean(go, 'memory', 'num_gc'):.0f} collections); the Rust build has no "
-            "garbage collector, so its GC fields are zero by construction.</p>"
+            "garbage collector and reports no GC figures.</p>"
         ),
     ]
 
