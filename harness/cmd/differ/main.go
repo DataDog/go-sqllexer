@@ -58,12 +58,10 @@ type mismatch struct {
 
 func main() {
 	var (
-		corpusPath  = flag.String("corpus", "", "path to a JSONL corpus (required)")
-		refCmd      = flag.String("reference", "go run ./harness/cmd/gorunner", "reference implementation command")
-		candCmd     = flag.String("candidate", "", "candidate implementation command (required)")
-		reportPath  = flag.String("report", "", "optional path for the JSONL mismatch report")
-		maxReport   = flag.Int("max-report", 100, "stop printing individual mismatches after this many")
-		strictOrder = flag.Bool("strict-order", false, "treat metadata ordering differences as mismatches, matching the frozen Go test suite")
+		corpusPath = flag.String("corpus", "", "path to a JSONL corpus (required)")
+		refCmd     = flag.String("reference", "go run ./harness/cmd/gorunner", "reference implementation command")
+		candCmd    = flag.String("candidate", "", "candidate implementation command (required)")
+		reportPath = flag.String("report", "", "optional path for the JSONL mismatch report")
 	)
 	flag.Parse()
 
@@ -99,14 +97,12 @@ func main() {
 		defer report.Close()
 	}
 
-	mismatches, orderDiffs := compare(requests, refResponses, candResponses, report, *maxReport, *strictOrder)
+	mismatches, orderDiffs := compare(requests, refResponses, candResponses, report)
 
 	fmt.Printf("\ncorpus     %s\n", *corpusPath)
 	fmt.Printf("requests   %d\n", len(requests))
 	fmt.Printf("mismatches %d\n", mismatches)
-	if !*strictOrder {
-		fmt.Printf("order-only %d (reported, not gating; the frozen Go suite would fail on these)\n", orderDiffs)
-	}
+	fmt.Printf("order-only %d (reported, not gating; the frozen Go suite would fail on these)\n", orderDiffs)
 	if mismatches > 0 {
 		if *reportPath != "" {
 			fmt.Printf("report     %s\n", *reportPath)
@@ -115,7 +111,11 @@ func main() {
 	}
 }
 
-func compare(requests []protocol.Request, ref, cand []protocol.Response, report *os.File, maxReport int, strictOrder bool) (mismatches, orderDiffs int) {
+// maxPrinted caps the individual mismatches echoed to stdout; the full set always
+// goes to the JSONL report when one is requested.
+const maxPrinted = 100
+
+func compare(requests []protocol.Request, ref, cand []protocol.Response, report *os.File) (mismatches, orderDiffs int) {
 	printed := 0
 	var enc *json.Encoder
 	if report != nil {
@@ -127,29 +127,25 @@ func compare(requests []protocol.Request, ref, cand []protocol.Response, report 
 		if v == verdictEqual {
 			continue
 		}
-		kind := "mismatch"
 		if v == verdictOrder {
 			orderDiffs++
-			kind = "order"
-			if !strictOrder {
-				if enc != nil {
-					_ = enc.Encode(mismatch{ID: req.ID, Field: field, Kind: kind, SQL: req.SQL,
-						Request: req, Reference: &ref[i], Candidate: &cand[i]})
-				}
-				continue
+			if enc != nil {
+				_ = enc.Encode(mismatch{ID: req.ID, Field: field, Kind: "order", SQL: req.SQL,
+					Request: req, Reference: &ref[i], Candidate: &cand[i]})
 			}
+			continue
 		}
 		mismatches++
 		if enc != nil {
 			_ = enc.Encode(mismatch{
-				ID: req.ID, Field: field, Kind: kind, SQL: req.SQL,
+				ID: req.ID, Field: field, Kind: "mismatch", SQL: req.SQL,
 				Request: req, Reference: &ref[i], Candidate: &cand[i],
 			})
 		}
-		if printed < maxReport {
+		if printed < maxPrinted {
 			printed++
-			fmt.Printf("MISMATCH %s [%s %s]\n  sql:       %s\n  reference: %s\n  candidate: %s\n",
-				req.ID, field, kind, truncate(string(req.SQL)), truncate(describe(ref[i])), truncate(describe(cand[i])))
+			fmt.Printf("MISMATCH %s [%s]\n  sql:       %s\n  reference: %s\n  candidate: %s\n",
+				req.ID, field, truncate(string(req.SQL)), truncate(describe(ref[i])), truncate(describe(cand[i])))
 		}
 	}
 	return mismatches, orderDiffs

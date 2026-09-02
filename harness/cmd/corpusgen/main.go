@@ -44,14 +44,21 @@ type testcaseFile struct {
 	} `json:"outputs"`
 }
 
+const (
+	// repoRoot is where testdata and the benchmark sources are read from; the
+	// generator is always run from the repository root.
+	repoRoot = "."
+	// benchMinLen is the shortest benchmark string literal still treated as a query.
+	benchMinLen = 24
+	// matrixSize and matrixSeed keep the configuration matrix reproducible.
+	matrixSize = 20000
+	matrixSeed = 1
+)
+
 func main() {
 	var (
-		repoRoot   = flag.String("repo", ".", "path to the go-sqllexer checkout")
-		outDir     = flag.String("out", "harness/corpus", "directory to write corpora into")
-		fuzzDir    = flag.String("fuzz-corpus", "", "optional Go fuzz corpus directory to import as seeds")
-		minLen     = flag.Int("bench-min-len", 24, "minimum length of a benchmark string literal to treat as a query")
-		matrixN    = flag.Int("matrix", 20000, "number of randomized configuration/query combinations to emit (0 disables)")
-		matrixSeed = flag.Int64("matrix-seed", 1, "seed for the configuration matrix, so runs are reproducible")
+		outDir  = flag.String("out", "harness/corpus", "directory to write corpora into")
+		fuzzDir = flag.String("fuzz-corpus", "", "optional Go fuzz corpus directory to import as seeds")
 	)
 	flag.Parse()
 
@@ -60,7 +67,7 @@ func main() {
 	}
 
 	if n, err := writeCorpus(filepath.Join(*outDir, "testdata.jsonl"), func(w *corpus.Writer) error {
-		return genTestdata(*repoRoot, w)
+		return genTestdata(repoRoot, w)
 	}); err != nil {
 		log.Fatalf("testdata corpus: %v", err)
 	} else {
@@ -68,7 +75,7 @@ func main() {
 	}
 
 	if n, err := writeCorpus(filepath.Join(*outDir, "workloads.jsonl"), func(w *corpus.Writer) error {
-		return genBenchQueries(*repoRoot, *minLen, w)
+		return genBenchQueries(repoRoot, benchMinLen, w)
 	}); err != nil {
 		log.Fatalf("workload corpus: %v", err)
 	} else {
@@ -81,14 +88,12 @@ func main() {
 		fmt.Printf("pathological.jsonl    %6d requests\n", n)
 	}
 
-	if *matrixN > 0 {
-		if n, err := writeCorpus(filepath.Join(*outDir, "matrix.jsonl"), func(w *corpus.Writer) error {
-			return genMatrix(*repoRoot, *matrixN, *matrixSeed, w)
-		}); err != nil {
-			log.Fatalf("matrix corpus: %v", err)
-		} else {
-			fmt.Printf("matrix.jsonl          %6d requests\n", n)
-		}
+	if n, err := writeCorpus(filepath.Join(*outDir, "matrix.jsonl"), func(w *corpus.Writer) error {
+		return genMatrix(repoRoot, matrixSize, matrixSeed, w)
+	}); err != nil {
+		log.Fatalf("matrix corpus: %v", err)
+	} else {
+		fmt.Printf("matrix.jsonl          %6d requests\n", n)
 	}
 
 	if *fuzzDir != "" {

@@ -12,11 +12,13 @@ import "math/bits"
 
 // Buckets are log-linear: exact below subBucketCount nanoseconds, then
 // subBucketCount buckets per power of two. That is ~0.1% worst-case error, far
-// below the run-to-run noise the gates are read against.
+// below the run-to-run noise the gates are read against. 24 magnitudes reach ~17s,
+// well past the slowest statement; anything beyond lands in the last bucket and is
+// still exact in Max.
 const (
 	subBucketBits  = 10
 	subBucketCount = 1 << subBucketBits
-	bucketCount    = subBucketCount * 54
+	bucketCount    = subBucketCount * 24
 )
 
 // Histogram records nanosecond latencies. It is not safe for concurrent use; each

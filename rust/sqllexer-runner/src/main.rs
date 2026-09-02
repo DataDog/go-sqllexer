@@ -1,13 +1,10 @@
 //! Rust side of the differential harness.
 //!
 //! Reads harness protocol requests as newline-delimited JSON on stdin and writes
-//! one response per line, interchangeably with `harness/cmd/gorunner`. Handles are
-//! cached per configuration so the measured path is the one production would use
-//! (a reusable obfuscator/normalizer pair rather than one built per statement).
+//! one response per line, interchangeably with `harness/cmd/gorunner`.
 //!
 //!     cargo run --release -p sqllexer-runner < corpus/testdata.jsonl > rust.out.jsonl
 
-use std::collections::HashMap;
 use std::io::{self, BufRead, BufWriter, Write};
 
 use serde::{Deserialize, Serialize};
@@ -18,7 +15,7 @@ use sqllexer::{
 
 use sqllexer_runner::text::Text;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Default)]
+#[derive(Debug, Clone, Copy, Deserialize, Default)]
 #[serde(default)]
 struct WireObfuscatorConfig {
     dollar_quoted_func: bool,
@@ -30,7 +27,7 @@ struct WireObfuscatorConfig {
     replace_bind_parameter: bool,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Default)]
+#[derive(Debug, Clone, Copy, Deserialize, Default)]
 #[serde(default)]
 struct WireNormalizerConfig {
     collect_tables: bool,
@@ -138,44 +135,6 @@ struct Response {
     error: Option<String>,
 }
 
-/// Reusable per-configuration state, mirroring how a tracer would hold handles.
-#[derive(Default)]
-struct Handles {
-    obfuscators: HashMap<WireObfuscatorConfig, Obfuscator>,
-    normalizers: HashMap<WireNormalizerConfig, Normalizer>,
-}
-
-impl Handles {
-    /// Borrows both handles at once; they live in separate maps so no aliasing
-    /// workaround is needed.
-    fn pair(
-        &mut self,
-        obfuscator: WireObfuscatorConfig,
-        normalizer: WireNormalizerConfig,
-    ) -> (&Obfuscator, &Normalizer) {
-        (
-            self.obfuscators
-                .entry(obfuscator)
-                .or_insert_with(|| Obfuscator::new(obfuscator.into())),
-            self.normalizers
-                .entry(normalizer)
-                .or_insert_with(|| Normalizer::new(normalizer.into())),
-        )
-    }
-
-    fn obfuscator(&mut self, cfg: WireObfuscatorConfig) -> &Obfuscator {
-        self.obfuscators
-            .entry(cfg)
-            .or_insert_with(|| Obfuscator::new(cfg.into()))
-    }
-
-    fn normalizer(&mut self, cfg: WireNormalizerConfig) -> &Normalizer {
-        self.normalizers
-            .entry(cfg)
-            .or_insert_with(|| Normalizer::new(cfg.into()))
-    }
-}
-
 fn main() {
     // --stream answers each request before reading the next one, for callers that
     // wait for the response (the differential fuzzer). Without it responses stay
@@ -186,7 +145,6 @@ fn main() {
     let mut input = stdin.lock();
     let stdout = io::stdout();
     let mut out = BufWriter::with_capacity(1 << 20, stdout.lock());
-    let mut handles = Handles::default();
     let mut sql = Vec::new();
     let mut metadata = StatementMetadata::default();
 
@@ -214,7 +172,7 @@ fn main() {
                 std::process::exit(1);
             }
         };
-        let resp = handle(req, &mut handles, &mut sql, &mut metadata);
+        let resp = handle(req, &mut sql, &mut metadata);
         if let Err(err) = serde_json::to_writer(&mut out, &resp).and_then(|()| {
             out.write_all(b"\n").map_err(serde_json::Error::io)?;
             Ok(())
@@ -235,12 +193,7 @@ fn main() {
     }
 }
 
-fn handle(
-    req: Request,
-    handles: &mut Handles,
-    sql: &mut Vec<u8>,
-    metadata: &mut StatementMetadata,
-) -> Response {
+fn handle(req: Request, sql: &mut Vec<u8>, metadata: &mut StatementMetadata) -> Response {
     let dbms = Dbms::from_name(&req.dbms);
     let mut resp = Response {
         id: req.id,
@@ -266,25 +219,23 @@ fn handle(
         }
         "obfuscate" => {
             let cfg = req.obfuscator.unwrap_or_else(default_obfuscator);
-            let output = handles.obfuscator(cfg).obfuscate(req.sql.as_bytes(), dbms);
+            let output = Obfuscator::new(cfg.into()).obfuscate(req.sql.as_bytes(), dbms);
             resp.output = Some(Text(output));
         }
         "normalize" => {
             let cfg = req.normalizer.unwrap_or_else(default_normalizer);
-            handles
-                .normalizer(cfg)
-                .normalize_into(req.sql.as_bytes(), dbms, sql, metadata);
+            Normalizer::new(cfg.into()).normalize_into(req.sql.as_bytes(), dbms, sql, metadata);
             resp.output = Some(Text(sql.clone()));
             resp.metadata = Some(wire_metadata(metadata));
         }
         "obfuscate_and_normalize" => {
-            let (obfuscator, normalizer) = handles.pair(
-                req.obfuscator.unwrap_or_else(default_obfuscator),
-                req.normalizer.unwrap_or_else(default_normalizer),
-            );
+            let obfuscator =
+                Obfuscator::new(req.obfuscator.unwrap_or_else(default_obfuscator).into());
+            let normalizer =
+                Normalizer::new(req.normalizer.unwrap_or_else(default_normalizer).into());
             normalizer.obfuscate_and_normalize_into(
                 req.sql.as_bytes(),
-                obfuscator,
+                &obfuscator,
                 dbms,
                 sql,
                 metadata,

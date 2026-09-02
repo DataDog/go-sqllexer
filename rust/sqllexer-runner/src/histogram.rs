@@ -4,7 +4,7 @@
 
 const SUB_BUCKET_BITS: u32 = 10;
 const SUB_BUCKET_COUNT: u64 = 1 << SUB_BUCKET_BITS;
-const BUCKET_COUNT: usize = (SUB_BUCKET_COUNT as usize) * 54;
+const BUCKET_COUNT: usize = (SUB_BUCKET_COUNT as usize) * 24;
 
 pub struct Histogram {
     counts: Vec<u64>,

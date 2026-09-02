@@ -36,7 +36,7 @@ trap 'rm -f "$out/.throughput"' EXIT
 for workers in "${worker_counts[@]}"; do
   for corpus in workloads pathological; do
     "$out/.throughput" -corpus "$corpus_dir/$corpus.jsonl" -workers "$workers" \
-      -duration "$duration" -warmup "$warmup" -impl go \
+      -duration "$duration" -warmup "$warmup" \
       -json "$out/$corpus-w$workers-go.json"
     rust/target/release/bench \
       --corpus "$corpus_dir/$corpus.jsonl" --workers "$workers" \

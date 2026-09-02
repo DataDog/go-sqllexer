@@ -37,20 +37,8 @@ pub fn read(path: &str) -> io::Result<Vec<Entry>> {
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
         entries.push(Entry {
             sql: entry.sql.0,
-            dbms: dbms_from_name(&entry.dbms),
+            dbms: Dbms::from_name(&entry.dbms),
         });
     }
     Ok(entries)
-}
-
-/// Resolves a DBMS name the way `WithDBMS` does, aliases included.
-pub fn dbms_from_name(name: &str) -> Dbms {
-    match name {
-        "mssql" | "sql-server" | "sqlserver" => Dbms::SqlServer,
-        "postgresql" | "postgres" => Dbms::Postgres,
-        "mysql" => Dbms::MySql,
-        "oracle" => Dbms::Oracle,
-        "snowflake" => Dbms::Snowflake,
-        _ => Dbms::None,
-    }
 }

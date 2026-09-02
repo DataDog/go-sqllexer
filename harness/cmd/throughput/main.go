@@ -86,7 +86,6 @@ type Report struct {
 	Corpus         string        `json:"corpus"`
 	Workers        int           `json:"workers"`
 	Duration       string        `json:"duration"`
-	ReuseInstances bool          `json:"reuse_instances"`
 	GOMAXPROCS     int           `json:"gomaxprocs"`
 	TotalOps       int64         `json:"total_ops"`
 	OpsPerSecond   float64       `json:"ops_per_second"`
@@ -131,20 +130,9 @@ func main() {
 		workers    = flag.Int("workers", runtime.GOMAXPROCS(0), "concurrent workers")
 		duration   = flag.Duration("duration", 30*time.Second, "how long to sustain the load")
 		warmup     = flag.Duration("warmup", 3*time.Second, "warmup period excluded from the measurements")
-		reuse      = flag.Bool("reuse", true, "reuse one obfuscator/normalizer per worker instead of constructing per call")
 		jsonOut    = flag.String("json", "", "optional path for the JSON report")
-		label      = flag.String("label", "", "implementation label recorded in the report (defaults to -impl)")
-		impl       = flag.String("impl", "go", "implementation to drive: "+engineNames())
 	)
 	flag.Parse()
-
-	newEngine, ok := engines[*impl]
-	if !ok {
-		log.Fatalf("unknown -impl %q; known implementations are %s", *impl, engineNames())
-	}
-	if *label == "" {
-		*label = *impl
-	}
 
 	requests, err := corpus.Read(*corpusPath)
 	if err != nil {
@@ -161,7 +149,7 @@ func main() {
 
 	// Warmup lets the allocator and (for the Go side) the GC reach steady state, so
 	// the measured window reflects sustained behavior rather than startup.
-	runLoad(newEngine, requests, *workers, *warmup, *reuse, nil)
+	runLoad(requests, *workers, *warmup, nil)
 
 	runtime.GC()
 	var before, after runtime.MemStats
@@ -169,12 +157,12 @@ func main() {
 
 	peakRSS := newRSSSampler()
 	start := time.Now()
-	totalOps := runLoad(newEngine, requests, *workers, *duration, *reuse, stats)
+	totalOps := runLoad(requests, *workers, *duration, stats)
 	elapsed := time.Since(start)
 	peakRSS.stop()
 	runtime.ReadMemStats(&after)
 
-	report := buildReport(*label, *corpusPath, *workers, *duration, *reuse, totalOps, elapsed, stats, before, after, peakRSS)
+	report := buildReport(*corpusPath, *workers, *duration, totalOps, elapsed, stats, before, after, peakRSS)
 	printReport(report)
 
 	if *jsonOut != "" {
@@ -194,7 +182,7 @@ func main() {
 
 // runLoad drives the corpus in a round-robin across workers until the deadline.
 // Passing nil stats runs the load without recording (used for warmup).
-func runLoad(newEngine func(bool) engine, requests []protocol.Request, workers int, duration time.Duration, reuse bool, stats map[string]*classStats) int64 {
+func runLoad(requests []protocol.Request, workers int, duration time.Duration, stats map[string]*classStats) int64 {
 	var ops int64
 	deadline := time.Now().Add(duration)
 
@@ -204,8 +192,7 @@ func runLoad(newEngine func(bool) engine, requests []protocol.Request, workers i
 		go func(worker int) {
 			defer wg.Done()
 
-			eng := newEngine(reuse)
-			defer eng.close()
+			eng := newEngine()
 
 			// Per-worker stats, merged once at the end.
 			var local map[string]*classStats
@@ -254,17 +241,16 @@ func runLoad(newEngine func(bool) engine, requests []protocol.Request, workers i
 }
 
 func buildReport(
-	label, corpusPath string, workers int, duration time.Duration, reuse bool,
+	corpusPath string, workers int, duration time.Duration,
 	totalOps int64, elapsed time.Duration, stats map[string]*classStats,
 	before, after runtime.MemStats, rss *rssSampler,
 ) Report {
 	seconds := elapsed.Seconds()
 	report := Report{
-		Implementation: label,
+		Implementation: "go",
 		Corpus:         corpusPath,
 		Workers:        workers,
 		Duration:       duration.String(),
-		ReuseInstances: reuse,
 		GOMAXPROCS:     runtime.GOMAXPROCS(0),
 		TotalOps:       totalOps,
 		OpsPerSecond:   float64(totalOps) / seconds,
@@ -312,7 +298,7 @@ func buildReport(
 func printReport(r Report) {
 	fmt.Printf("implementation  %s\n", r.Implementation)
 	fmt.Printf("corpus          %s\n", r.Corpus)
-	fmt.Printf("workers         %d (GOMAXPROCS=%d, reuse=%v)\n", r.Workers, r.GOMAXPROCS, r.ReuseInstances)
+	fmt.Printf("workers         %d (GOMAXPROCS=%d)\n", r.Workers, r.GOMAXPROCS)
 	fmt.Printf("throughput      %.0f ops/s  (%.1f MB/s of SQL)\n", r.OpsPerSecond, r.BytesPerSecond/(1<<20))
 	fmt.Printf("total ops       %d\n\n", r.TotalOps)
 

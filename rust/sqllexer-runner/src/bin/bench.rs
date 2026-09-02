@@ -133,9 +133,6 @@ struct MemoryReport {
     alloc_rate_mb_per_second: f64,
     // Kept so the report is field-compatible with the Go driver's. There is no
     // garbage collector on this side; the zeros are the point.
-    num_gc: u32,
-    gc_pause_total_ms: f64,
-    gc_cpu_fraction: f64,
     rss_peak_mb: f64,
     rss_final_mb: f64,
 }
@@ -146,7 +143,6 @@ struct Report {
     corpus: String,
     workers: usize,
     duration: String,
-    reuse_instances: bool,
     total_ops: u64,
     ops_per_second: f64,
     bytes_per_second: f64,
@@ -160,8 +156,11 @@ struct Args {
     duration: u64,
     warmup: u64,
     json: Option<String>,
-    label: String,
 }
+
+/// The allocation pass only needs enough operations for a stable per-op average,
+/// not the full measured duration.
+const ALLOC_PASS: Duration = Duration::from_secs(5);
 
 fn parse_args() -> Args {
     let mut args = Args {
@@ -172,7 +171,6 @@ fn parse_args() -> Args {
         duration: 30,
         warmup: 3,
         json: None,
-        label: "rust".to_string(),
     };
     let mut argv = std::env::args().skip(1);
     while let Some(flag) = argv.next() {
@@ -186,7 +184,6 @@ fn parse_args() -> Args {
             "--duration" => args.duration = value().parse().expect("--duration in seconds"),
             "--warmup" => args.warmup = value().parse().expect("--warmup in seconds"),
             "--json" => args.json = Some(value()),
-            "--label" => args.label = value(),
             other => panic!("unknown flag {other}"),
         }
     }
@@ -373,12 +370,7 @@ fn main() -> io::Result<()> {
     ALLOC_BYTES.store(0, Ordering::Relaxed);
     ALLOC_COUNT.store(0, Ordering::Relaxed);
     let alloc_start = Instant::now();
-    let (alloc_ops, _) = run_load(
-        &entries,
-        args.workers,
-        Duration::from_secs(args.duration),
-        false,
-    );
+    let (alloc_ops, _) = run_load(&entries, args.workers, ALLOC_PASS, false);
     let alloc_elapsed = alloc_start.elapsed();
     let alloc_bytes = ALLOC_BYTES.load(Ordering::Relaxed);
     let alloc_count = ALLOC_COUNT.load(Ordering::Relaxed);
@@ -406,11 +398,10 @@ fn main() -> io::Result<()> {
     }
 
     let report = Report {
-        implementation: args.label.clone(),
+        implementation: "rust".to_string(),
         corpus: args.corpus.clone(),
         workers: args.workers,
         duration: format!("{}s", args.duration),
-        reuse_instances: true,
         total_ops,
         ops_per_second: total_ops as f64 / seconds,
         bytes_per_second: total_bytes as f64 / seconds,
@@ -423,9 +414,6 @@ fn main() -> io::Result<()> {
             alloc_rate_mb_per_second: alloc_bytes as f64
                 / (1 << 20) as f64
                 / alloc_elapsed.as_secs_f64(),
-            num_gc: 0,
-            gc_pause_total_ms: 0.0,
-            gc_cpu_fraction: 0.0,
             rss_peak_mb: rss_peak as f64 / (1 << 20) as f64,
             rss_final_mb: rss_final as f64 / (1 << 20) as f64,
         },
@@ -453,11 +441,7 @@ fn print_report(r: &Report) {
     let mut out = out.lock();
     let _ = writeln!(out, "implementation  {}", r.implementation);
     let _ = writeln!(out, "corpus          {}", r.corpus);
-    let _ = writeln!(
-        out,
-        "workers         {} (reuse={})",
-        r.workers, r.reuse_instances
-    );
+    let _ = writeln!(out, "workers         {}", r.workers);
     let _ = writeln!(
         out,
         "throughput      {:.0} ops/s  ({:.1} MB/s of SQL)",
