@@ -1160,6 +1160,37 @@ func TestNormalizeDeobfuscatedSQL(t *testing.T) {
 	}
 }
 
+func TestNormalizeMySQLPerformanceSchemaQualifiedIdentifiers(t *testing.T) {
+	input := "SELECT `performance_schema` . `events_statements_summary_by_digest` . `DIGEST_TEXT` " +
+		"FROM `performance_schema` . `events_statements_summary_by_digest` " +
+		"WHERE `SCHEMA_NAME` = ?"
+	expected := "SELECT performance_schema.events_statements_summary_by_digest.DIGEST_TEXT " +
+		"FROM performance_schema.events_statements_summary_by_digest WHERE SCHEMA_NAME = ?"
+
+	normalizer := NewNormalizer(WithCollectTables(true))
+	got, metadata, err := normalizer.Normalize(input, WithDBMS(DBMSMySQL))
+	assert.NoError(t, err)
+	assert.Equal(t, expected, got)
+	assert.Equal(t, []string{"performance_schema.events_statements_summary_by_digest"}, metadata.Tables)
+}
+
+func TestNormalizeMySQLSpacedQualifiedNameBeforeParentheses(t *testing.T) {
+	normalizer := NewNormalizer(WithRemoveSpaceBetweenParentheses(true))
+	tests := []struct {
+		spaced   string
+		adjacent string
+	}{
+		{spaced: "SELECT mydb . func(1)", adjacent: "SELECT mydb.func(1)"},
+		{spaced: "INSERT INTO mydb . table(id) VALUES (1)", adjacent: "INSERT INTO mydb.table(id) VALUES (1)"},
+	}
+
+	for _, tt := range tests {
+		got, _, err := normalizer.Normalize(tt.spaced, WithDBMS(DBMSMySQL))
+		assert.NoError(t, err)
+		assert.Equal(t, tt.adjacent, got)
+	}
+}
+
 func TestGroupObfuscatedValues(t *testing.T) {
 	tests := []struct {
 		input    string

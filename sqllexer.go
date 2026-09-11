@@ -1,6 +1,7 @@
 package sqllexer
 
 import (
+	"strings"
 	"unicode/utf8"
 )
 
@@ -363,6 +364,9 @@ func (s *Lexer) scanIdentifier(ch rune) *Token {
 		if s.start == s.cursor {
 			return s.scanUnknown()
 		}
+		if s.config.DBMS == DBMSMySQL {
+			return s.checkForSpacesInIdentifier(IDENT)
+		}
 		return s.emit(IDENT)
 	}
 
@@ -418,10 +422,17 @@ func (s *Lexer) scanIdentifier(ch rune) *Token {
 	if ch == '(' {
 		return s.emit(FUNCTION)
 	}
+	if s.config.DBMS == DBMSMySQL {
+		return s.checkForSpacesInIdentifier(IDENT)
+	}
 	return s.emit(IDENT)
 }
 
 func (s *Lexer) scanDoubleQuotedIdentifier(delimiter rune) *Token {
+	return s.scanDoubleQuotedIdentifierComponent(delimiter, true)
+}
+
+func (s *Lexer) scanDoubleQuotedIdentifierComponent(delimiter rune, joinQualified bool) *Token {
 	closingDelimiter := delimiter
 	if delimiter == '[' {
 		closingDelimiter = ']'
@@ -471,7 +482,157 @@ func (s *Lexer) scanDoubleQuotedIdentifier(delimiter rune) *Token {
 		ch = s.nextBy(size)
 	}
 	s.next() // consume the closing quote (ASCII)
+	if joinQualified && s.config.DBMS == DBMSMySQL {
+		return s.checkForSpacesInIdentifier(QUOTED_IDENT)
+	}
 	return s.emit(QUOTED_IDENT)
+}
+
+// scanMySQLQualifiedIdentifierComponent scans an unquoted identifier after a
+// qualifier dot. Keywords are valid identifier components in this position,
+// so this deliberately skips the keyword trie used by scanIdentifier.
+func (s *Lexer) scanMySQLQualifiedIdentifierComponent(ch rune) *Token {
+	s.start = s.cursor
+	for isIdentifier(ch) {
+		s.hasDigits = s.hasDigits || isDigit(ch)
+		ch = s.nextBy(utf8.RuneLen(ch))
+	}
+	if ch == '(' {
+		return s.emit(FUNCTION)
+	}
+	return s.emit(IDENT)
+}
+
+// checkForSpacesInIdentifier joins MySQL qualified identifiers whose
+// components have been separated by whitespace around a dot. MySQL emits this
+// form in normalized performance_schema statements, for example:
+// `schema` . `table` . `column`.
+func (s *Lexer) checkForSpacesInIdentifier(tokenType TokenType) *Token {
+	token := s.emit(tokenType)
+	identifierStart := s.cursor - len(token.Value)
+	identifierEnd := s.cursor
+	resultType := token.Type
+	hasDigits := token.hasDigits
+	hasQuotes := token.hasQuotes
+	hasSeparatorSpaces := false
+	joined := false
+
+	for {
+		ch := s.peek()
+		componentEnd := s.cursor
+		separatorHasSpaces := false
+
+		// Unquoted identifiers already consume an adjacent dot. Continue from
+		// that dot as well as from a dot separated by whitespace.
+		dotConsumed := identifierEnd > identifierStart && s.src[identifierEnd-1] == '.'
+		if dotConsumed {
+			for isSpace(ch) {
+				separatorHasSpaces = true
+				ch = s.next()
+			}
+		} else {
+			for isSpace(ch) {
+				separatorHasSpaces = true
+				ch = s.next()
+			}
+			if ch != '.' {
+				s.cursor = componentEnd
+				break
+			}
+			ch = s.next()
+			for isSpace(ch) {
+				separatorHasSpaces = true
+				ch = s.next()
+			}
+		}
+
+		// Match the characters scanMySQLQualifiedIdentifierComponent can
+		// actually consume. isAlphaNumeric also accepts Unicode numbers, while
+		// isIdentifier does not; accepting one here would make no progress.
+		if !isLetter(ch) && !isDigit(ch) && ch != '$' && ch != '`' {
+			if ch == '*' {
+				// Preserve the qualifier dot on the identifier and let the next
+				// scan emit the wildcard, matching the adjacent-token behavior.
+				joined = true
+				hasSeparatorSpaces = hasSeparatorSpaces || separatorHasSpaces
+				identifierEnd = s.cursor
+				break
+			}
+			s.cursor = componentEnd
+			break
+		}
+
+		if ch == '`' {
+			token = s.scanDoubleQuotedIdentifierComponent('`', false) // sadscan:disable np.hashicorp.1 -- lexer token, not a Vault token
+		} else {
+			token = s.scanMySQLQualifiedIdentifierComponent(ch) // sadscan:disable np.hashicorp.1 -- lexer token, not a Vault token
+		}
+
+		joined = true
+		hasSeparatorSpaces = hasSeparatorSpaces || separatorHasSpaces
+		identifierEnd = s.cursor
+		hasDigits = hasDigits || token.hasDigits
+		hasQuotes = hasQuotes || token.hasQuotes
+
+		if token.Type == ERROR {
+			resultType = ERROR
+			break
+		}
+		if token.Type == FUNCTION {
+			// Match the existing token type for an adjacent unquoted name such
+			// as db.func(. Quoted or partially quoted names retain their quoted
+			// identifier type; recognizing those as routines needs SQL context.
+			if resultType != QUOTED_IDENT {
+				resultType = FUNCTION
+			}
+			break
+		}
+		if resultType == QUOTED_IDENT || token.Type == QUOTED_IDENT {
+			resultType = QUOTED_IDENT
+		}
+	}
+
+	if !joined {
+		return token
+	}
+
+	token.Type = resultType
+	token.hasDigits = hasDigits
+	token.hasQuotes = hasQuotes
+	token.isSimpleIdentifier = false
+	if !hasSeparatorSpaces {
+		token.Value = s.src[identifierStart:identifierEnd]
+		return token
+	}
+	token.Value = compactMySQLQualifiedIdentifier(s.src[identifierStart:identifierEnd])
+	return token
+}
+
+func compactMySQLQualifiedIdentifier(value string) string {
+	compactLength := len(value)
+	inQuotes := false
+	for i := 0; i < len(value); i++ {
+		ch := value[i]
+		if ch == '`' {
+			inQuotes = !inQuotes
+		} else if !inQuotes && isSpace(rune(ch)) {
+			compactLength--
+		}
+	}
+
+	var compact strings.Builder
+	compact.Grow(compactLength)
+	inQuotes = false
+	for i := 0; i < len(value); i++ {
+		ch := value[i]
+		if ch == '`' {
+			inQuotes = !inQuotes
+		} else if !inQuotes && isSpace(rune(ch)) {
+			continue
+		}
+		compact.WriteByte(ch)
+	}
+	return compact.String()
 }
 
 func (s *Lexer) scanWhitespace() *Token {
