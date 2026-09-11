@@ -1042,6 +1042,68 @@ func TestNormalizeDeobfuscatedSQL(t *testing.T) {
 			},
 		},
 		{
+			// Firebird quoted identifiers (double quotes, case-sensitive)
+			input:    `SELECT * FROM "PUBLIC"."USERS" WHERE id = :id`,
+			expected: `SELECT * FROM PUBLIC.USERS WHERE id = :id`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{`PUBLIC.USERS`},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       18,
+			},
+			normalizationConfig: &normalizerConfig{
+				CollectComments: true,
+				CollectCommands: true,
+				CollectTables:   true,
+				KeepSQLAlias:    true,
+			},
+			lexerOptions: []lexerOption{
+				WithDBMS(DBMSFirebird),
+			},
+		},
+		{
+			input:    `SELECT * FROM "PUBLIC"."USERS" WHERE id = :id`,
+			expected: `SELECT * FROM "PUBLIC"."USERS" WHERE id = :id`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{`PUBLIC.USERS`},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       18,
+			},
+			normalizationConfig: &normalizerConfig{
+				CollectComments:         true,
+				CollectCommands:         true,
+				CollectTables:           true,
+				KeepSQLAlias:            true,
+				KeepIdentifierQuotation: true,
+			},
+			lexerOptions: []lexerOption{
+				WithDBMS(DBMSFirebird),
+			},
+		},
+		{
+			// Firebird FIRST/SKIP paging and :name bind parameters
+			input:    `SELECT FIRST 10 SKIP 5 LAST_NAME FROM EMPLOYEE WHERE SALARY > :min_salary`,
+			expected: `SELECT FIRST 10 SKIP 5 LAST_NAME FROM EMPLOYEE WHERE SALARY > :min_salary`,
+			statementMetadata: StatementMetadata{
+				Tables:     []string{"EMPLOYEE"},
+				Comments:   []string{},
+				Commands:   []string{"SELECT"},
+				Procedures: []string{},
+				Size:       14,
+			},
+			normalizationConfig: &normalizerConfig{
+				CollectComments: true,
+				CollectCommands: true,
+				CollectTables:   true,
+			},
+			lexerOptions: []lexerOption{
+				WithDBMS(DBMSFirebird),
+			},
+		},
+		{
 			// simple bracket-quoted column after dot — no space, brackets stripped, metadata on
 			input:    `SELECT t.[SimpleCol] FROM dbo.SomeTable AS t`,
 			expected: `SELECT t.SimpleCol FROM dbo.SomeTable AS t`,

@@ -1,0 +1,19 @@
+{
+  "input": "SELECT LAST_NAME FROM EMPLOYEE OFFSET 5 ROWS FETCH NEXT 10 ROWS ONLY",
+  "outputs": [
+    {
+      "expected": "SELECT LAST_NAME FROM EMPLOYEE OFFSET ? ROWS FETCH NEXT ? ROWS ONLY",
+      "statement_metadata": {
+        "size": 14,
+        "tables": [
+          "EMPLOYEE"
+        ],
+        "commands": [
+          "SELECT"
+        ],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}

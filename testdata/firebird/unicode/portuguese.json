@@ -1,0 +1,19 @@
+{
+  "input": "INSERT INTO NOTAS (TEXTO) VALUES ('«Só juíza chata não vê câmera frágil e dá kiwi à ré sexy que pôs ações em baú.»') RETURNING ID",
+  "outputs": [
+    {
+      "expected": "INSERT INTO NOTAS ( TEXTO ) VALUES ( ? ) RETURNING ID",
+      "statement_metadata": {
+        "size": 11,
+        "tables": [
+          "NOTAS"
+        ],
+        "commands": [
+          "INSERT"
+        ],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}

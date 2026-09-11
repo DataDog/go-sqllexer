@@ -1,0 +1,21 @@
+{
+  "input": "EXECUTE BLOCK (dept_no VARCHAR(3) = :dept) RETURNS (cnt INTEGER) AS BEGIN SELECT COUNT(*) FROM EMPLOYEE WHERE DEPT_NO = :dept INTO :cnt; SUSPEND; END",
+  "outputs": [
+    {
+      "expected": "EXECUTE BLOCK ( dept_no VARCHAR ( ? ) = :dept ) RETURNS ( cnt INTEGER ) AS BEGIN SELECT COUNT ( * ) FROM EMPLOYEE WHERE DEPT_NO = :dept INTO :cnt; SUSPEND; END",
+      "statement_metadata": {
+        "size": 26,
+        "tables": [
+          "EMPLOYEE"
+        ],
+        "commands": [
+          "EXECUTE",
+          "BEGIN",
+          "SELECT"
+        ],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}

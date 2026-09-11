@@ -3,13 +3,16 @@
 This repository contains a hand written SQL Lexer that tokenizes SQL queries with a focus on obfuscating and normalization. The lexer is written in Go with no external dependencies.
 **Note** This is NOT a SQL parser, it only tokenizes SQL queries.
 
+This fork adds first-class **FirebirdSQL** support (`firebird` / `firebirdsql` DBMS) on top of upstream [DataDog/go-sqllexer](https://github.com/DataDog/go-sqllexer) v0.2.4. See [FIREBIRD.md](FIREBIRD.md) for the full description of what was implemented and how it was validated against a live Firebird 5.0.3 server.
+
 ## Features
 
 - :rocket: Fast and lightweight tokenization (not regex based)
 - :lock: Obfuscates sensitive data (e.g. numbers, strings, specific literals like dollar quoted strings in Postgres, etc.)
 - :book: Even works with truncated queries
-- :globe_with_meridians: UTF-8 support
+- :globe_with_meridians: UTF-8 support (multi-byte string literals, quoted identifiers and bind parameter names)
 - :wrench: Normalizes obfuscated queries
+- :fire: FirebirdSQL dialect: ANSI string literals with `''` quote doubling, `:name` bind parameters, `RDB$...` identifiers, `FIRST`/`SKIP` and `EXECUTE BLOCK`/PSQL keywords
 
 ## Installation
 
@@ -130,6 +133,20 @@ Use the `-dbms` flag to specify the database type:
 - `mysql` - MySQL
 - `oracle` - Oracle
 - `snowflake` - Snowflake
+- `firebird` - FirebirdSQL (alias: `firebirdsql`)
+
+```bash
+# Normalize a Firebird query with named bind parameters
+echo "SELECT FIRST 10 LAST_NAME FROM EMPLOYEE WHERE SALARY > :min_salary" \
+  | sqllexer -mode normalize -dbms firebird
+# SELECT FIRST 10 LAST_NAME FROM EMPLOYEE WHERE SALARY > :min_salary
+
+# Obfuscate a Firebird query (strings, incl. '' quote doubling, become ?)
+echo "SELECT * FROM EMPLOYEE WHERE LAST_NAME = 'O''Brien'" | sqllexer -dbms firebird
+# SELECT * FROM EMPLOYEE WHERE LAST_NAME = ?
+```
+
+See [FIREBIRD.md](FIREBIRD.md) for dialect details.
 
 ## Testing
 

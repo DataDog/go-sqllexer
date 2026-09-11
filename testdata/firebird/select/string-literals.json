@@ -1,0 +1,19 @@
+{
+  "input": "SELECT FIRST 1 LAST_NAME FROM EMPLOYEE WHERE LAST_NAME = 'O''Brien' OR FIRST_NAME LIKE '%\\_%' ESCAPE '\\'",
+  "outputs": [
+    {
+      "expected": "SELECT FIRST ? LAST_NAME FROM EMPLOYEE WHERE LAST_NAME = ? OR FIRST_NAME LIKE ? ESCAPE ?",
+      "statement_metadata": {
+        "size": 14,
+        "tables": [
+          "EMPLOYEE"
+        ],
+        "commands": [
+          "SELECT"
+        ],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}

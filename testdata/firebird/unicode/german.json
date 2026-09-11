@@ -1,0 +1,19 @@
+{
+  "input": "SELECT FIRST 1 TITEL FROM ARTIKEL WHERE INHALT = 'Polyfon zwitschernd aßen Mäxchens Vögel Rüben, Joghurt und Quark.' AND \"GRÖSSE\" > :größe",
+  "outputs": [
+    {
+      "expected": "SELECT FIRST ? TITEL FROM ARTIKEL WHERE INHALT = ? AND GRÖSSE > :größe",
+      "statement_metadata": {
+        "size": 13,
+        "tables": [
+          "ARTIKEL"
+        ],
+        "commands": [
+          "SELECT"
+        ],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}

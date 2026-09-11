@@ -1,0 +1,19 @@
+{
+  "input": "SELECT RDB$RELATION_NAME, RDB$RELATION_ID FROM RDB$RELATIONS WHERE RDB$SYSTEM_FLAG = 0 ORDER BY RDB$RELATION_ID",
+  "outputs": [
+    {
+      "expected": "SELECT RDB$RELATION_NAME, RDB$RELATION_ID FROM RDB$RELATIONS WHERE RDB$SYSTEM_FLAG = ? ORDER BY RDB$RELATION_ID",
+      "statement_metadata": {
+        "size": 19,
+        "tables": [
+          "RDB$RELATIONS"
+        ],
+        "commands": [
+          "SELECT"
+        ],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}

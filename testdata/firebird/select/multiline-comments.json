@@ -1,0 +1,23 @@
+{
+  "input": "SELECT /* employees hired in 1990s */ LAST_NAME, HIRE_DATE /* TODO: add dept */ FROM EMPLOYEE -- active only\nWHERE JOB_GRADE = 5",
+  "outputs": [
+    {
+      "expected": "SELECT LAST_NAME, HIRE_DATE FROM EMPLOYEE WHERE JOB_GRADE = ?",
+      "statement_metadata": {
+        "size": 78,
+        "tables": [
+          "EMPLOYEE"
+        ],
+        "commands": [
+          "SELECT"
+        ],
+        "comments": [
+          "/* employees hired in 1990s */",
+          "/* TODO: add dept */",
+          "-- active only"
+        ],
+        "procedures": []
+      }
+    }
+  ]
+}

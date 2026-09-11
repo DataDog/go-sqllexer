@@ -21,12 +21,16 @@ const (
 	DBMSOracle DBMSType = "oracle"
 	// DBMSSnowflake is a Snowflake Server
 	DBMSSnowflake DBMSType = "snowflake"
+	// DBMSFirebird is a Firebird Server
+	DBMSFirebird       DBMSType = "firebird"
+	DBMSFirebirdAlias1 DBMSType = "firebirdsql" // Go driver (github.com/nakagami/firebirdsql)
 )
 
 var dbmsAliases = map[DBMSType]DBMSType{
 	DBMSSQLServerAlias1: DBMSSQLServer,
 	DBMSSQLServerAlias2: DBMSSQLServer,
 	DBMSPostgresAlias1:  DBMSPostgres,
+	DBMSFirebirdAlias1:  DBMSFirebird,
 }
 
 func getDBMSFromAlias(alias DBMSType) DBMSType {
@@ -58,6 +62,7 @@ var commands = []string{
 	"USE",
 	"CLONE",
 	"VACUUM",
+	"RECREATE", // Firebird: drop-and-recreate DDL
 }
 
 var tableIndicatorCommands = []string{
@@ -154,6 +159,13 @@ var keywords = []string{
 	"SKIP",
 	"IF",
 	"ONLY",
+	// Firebird
+	"SUSPEND",    // PSQL: yield a row from a selectable stored procedure / EXECUTE BLOCK
+	"STARTING",   // STARTING WITH string match operator
+	"CONTAINING", // CONTAINING case-insensitive substring match operator
+	"SIMILAR",    // SIMILAR TO regex match operator
+	"SINGULAR",   // SINGULAR subquery predicate
+	"LEAVE",      // PSQL: exit a loop
 }
 
 var (
