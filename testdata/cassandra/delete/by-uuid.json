@@ -1,0 +1,19 @@
+{
+  "input": "DELETE FROM users WHERE id = 550e8400-e29b-41d4-a716-446655440000",
+  "outputs": [
+    {
+      "expected": "DELETE FROM users WHERE id = ?",
+      "statement_metadata": {
+        "size": 11,
+        "tables": [
+          "users"
+        ],
+        "commands": [
+          "DELETE"
+        ],
+        "comments": [],
+        "procedures": []
+      }
+    }
+  ]
+}

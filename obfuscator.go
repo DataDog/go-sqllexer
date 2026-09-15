@@ -131,7 +131,7 @@ func (o *Obfuscator) ObfuscateTokenValue(token *Token, lastValueToken *LastValue
 			break
 		}
 		token.Value = StringPlaceholder
-	case STRING, INCOMPLETE_STRING, DOLLAR_QUOTED_STRING:
+	case STRING, INCOMPLETE_STRING, DOLLAR_QUOTED_STRING, UUID:
 		if o.config.KeepJsonPath && lastValueToken != nil && lastValueToken.Type == JSON_OP {
 			break
 		}

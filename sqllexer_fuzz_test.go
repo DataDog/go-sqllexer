@@ -147,6 +147,16 @@ func addComplexTestCases(f *testing.F) {
 		`SELECT $1, $2 FROM @mystage/file.csv`,
 	}
 
+	// Cassandra/CQL specific patterns
+	cassandraPatterns := []string{
+		`SELECT * FROM users WHERE id = 550e8400-e29b-41d4-a716-446655440000`,
+		`SELECT * FROM users WHERE id = a50e8400-e29b-41d4-a716-446655440000 ALLOW FILTERING`,
+		`INSERT INTO users (id, data) VALUES (550e8400-e29b-41d4-a716-446655440000, 0xabcdef)`,
+		`SELECT * FROM users WHERE id = :user_id`,
+		`BEGIN BATCH INSERT INTO users (id) VALUES (1); DELETE FROM users WHERE id = 2 APPLY BATCH`,
+		`SELECT WRITETIME(name), TTL(name) FROM users WHERE token(id) > 0`,
+	}
+
 	// Common edge cases across all DBMS
 	commonEdgeCases := []string{
 		// Nested subqueries
@@ -180,6 +190,7 @@ func addComplexTestCases(f *testing.F) {
 	patterns = append(patterns, mysqlPatterns...)
 	patterns = append(patterns, oraclePatterns...)
 	patterns = append(patterns, snowflakePatterns...)
+	patterns = append(patterns, cassandraPatterns...)
 	patterns = append(patterns, commonEdgeCases...)
 
 	// Add each pattern with different DBMS types
@@ -189,6 +200,7 @@ func addComplexTestCases(f *testing.F) {
 		string(DBMSMySQL),
 		string(DBMSOracle),
 		string(DBMSSnowflake),
+		string(DBMSCassandra),
 	}
 
 	for _, pattern := range patterns {
@@ -257,6 +269,14 @@ func addObfuscationTestCases(f *testing.F) {
 		`SELECT TO_GEOGRAPHY('POINT(-122.35 37.55)')`,
 		// Stage references
 		`SELECT $1, $2, $3 FROM @mystage`,
+	}
+
+	// Cassandra/CQL specific obfuscation patterns
+	cassandraPatterns := []string{
+		`SELECT * FROM users WHERE id = 550e8400-e29b-41d4-a716-446655440000`,
+		`SELECT * FROM users WHERE id = a50e8400-e29b-41d4-a716-446655440000`,
+		`INSERT INTO users (id, blob) VALUES (550e8400-e29b-41d4-a716-446655440000, 0xdeadbeef)`,
+		`SELECT * FROM users WHERE name = 'alice' ALLOW FILTERING`,
 	}
 
 	// Common obfuscation patterns for all DBMS
@@ -331,6 +351,11 @@ func addObfuscationTestCases(f *testing.F) {
 		f.Add(pattern, string(DBMSSnowflake))
 	}
 
+	// Add Cassandra patterns with Cassandra DBMS
+	for _, pattern := range cassandraPatterns {
+		f.Add(pattern, string(DBMSCassandra))
+	}
+
 	// Add common patterns and quote edge cases with all DBMS types
 	dbmsTypes := []string{
 		string(DBMSPostgres),
@@ -338,6 +363,7 @@ func addObfuscationTestCases(f *testing.F) {
 		string(DBMSMySQL),
 		string(DBMSOracle),
 		string(DBMSSnowflake),
+		string(DBMSCassandra),
 	}
 
 	for _, pattern := range append(commonPatterns, quoteEdgeCases...) {

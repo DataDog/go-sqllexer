@@ -71,6 +71,24 @@ func TestObfuscator(t *testing.T) {
 			dbms:     DBMSSnowflake,
 		},
 		{
+			// Cassandra/CQL UUID literals are obfuscated as a single placeholder
+			input:    `SELECT * FROM users WHERE id = 550e8400-e29b-41d4-a716-446655440000 AND name = 'alice'`,
+			expected: `SELECT * FROM users WHERE id = ? AND name = ?`,
+			dbms:     DBMSCassandra,
+		},
+		{
+			// Cassandra UUID starting with hex letter + blob literal
+			input:    `INSERT INTO users (id, data) VALUES (a50e8400-e29b-41d4-a716-446655440000, 0xdeadbeef)`,
+			expected: `INSERT INTO users (id, data) VALUES (?, ?)`,
+			dbms:     DBMSCassandra,
+		},
+		{
+			// cql alias should behave like cassandra
+			input:    `SELECT * FROM users WHERE id = 550e8400-e29b-41d4-a716-446655440000`,
+			expected: `SELECT * FROM users WHERE id = ?`,
+			dbms:     DBMSCQL,
+		},
+		{
 			input:         "SELECT * FROM \"users table\" where id = 1",
 			expected:      "SELECT * FROM \"users table\" where id = ?",
 			replaceDigits: true,
