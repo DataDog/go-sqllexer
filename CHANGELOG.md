@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.2.5
+
+### Bug Fixes
+
+- **Fix truncated obfuscation of PostgreSQL strings containing backslashes** ([#110](https://github.com/DataDog/go-sqllexer/pull/110))
+  Backslash is now treated as a normal character in PostgreSQL strings (except `E'...'` strings), so these strings no longer truncate the obfuscated query. In all dialects, a doubled quote (`''`) inside a string now stays part of one literal, which can slightly change obfuscated output.
+
+- **Keep MySQL qualified identifiers intact when spaced around dots** ([#108](https://github.com/DataDog/go-sqllexer/pull/108))
+  Names like `db . table` (as found in `performance_schema` digest text) are now normalized to `db.table` and reported as a single table in metadata.
+
 ## v0.2.4
 
 ### Bug Fixes
