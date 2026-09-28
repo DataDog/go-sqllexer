@@ -2,7 +2,7 @@
     "input": "CREATE OR ALTER PROCEDURE UpdateOrderStatus @orderId INT, @newStatus NVARCHAR(50) AS BEGIN SET NOCOUNT ON; BEGIN TRY BEGIN TRANSACTION; DECLARE @sql NVARCHAR(MAX) = N'UPDATE orders SET status = ''' + @newStatus + ''' WHERE id = ' + CAST(@orderId AS NVARCHAR(10)) + ';'; EXEC sp_executesql @sql; COMMIT TRANSACTION; END TRY BEGIN CATCH ROLLBACK TRANSACTION; THROW; END CATCH; END;",
     "outputs": [
       {
-        "expected": "CREATE OR ALTER PROCEDURE UpdateOrderStatus @orderId INT, @newStatus NVARCHAR(?) AS BEGIN SET NOCOUNT ON; BEGIN TRY BEGIN TRANSACTION; DECLARE @sql NVARCHAR(MAX) = N ? ? + @newStatus + ? ? + CAST(@orderId AS NVARCHAR(?)) + ?; EXEC sp_executesql @sql; COMMIT TRANSACTION; END TRY BEGIN CATCH ROLLBACK TRANSACTION; THROW; END CATCH; END;",
+        "expected": "CREATE OR ALTER PROCEDURE UpdateOrderStatus @orderId INT, @newStatus NVARCHAR(?) AS BEGIN SET NOCOUNT ON; BEGIN TRY BEGIN TRANSACTION; DECLARE @sql NVARCHAR(MAX) = N ? + @newStatus + ? + CAST(@orderId AS NVARCHAR(?)) + ?; EXEC sp_executesql @sql; COMMIT TRANSACTION; END TRY BEGIN CATCH ROLLBACK TRANSACTION; THROW; END CATCH; END;",
         "statement_metadata": {
           "size": 43,
           "tables": [],

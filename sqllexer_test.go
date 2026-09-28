@@ -1101,6 +1101,135 @@ here */`,
 			lexerOpts: []lexerOption{WithDBMS(DBMSOracle)},
 		},
 		{
+			// PostgreSQL standard strings (standard_conforming_strings, the default
+			// since 9.1) do not treat backslash as an escape. A quote inside a
+			// literal is written by doubling it, so '\' followed by another quote
+			// is a literal backslash plus an embedded quote, not an escaped quote.
+			// https://github.com/DataDog/go-sqllexer/issues/63
+			name:  "postgres backslash before quote stays inside the literal",
+			input: `INSERT INTO restaurants VALUES ('Bob\''s Burgers');`,
+			expected: []TokenSpec{
+				{COMMAND, "INSERT"},
+				{SPACE, " "},
+				{KEYWORD, "INTO"},
+				{SPACE, " "},
+				{IDENT, "restaurants"},
+				{SPACE, " "},
+				{KEYWORD, "VALUES"},
+				{SPACE, " "},
+				{PUNCTUATION, "("},
+				{STRING, `'Bob\''s Burgers'`},
+				{PUNCTUATION, ")"},
+				{PUNCTUATION, ";"},
+			},
+			lexerOpts: []lexerOption{WithDBMS(DBMSPostgres)},
+		},
+		{
+			// Same rule as SQL Server and Oracle: ESCAPE '\' must end at the
+			// closing quote when more SQL follows.
+			name:  "postgres escape backslash mid-query",
+			input: `SELECT * FROM t WHERE x LIKE '%a%' ESCAPE '\' AND y = 1`,
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
+				{WILDCARD, "*"},
+				{SPACE, " "},
+				{KEYWORD, "FROM"},
+				{SPACE, " "},
+				{IDENT, "t"},
+				{SPACE, " "},
+				{KEYWORD, "WHERE"},
+				{SPACE, " "},
+				{IDENT, "x"},
+				{SPACE, " "},
+				{KEYWORD, "LIKE"},
+				{SPACE, " "},
+				{STRING, `'%a%'`},
+				{SPACE, " "},
+				{KEYWORD, "ESCAPE"},
+				{SPACE, " "},
+				{STRING, `'\'`},
+				{SPACE, " "},
+				{KEYWORD, "AND"},
+				{SPACE, " "},
+				{IDENT, "y"},
+				{SPACE, " "},
+				{OPERATOR, "="},
+				{SPACE, " "},
+				{NUMBER, "1"},
+			},
+			lexerOpts: []lexerOption{WithDBMS(DBMSPostgres)},
+		},
+		{
+			// '' is the standard-SQL escaped quote. The pair is one literal,
+			// not two adjacent strings.
+			name:  "postgres doubled quote is one string",
+			input: `INSERT INTO restaurants VALUES ('Bob''s Burgers');`,
+			expected: []TokenSpec{
+				{COMMAND, "INSERT"},
+				{SPACE, " "},
+				{KEYWORD, "INTO"},
+				{SPACE, " "},
+				{IDENT, "restaurants"},
+				{SPACE, " "},
+				{KEYWORD, "VALUES"},
+				{SPACE, " "},
+				{PUNCTUATION, "("},
+				{STRING, `'Bob''s Burgers'`},
+				{PUNCTUATION, ")"},
+				{PUNCTUATION, ";"},
+			},
+			lexerOpts: []lexerOption{WithDBMS(DBMSPostgres)},
+		},
+		{
+			// Escape-string syntax (E'...') still uses backslash escapes.
+			// A fix for ordinary strings must leave this form intact.
+			name:  "postgres escape string keeps backslash escapes",
+			input: `SELECT E'Bob\'s Burgers'`,
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
+				{IDENT, "E"},
+				{STRING, `'Bob\'s Burgers'`},
+			},
+			lexerOpts: []lexerOption{WithDBMS(DBMSPostgres)},
+		},
+		{
+			name:  "postgres lowercase escape string keeps backslash escapes",
+			input: `SELECT e'Bob\'s Burgers'`,
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
+				{IDENT, "e"},
+				{STRING, `'Bob\'s Burgers'`},
+			},
+			lexerOpts: []lexerOption{WithDBMS(DBMSPostgres)},
+		},
+		{
+			// '' is also an escaped quote inside an escape string.
+			name:  "postgres escape string doubled quote is one string",
+			input: `SELECT E'Bob''s Burgers'`,
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
+				{IDENT, "E"},
+				{STRING, `'Bob''s Burgers'`},
+			},
+			lexerOpts: []lexerOption{WithDBMS(DBMSPostgres)},
+		},
+		{
+			// The E in someValue is the tail of an identifier, not an escape-string marker.
+			name:  "postgres identifier ending in E is not an escape string",
+			input: `SELECT someValue'Bob\''s Burgers'`,
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
+				{IDENT, "someValue"},
+				{STRING, `'Bob\''s Burgers'`},
+			},
+			lexerOpts: []lexerOption{WithDBMS(DBMSPostgres)},
+		},
+		{
 			name:  "simple select with multiline comments as separators",
 			input: `SELECT/**/*/**/FROM/**/test`,
 			expected: []TokenSpec{

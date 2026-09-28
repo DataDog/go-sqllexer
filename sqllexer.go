@@ -318,10 +318,7 @@ func (s *Lexer) scanStringWithDelimiter(delimiter rune) *Token {
 	s.start = s.cursor
 	escaped := false
 	escapedQuote := false
-
-	// SQL Server (T-SQL) and Oracle do not use backslash as a string escape
-	// character; a quote inside a literal is escaped by doubling it ('').
-	backslashEscapes := s.config.DBMS != DBMSSQLServer && s.config.DBMS != DBMSOracle
+	backslashEscapes := s.stringBackslashEscapes()
 
 	ch := s.next() // consume opening quote
 
@@ -338,6 +335,12 @@ func (s *Lexer) scanStringWithDelimiter(delimiter rune) *Token {
 		}
 
 		if ch == delimiter {
+			// '' (and "" for MySQL string literals) is one escaped quote in
+			// standard SQL, including dialects that also accept \'.
+			if s.lookAhead(1) == delimiter {
+				s.next()
+				continue
+			}
 			s.next() // consume the closing quote
 			return s.emit(STRING)
 		}
@@ -348,6 +351,42 @@ func (s *Lexer) scanStringWithDelimiter(delimiter rune) *Token {
 	}
 	// If we get here, we hit EOF before finding closing quote
 	return s.emit(INCOMPLETE_STRING)
+}
+
+// stringBackslashEscapes reports whether a backslash inside the literal that
+// starts at s.start escapes the following character.
+//
+// SQL Server and Oracle never treat backslash as an escape. PostgreSQL does
+// so only for escape strings (E'...' / e'...'). Ordinary PostgreSQL strings
+// follow standard_conforming_strings: a quote is escaped by doubling it.
+func (s *Lexer) stringBackslashEscapes() bool {
+	switch s.config.DBMS {
+	case DBMSSQLServer, DBMSOracle:
+		return false
+	case DBMSPostgres:
+		return s.hasPostgresEscapeStringPrefix()
+	default:
+		return true
+	}
+}
+
+// hasPostgresEscapeStringPrefix reports whether the quote at s.start is the
+// opening quote of an escape string, E'...' or e'...'. The marker has to be
+// its own token, so an identifier that merely ends in E (someValue'...') does
+// not count.
+func (s *Lexer) hasPostgresEscapeStringPrefix() bool {
+	if s.start == 0 {
+		return false
+	}
+	marker, size := utf8.DecodeLastRuneInString(s.src[:s.start])
+	if marker != 'E' && marker != 'e' {
+		return false
+	}
+	if s.start == size {
+		return true
+	}
+	prev, _ := utf8.DecodeLastRuneInString(s.src[:s.start-size])
+	return !isLetter(prev) && !isDigit(prev)
 }
 
 func (s *Lexer) scanIdentifier(ch rune) *Token {
