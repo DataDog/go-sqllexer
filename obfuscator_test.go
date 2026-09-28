@@ -59,6 +59,23 @@ func TestObfuscator(t *testing.T) {
 			dbms:     DBMSOracle,
 		},
 		{
+			// PostgreSQL standard strings: \ is literal, '' is one escaped quote.
+			// https://github.com/DataDog/go-sqllexer/issues/63
+			input:    `INSERT INTO restaurants VALUES ('Bob\''s Burgers');`,
+			expected: `INSERT INTO restaurants VALUES (?);`,
+			dbms:     DBMSPostgres,
+		},
+		{
+			input:    `INSERT INTO restaurants VALUES ('Bob''s Burgers');`,
+			expected: `INSERT INTO restaurants VALUES (?);`,
+			dbms:     DBMSPostgres,
+		},
+		{
+			input:    `SELECT E'Bob\'s Burgers', e'Bob''s'`,
+			expected: `SELECT E?, e?`,
+			dbms:     DBMSPostgres,
+		},
+		{
 			// MySQL genuinely uses backslash as a string escape
 			input:    `SELECT col FROM tbl WHERE col LIKE '%foo%' ESCAPE '\' AND flag = 1`,
 			expected: `SELECT col FROM tbl WHERE col LIKE ? ESCAPE ?`,
