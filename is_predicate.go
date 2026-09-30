@@ -8,9 +8,6 @@ const (
 	noISPredicate isPredicateState = iota
 	afterIS
 	afterISNot
-	afterISDistinct
-	afterISNotDistinct
-	afterISDistinctFrom
 )
 
 // isPredicateContext follows only the keyword sequence of a PostgreSQL IS
@@ -31,28 +28,12 @@ func (c *isPredicateContext) keep(token *Token) bool {
 	keep := false
 	switch c.state {
 	case afterIS:
-		switch {
-		case keyword("NOT"):
+		if keyword("NOT") {
 			c.state = afterISNot
-			return false
-		case keyword("DISTINCT"):
-			c.state = afterISDistinct
-			return false
-		default:
-			keep = operand
-		}
-	case afterISNot:
-		if keyword("DISTINCT") {
-			c.state = afterISNotDistinct
 			return false
 		}
 		keep = operand
-	case afterISDistinct, afterISNotDistinct:
-		if keyword("FROM") {
-			c.state = afterISDistinctFrom
-			return false
-		}
-	case afterISDistinctFrom:
+	case afterISNot:
 		keep = operand
 	}
 

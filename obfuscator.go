@@ -41,7 +41,7 @@ func WithReplaceNull(replaceNull bool) obfuscatorOption {
 	}
 }
 
-// WithKeepISPredicate preserves PostgreSQL TRUE, FALSE, and NULL predicate targets.
+// WithKeepISPredicate preserves PostgreSQL TRUE, FALSE, and NULL after IS or IS NOT.
 // The option is disabled by default and does not change other literal handling.
 func WithKeepISPredicate(keepISPredicate bool) obfuscatorOption {
 	return func(c *obfuscatorConfig) {

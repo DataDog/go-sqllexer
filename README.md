@@ -116,23 +116,22 @@ sqllexer -mode tokenize -input query.sql
 sqllexer -replace-digits=false -keep-json-path=true -input query.sql
 
 # Keep PostgreSQL IS predicate targets while replacing other booleans and NULLs
-echo "SELECT true WHERE false IS NOT DISTINCT FROM true AND NULL IS NULL" | \
+echo "SELECT true WHERE false IS NOT true AND NULL IS NULL" | \
   sqllexer -dbms postgresql -keep-is-predicate
 ```
 
 `-keep-is-predicate` is disabled by default. For PostgreSQL, it preserves
-`TRUE`, `FALSE`, and `NULL` on the right of `IS`, `IS NOT`,
-`IS DISTINCT FROM`, and `IS NOT DISTINCT FROM`. Other literals still follow
-`-replace-boolean` and `-replace-null`. The library option is
+`TRUE`, `FALSE`, and `NULL` on the right of `IS` and `IS NOT`. Other literals,
+including those after `IS [NOT] DISTINCT FROM`, still follow `-replace-boolean`
+and `-replace-null`. The library option is
 `WithKeepISPredicate(true)` and its JSON configuration key is `keep_is_predicate`.
 
-`pg_stat_statements` can parameterize boolean literals after `IS [NOT] DISTINCT
-FROM`. For example, PostgreSQL 18.6 reports `SELECT $1 IS DISTINCT FROM $2`
-for `SELECT TRUE IS DISTINCT FROM FALSE`. With this option enabled and positional
-parameters replaced, the raw sample becomes `SELECT ? IS DISTINCT FROM FALSE`
-while the representative text becomes `SELECT ? IS DISTINCT FROM ?`. These
-queries therefore have different signatures. `IS TRUE` and `IS NULL` matched
-in the same check.
+`pg_stat_statements` can parameterize boolean literals after
+`IS [NOT] DISTINCT FROM`. For example, PostgreSQL 18.6 reports
+`SELECT $1 IS DISTINCT FROM $2`
+for `SELECT TRUE IS DISTINCT FROM FALSE`. Preserving the right-hand `FALSE`
+would give that raw sample a different signature from the representative text.
+The option leaves both `DISTINCT FROM` forms on the existing replacement rules.
 
 ### Available Modes
 

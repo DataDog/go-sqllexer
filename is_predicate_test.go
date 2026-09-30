@@ -40,20 +40,20 @@ func TestKeepISPredicateGoldens(t *testing.T) {
 			name:        "null",
 			replaceNull: true,
 			off:         "SELECT TRUE, ?, a IS TRUE, b IS NOT FALSE, c IS ?, d IS DISTINCT FROM TRUE, e IS NOT DISTINCT FROM ?, TRUE = FALSE FROM t WHERE ? IS TRUE",
-			on:          "SELECT TRUE, ?, a IS TRUE, b IS NOT FALSE, c IS NULL, d IS DISTINCT FROM TRUE, e IS NOT DISTINCT FROM NULL, TRUE = FALSE FROM t WHERE ? IS TRUE",
+			on:          "SELECT TRUE, ?, a IS TRUE, b IS NOT FALSE, c IS NULL, d IS DISTINCT FROM TRUE, e IS NOT DISTINCT FROM ?, TRUE = FALSE FROM t WHERE ? IS TRUE",
 		},
 		{
 			name:           "boolean",
 			replaceBoolean: true,
 			off:            "SELECT ?, NULL, a IS ?, b IS NOT ?, c IS NULL, d IS DISTINCT FROM ?, e IS NOT DISTINCT FROM NULL, ? = ? FROM t WHERE ? IS ?",
-			on:             "SELECT ?, NULL, a IS TRUE, b IS NOT FALSE, c IS NULL, d IS DISTINCT FROM TRUE, e IS NOT DISTINCT FROM NULL, ? = ? FROM t WHERE ? IS TRUE",
+			on:             "SELECT ?, NULL, a IS TRUE, b IS NOT FALSE, c IS NULL, d IS DISTINCT FROM ?, e IS NOT DISTINCT FROM NULL, ? = ? FROM t WHERE ? IS TRUE",
 		},
 		{
 			name:           "both",
 			replaceBoolean: true,
 			replaceNull:    true,
 			off:            "SELECT ?, ?, a IS ?, b IS NOT ?, c IS ?, d IS DISTINCT FROM ?, e IS NOT DISTINCT FROM ?, ? = ? FROM t WHERE ? IS ?",
-			on:             "SELECT ?, ?, a IS TRUE, b IS NOT FALSE, c IS NULL, d IS DISTINCT FROM TRUE, e IS NOT DISTINCT FROM NULL, ? = ? FROM t WHERE ? IS TRUE",
+			on:             "SELECT ?, ?, a IS TRUE, b IS NOT FALSE, c IS NULL, d IS DISTINCT FROM ?, e IS NOT DISTINCT FROM ?, ? = ? FROM t WHERE ? IS TRUE",
 		},
 	}
 
@@ -80,12 +80,25 @@ func TestKeepISPredicateGoldens(t *testing.T) {
 }
 
 func TestKeepISPredicateForms(t *testing.T) {
-	for _, prefix := range []string{"IS", "IS NOT", "IS DISTINCT FROM", "IS NOT DISTINCT FROM"} {
+	for _, prefix := range []string{"IS", "IS NOT"} {
 		for _, literal := range []string{"TRUE", "FALSE", "NULL"} {
 			input := "SELECT x " + prefix + " " + literal
 			t.Run(prefix+"/"+literal, func(t *testing.T) {
 				obfuscator := NewObfuscator(WithReplaceBoolean(true), WithReplaceNull(true), WithKeepISPredicate(true))
 				checkISPredicateOutputs(t, input, obfuscator, DBMSPostgres, input, input)
+			})
+		}
+	}
+}
+
+func TestKeepISPredicateDoesNotChangeDistinctFrom(t *testing.T) {
+	for _, prefix := range []string{"IS DISTINCT FROM", "IS NOT DISTINCT FROM"} {
+		for _, literal := range []string{"TRUE", "FALSE", "NULL"} {
+			input := "SELECT x " + prefix + " " + literal
+			want := "SELECT x " + prefix + " ?"
+			t.Run(prefix+"/"+literal, func(t *testing.T) {
+				obfuscator := NewObfuscator(WithReplaceBoolean(true), WithReplaceNull(true), WithKeepISPredicate(true))
+				checkISPredicateOutputs(t, input, obfuscator, DBMSPostgres, want, want)
 			})
 		}
 	}
@@ -107,8 +120,8 @@ func TestKeepISPredicateTokenBoundaries(t *testing.T) {
 		{
 			name:       "comments strings and quoted identifiers",
 			input:      `SELECT x IS /* NOT TRUE */ TRUE, x IS NOT /* IS TRUE */ DISTINCT /*hi*/ FROM FALSE, x IS DISTINCT FROM NULL, 'x IS TRUE', "IS TRUE" FROM t`,
-			obfuscated: `SELECT x IS /* NOT TRUE */ TRUE, x IS NOT /* IS TRUE */ DISTINCT /*hi*/ FROM FALSE, x IS DISTINCT FROM NULL, ?, "IS TRUE" FROM t`,
-			normalized: `SELECT x IS TRUE, x IS NOT DISTINCT FROM FALSE, x IS DISTINCT FROM NULL, ?, "IS TRUE" FROM t`,
+			obfuscated: `SELECT x IS /* NOT TRUE */ TRUE, x IS NOT /* IS TRUE */ DISTINCT /*hi*/ FROM ?, x IS DISTINCT FROM ?, ?, "IS TRUE" FROM t`,
+			normalized: `SELECT x IS TRUE, x IS NOT DISTINCT FROM ?, x IS DISTINCT FROM ?, ?, "IS TRUE" FROM t`,
 		},
 		{
 			name:       "binds and nonboolean distinct operand",
@@ -131,8 +144,8 @@ func TestKeepISPredicateTokenBoundaries(t *testing.T) {
 		{
 			name:       "case line comments and nested parentheses",
 			input:      "SELECT (x iS -- comment IS NOT NULL\n tRuE) IS FALSE, y Is NoT DiStInCt -- comment FROM TRUE\n FrOm nUlL, TRUE::boolean IS FALSE",
-			obfuscated: "SELECT (x iS -- comment IS NOT NULL\n tRuE) IS FALSE, y Is NoT DiStInCt -- comment FROM TRUE\n FrOm nUlL, ?::boolean IS FALSE",
-			normalized: "SELECT ( x iS tRuE ) IS FALSE, y Is NoT DiStInCt FrOm nUlL, ? :: boolean IS FALSE",
+			obfuscated: "SELECT (x iS -- comment IS NOT NULL\n tRuE) IS FALSE, y Is NoT DiStInCt -- comment FROM TRUE\n FrOm ?, ?::boolean IS FALSE",
+			normalized: "SELECT ( x iS tRuE ) IS FALSE, y Is NoT DiStInCt FrOm ?, ? :: boolean IS FALSE",
 		},
 	}
 	for _, tt := range tests {
@@ -144,11 +157,13 @@ func TestKeepISPredicateTokenBoundaries(t *testing.T) {
 }
 
 // These representative texts were observed on PostgreSQL 18.6 with
-// pg_stat_statements enabled. The mismatch is intentional for this option.
+// pg_stat_statements enabled. Excluding DISTINCT FROM keeps these pairs aligned.
 func TestKeepISPredicatePgStatStatementsRepresentative(t *testing.T) {
 	obfuscator := NewObfuscator(WithReplaceBoolean(true), WithReplaceNull(true), WithReplacePositionalParameter(true), WithKeepISPredicate(true))
-	checkISPredicateOutputs(t, "SELECT TRUE IS DISTINCT FROM FALSE", obfuscator, DBMSPostgres, "SELECT ? IS DISTINCT FROM FALSE", "SELECT ? IS DISTINCT FROM FALSE")
+	checkISPredicateOutputs(t, "SELECT TRUE IS DISTINCT FROM FALSE", obfuscator, DBMSPostgres, "SELECT ? IS DISTINCT FROM ?", "SELECT ? IS DISTINCT FROM ?")
 	checkISPredicateOutputs(t, "SELECT $1 IS DISTINCT FROM $2", obfuscator, DBMSPostgres, "SELECT ? IS DISTINCT FROM ?", "SELECT ? IS DISTINCT FROM ?")
+	checkISPredicateOutputs(t, "SELECT TRUE IS NOT DISTINCT FROM FALSE", obfuscator, DBMSPostgres, "SELECT ? IS NOT DISTINCT FROM ?", "SELECT ? IS NOT DISTINCT FROM ?")
+	checkISPredicateOutputs(t, "SELECT $1 IS NOT DISTINCT FROM $2", obfuscator, DBMSPostgres, "SELECT ? IS NOT DISTINCT FROM ?", "SELECT ? IS NOT DISTINCT FROM ?")
 	checkISPredicateOutputs(t, "SELECT TRUE IS TRUE", obfuscator, DBMSPostgres, "SELECT ? IS TRUE", "SELECT ? IS TRUE")
 	checkISPredicateOutputs(t, "SELECT $1 IS TRUE", obfuscator, DBMSPostgres, "SELECT ? IS TRUE", "SELECT ? IS TRUE")
 }
@@ -162,7 +177,7 @@ func TestKeepISPredicateOnlyPostgres(t *testing.T) {
 			checkISPredicateOutputs(t, input, obfuscator, dbms, want, want)
 		})
 	}
-	checkISPredicateOutputs(t, input, NewObfuscator(WithReplaceBoolean(true), WithReplaceNull(true), WithKeepISPredicate(true)), DBMSPostgresAlias1, "SELECT ?, x IS TRUE, x IS NOT DISTINCT FROM NULL", "SELECT ?, x IS TRUE, x IS NOT DISTINCT FROM NULL")
+	checkISPredicateOutputs(t, input, NewObfuscator(WithReplaceBoolean(true), WithReplaceNull(true), WithKeepISPredicate(true)), DBMSPostgresAlias1, "SELECT ?, x IS TRUE, x IS NOT DISTINCT FROM ?", "SELECT ?, x IS TRUE, x IS NOT DISTINCT FROM ?")
 }
 
 func TestKeepISPredicateConfigJSON(t *testing.T) {
