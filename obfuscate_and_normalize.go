@@ -4,8 +4,19 @@ package sqllexer
 // This function is a convenience function that combines the Obfuscator and Normalizer in one pass
 func ObfuscateAndNormalize(input string, obfuscator *Obfuscator, normalizer *Normalizer, lexerOpts ...lexerOption) (normalizedSQL string, statementMetadata *StatementMetadata, err error) {
 	var ec extractContext
+	var predicate isPredicateContext
+	keepISPredicate := false
+	if obfuscator.config.KeepISPredicate {
+		lexerConfig := LexerConfig{}
+		for _, opt := range lexerOpts {
+			opt(&lexerConfig)
+		}
+		keepISPredicate = lexerConfig.DBMS == DBMSPostgres
+	}
 	obfuscate := func(token *Token, lastValueToken *LastValueToken) {
-		obfuscator.ObfuscateTokenValue(token, lastValueToken, lexerOpts...)
+		if !keepISPredicate || !predicate.keep(token) {
+			obfuscator.ObfuscateTokenValue(token, lastValueToken, lexerOpts...)
+		}
 		ec.maybeReplaceExtractField(token)
 		ec.update(token)
 	}
