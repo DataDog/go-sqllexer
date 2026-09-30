@@ -10,6 +10,7 @@ type obfuscatorConfig struct {
 	ReplacePositionalParameter bool `json:"replace_positional_parameter"`
 	ReplaceBoolean             bool `json:"replace_boolean"`
 	ReplaceNull                bool `json:"replace_null"`
+	KeepISPredicate            bool `json:"keep_is_predicate"`
 	KeepJsonPath               bool `json:"keep_json_path"` // by default, we replace json path with placeholder
 	ReplaceBindParameter       bool `json:"replace_bind_parameter"`
 }
@@ -37,6 +38,14 @@ func WithReplaceBoolean(replaceBoolean bool) obfuscatorOption {
 func WithReplaceNull(replaceNull bool) obfuscatorOption {
 	return func(c *obfuscatorConfig) {
 		c.ReplaceNull = replaceNull
+	}
+}
+
+// WithKeepISPredicate preserves PostgreSQL TRUE, FALSE, and NULL after IS or IS NOT.
+// The option is disabled by default and does not change other literal handling.
+func WithKeepISPredicate(keepISPredicate bool) obfuscatorOption {
+	return func(c *obfuscatorConfig) {
+		c.KeepISPredicate = keepISPredicate
 	}
 }
 
@@ -92,13 +101,17 @@ func (o *Obfuscator) Obfuscate(input string, lexerOpts ...lexerOption) string {
 
 	var lastValueToken *LastValueToken
 	var ec extractContext
+	var predicate isPredicateContext
+	keepISPredicate := o.config.KeepISPredicate && lexer.config.DBMS == DBMSPostgres
 
 	for {
 		token := lexer.Scan()
 		if token.Type == EOF {
 			break
 		}
-		o.ObfuscateTokenValue(token, lastValueToken, lexerOpts...)
+		if !keepISPredicate || !predicate.keep(token) {
+			o.ObfuscateTokenValue(token, lastValueToken, lexerOpts...)
+		}
 		ec.maybeReplaceExtractField(token)
 
 		obfuscatedSQL.WriteString(token.Value)

@@ -196,13 +196,13 @@ func (n *Normalizer) normalizeToken(lexer *Lexer, normalizedSQLBuilder *strings.
 }
 
 func (n *Normalizer) Normalize(input string, lexerOpts ...lexerOption) (normalizedSQL string, statementMetadata *StatementMetadata, err error) {
-	return n.normalize(input, nil, lexerOpts...)
+	return n.normalize(New(input, lexerOpts...), nil, lexerOpts...)
 }
 
-// normalize is the internal implementation that handles the common normalization logic.
-// preProcessToken is an optional function to process tokens before normalization (e.g., obfuscation).
-func (n *Normalizer) normalize(input string, preProcessToken func(*Token, *LastValueToken), lexerOpts ...lexerOption) (normalizedSQL string, statementMetadata *StatementMetadata, err error) {
-	lexer := New(input, lexerOpts...)
+// normalize processes a prepared lexer so the combined path can use its DBMS configuration.
+// preProcessToken optionally handles tokens before normalization (e.g., obfuscation).
+func (n *Normalizer) normalize(lexer *Lexer, preProcessToken func(*Token, *LastValueToken), lexerOpts ...lexerOption) (normalizedSQL string, statementMetadata *StatementMetadata, err error) {
+	input := lexer.src
 	var normalizedSQLBuilder strings.Builder
 	normalizedSQLBuilder.Grow(len(input))
 
