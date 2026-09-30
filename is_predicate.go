@@ -1,7 +1,5 @@
 package sqllexer
 
-import "strings"
-
 type isPredicateState uint8
 
 const (
@@ -17,29 +15,26 @@ type isPredicateContext struct {
 }
 
 func (c *isPredicateContext) keep(token *Token) bool {
-	if token.Type == SPACE || token.Type == COMMENT || token.Type == MULTILINE_COMMENT {
+	switch token.Type {
+	case SPACE, COMMENT, MULTILINE_COMMENT:
 		return false
-	}
-
-	keyword := func(value string) bool {
-		return token.Type == KEYWORD && strings.EqualFold(token.Value, value)
-	}
-	operand := token.Type == BOOLEAN || token.Type == NULL
-	keep := false
-	switch c.state {
-	case afterIS:
-		if keyword("NOT") {
+	case KEYWORD:
+		// The lexer classifies SQL keywords from ASCII letters.
+		value := token.Value
+		if len(value) == 2 && value[0]|0x20 == 'i' && value[1]|0x20 == 's' {
+			c.state = afterIS
+			return false
+		}
+		if c.state == afterIS && len(value) == 3 && value[0]|0x20 == 'n' && value[1]|0x20 == 'o' && value[2]|0x20 == 't' {
 			c.state = afterISNot
 			return false
 		}
-		keep = operand
-	case afterISNot:
-		keep = operand
+	case BOOLEAN, NULL:
+		keep := c.state == afterIS || c.state == afterISNot
+		c.state = noISPredicate
+		return keep
 	}
 
 	c.state = noISPredicate
-	if keyword("IS") {
-		c.state = afterIS
-	}
-	return keep
+	return false
 }

@@ -5,14 +5,8 @@ package sqllexer
 func ObfuscateAndNormalize(input string, obfuscator *Obfuscator, normalizer *Normalizer, lexerOpts ...lexerOption) (normalizedSQL string, statementMetadata *StatementMetadata, err error) {
 	var ec extractContext
 	var predicate isPredicateContext
-	keepISPredicate := false
-	if obfuscator.config.KeepISPredicate {
-		lexerConfig := LexerConfig{}
-		for _, opt := range lexerOpts {
-			opt(&lexerConfig)
-		}
-		keepISPredicate = lexerConfig.DBMS == DBMSPostgres
-	}
+	lexer := New(input, lexerOpts...)
+	keepISPredicate := obfuscator.config.KeepISPredicate && lexer.config.DBMS == DBMSPostgres
 	obfuscate := func(token *Token, lastValueToken *LastValueToken) {
 		if !keepISPredicate || !predicate.keep(token) {
 			obfuscator.ObfuscateTokenValue(token, lastValueToken, lexerOpts...)
@@ -20,5 +14,5 @@ func ObfuscateAndNormalize(input string, obfuscator *Obfuscator, normalizer *Nor
 		ec.maybeReplaceExtractField(token)
 		ec.update(token)
 	}
-	return normalizer.normalize(input, obfuscate, lexerOpts...)
+	return normalizer.normalize(lexer, obfuscate, lexerOpts...)
 }
