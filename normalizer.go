@@ -274,6 +274,93 @@ func (c *cteAliasContext) isCTEAS(token *Token) bool {
 	return previousAS
 }
 
+type castAliasContext struct {
+	depth          int
+	frames         [4]int
+	frameCount     int
+	overflowFrames []int
+	pending        bool
+	previousAS     bool
+}
+
+func (c *castAliasContext) pushFrame(depth int) {
+	if c.frameCount < len(c.frames) {
+		c.frames[c.frameCount] = depth
+	} else {
+		c.overflowFrames = append(c.overflowFrames, depth)
+	}
+	c.frameCount++
+}
+
+func (c *castAliasContext) lastFrame() int {
+	if c.frameCount <= len(c.frames) {
+		return c.frames[c.frameCount-1]
+	}
+	return c.overflowFrames[len(c.overflowFrames)-1]
+}
+
+func (c *castAliasContext) popFrame() {
+	if c.frameCount > len(c.frames) {
+		c.overflowFrames = c.overflowFrames[:len(c.overflowFrames)-1]
+	}
+	c.frameCount--
+}
+
+func isCastToken(token *Token) bool {
+	if (token.Type != FUNCTION && token.Type != IDENT) || len(token.Value) != 4 {
+		return false
+	}
+	v := token.Value
+	return v[0]|0x20 == 'c' && v[1]|0x20 == 'a' && v[2]|0x20 == 's' && v[3]|0x20 == 't'
+}
+
+// isCastAS keeps the type separator in CAST(expression AS type), including nested casts.
+func (c *castAliasContext) isCastAS(token *Token) bool {
+	previousAS := c.previousAS
+	if !isValueToken(token) {
+		return previousAS
+	}
+	c.previousAS = false
+	if token.Type == PUNCTUATION && token.Value == ";" {
+		c.depth = 0
+		c.frameCount = 0
+		c.overflowFrames = c.overflowFrames[:0]
+		c.pending = false
+		return false
+	}
+	if c.pending {
+		c.pending = false
+		if token.Type == PUNCTUATION && token.Value == "(" {
+			c.pushFrame(c.depth)
+		}
+	}
+	if c.frameCount > 0 && token.Type == ALIAS_INDICATOR && c.depth == c.lastFrame()+1 {
+		c.previousAS = true
+		return true
+	}
+	if isCastToken(token) {
+		if c.frameCount == 0 {
+			// Frame depths are relative to this CAST.
+			c.depth = 0
+		}
+		c.pending = true
+	}
+	if token.Type == PUNCTUATION {
+		switch token.Value {
+		case "(":
+			c.depth++
+		case ")":
+			if c.frameCount > 0 && c.depth == c.lastFrame()+1 {
+				c.popFrame()
+			}
+			if c.depth > 0 {
+				c.depth--
+			}
+		}
+	}
+	return previousAS
+}
+
 type Normalizer struct {
 	config *normalizerConfig
 }
@@ -302,6 +389,7 @@ func (n *Normalizer) normalizeToken(lexer *Lexer, normalizedSQLBuilder *strings.
 	var headState headState
 	var colonCtx colonContext
 	var cteContext cteAliasContext
+	var castContext castAliasContext
 	var ctes map[string]bool // Lazily initialized when first CTE is encountered
 	var inTableList bool
 
@@ -317,11 +405,14 @@ func (n *Normalizer) normalizeToken(lexer *Lexer, normalizedSQLBuilder *strings.
 		if n.shouldCollectMetadata() {
 			n.collectMetadata(token, lastValueToken, meta, statementMetadata, &ctes, &inTableList)
 		}
-		cteAS := false
+		keepAS := false
 		if stripAliases && (cteContext.frameCount > 0 || token.Type == CTE_INDICATOR) {
-			cteAS = cteContext.isCTEAS(token)
+			keepAS = cteContext.isCTEAS(token)
 		}
-		n.normalizeSQL(token, lastValueToken, normalizedSQLBuilder, &groupablePlaceholder, &headState, &colonCtx, cteAS, lexerOpts...)
+		if stripAliases && (castContext.frameCount > 0 || castContext.pending || isCastToken(token)) {
+			keepAS = castContext.isCastAS(token) || keepAS
+		}
+		n.normalizeSQL(token, lastValueToken, normalizedSQLBuilder, &groupablePlaceholder, &headState, &colonCtx, keepAS, lexerOpts...)
 		if token.Type == EOF {
 			break
 		}
@@ -342,7 +433,12 @@ func (n *Normalizer) Normalize(input string, lexerOpts ...lexerOption) (normaliz
 func (n *Normalizer) normalize(input string, preProcessToken func(*Token, *LastValueToken), lexerOpts ...lexerOption) (normalizedSQL string, statementMetadata *StatementMetadata, err error) {
 	lexer := New(input, lexerOpts...)
 	var normalizedSQLBuilder strings.Builder
-	normalizedSQLBuilder.Grow(len(input))
+	bufferSize := len(input)
+	if bufferSize <= 40 {
+		// Short statements can grow when punctuation gains surrounding spaces.
+		bufferSize += 8
+	}
+	normalizedSQLBuilder.Grow(bufferSize)
 
 	meta := &metadataSet{
 		tablesSet:     map[string]struct{}{},
@@ -421,7 +517,7 @@ func (n *Normalizer) collectMetadata(token *Token, lastValueToken *LastValueToke
 	}
 }
 
-func (n *Normalizer) normalizeSQL(token *Token, lastValueToken *LastValueToken, normalizedSQLBuilder *strings.Builder, groupablePlaceholder *groupablePlaceholder, headState *headState, colonCtx *colonContext, cteAS bool, lexerOpts ...lexerOption) {
+func (n *Normalizer) normalizeSQL(token *Token, lastValueToken *LastValueToken, normalizedSQLBuilder *strings.Builder, groupablePlaceholder *groupablePlaceholder, headState *headState, colonCtx *colonContext, keepAS bool, lexerOpts ...lexerOption) {
 	if token.Type != SPACE && token.Type != COMMENT && token.Type != MULTILINE_COMMENT {
 		if token.Type == QUOTED_IDENT && !n.config.KeepIdentifierQuotation {
 			if n.shouldStripIdentifierQuotes(token, lastValueToken) {
@@ -476,11 +572,11 @@ func (n *Normalizer) normalizeSQL(token *Token, lastValueToken *LastValueToken, 
 
 		if !n.config.KeepSQLAlias {
 			// discard SQL alias
-			if token.Type == ALIAS_INDICATOR && !cteAS {
+			if token.Type == ALIAS_INDICATOR && !keepAS {
 				return
 			}
 
-			if lastValueToken != nil && lastValueToken.Type == ALIAS_INDICATOR && !cteAS {
+			if lastValueToken != nil && lastValueToken.Type == ALIAS_INDICATOR && !keepAS {
 				if token.Type == IDENT || token.Type == QUOTED_IDENT {
 					return
 				} else {
