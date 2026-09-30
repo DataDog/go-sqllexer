@@ -1514,6 +1514,31 @@ func TestNormalizerCTEWithoutCollectTables(t *testing.T) {
 	}
 }
 
+func TestNormalizerCTEASWithAliasRemoval(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"WITH c AS MATERIALIZED (SELECT 1) SELECT * FROM c", "WITH c AS MATERIALIZED ( SELECT 1 ) SELECT * FROM c"},
+		{"WITH c AS NOT MATERIALIZED (SELECT 1) SELECT * FROM c", "WITH c AS NOT MATERIALIZED ( SELECT 1 ) SELECT * FROM c"},
+		{"WITH c AS (SELECT 1) SELECT * FROM c", "WITH c AS ( SELECT 1 ) SELECT * FROM c"},
+		{"WITH c AS MATERIALIZED (SELECT 1 AS value) SELECT * FROM c AS alias", "WITH c AS MATERIALIZED ( SELECT 1 ) SELECT * FROM c"},
+		{"WITH c AS (SELECT 1), d AS MATERIALIZED (SELECT * FROM c) SELECT * FROM d", "WITH c AS ( SELECT 1 ), d AS MATERIALIZED ( SELECT * FROM c ) SELECT * FROM d"},
+		{"WITH c(v) AS (SELECT 1) SELECT * FROM c", "WITH c ( v ) AS ( SELECT 1 ) SELECT * FROM c"},
+		{"WITH RECURSIVE c AS (SELECT 1) SELECT * FROM c", "WITH RECURSIVE c AS ( SELECT 1 ) SELECT * FROM c"},
+		{"WITH c AS (WITH d AS (SELECT 1) SELECT * FROM d) SELECT * FROM c", "WITH c AS ( WITH d AS ( SELECT 1 ) SELECT * FROM d ) SELECT * FROM c"},
+		{"SELECT 1 AS materialized FROM t AS alias", "SELECT 1 FROM t"},
+	}
+	normalizer := NewNormalizer(WithKeepSQLAlias(false))
+	for _, test := range tests {
+		t.Run(test.input, func(t *testing.T) {
+			got, _, err := normalizer.Normalize(test.input)
+			assert.NoError(t, err)
+			assert.Equal(t, test.want, got)
+		})
+	}
+}
+
 func TestNormalizerOracleBindVariables(t *testing.T) {
 	// This test is to ensure that Oracle bind variables with colons are normalized correctly
 	// without adding unwanted spaces between the colon and the parameter name.

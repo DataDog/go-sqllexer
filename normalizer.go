@@ -142,6 +142,107 @@ type headState struct {
 	parenthesesDepth                    int
 }
 
+type ctePhase uint8
+
+const (
+	cteName ctePhase = iota
+	cteAs
+	cteColumns
+	cteBodyStart
+	cteBody
+	cteAfterBody
+)
+
+type cteFrame struct {
+	depth int
+	phase ctePhase
+}
+
+type cteAliasContext struct {
+	depth      int
+	frames     []cteFrame
+	previousAS bool
+}
+
+// isCTEAS keeps AS in a CTE header without retaining projection or table aliases.
+func (c *cteAliasContext) isCTEAS(token *Token) bool {
+	previousAS := c.previousAS
+	if !isValueToken(token) {
+		return previousAS
+	}
+	c.previousAS = false
+	if token.Type == PUNCTUATION && token.Value == ";" {
+		c.frames = c.frames[:0]
+		c.depth = 0
+		return false
+	}
+	depth := c.depth
+	if token.Type == CTE_INDICATOR {
+		c.frames = append(c.frames, cteFrame{depth: depth, phase: cteName})
+	} else {
+		for len(c.frames) > 0 {
+			frame := &c.frames[len(c.frames)-1]
+			handled := false
+			switch frame.phase {
+			case cteName:
+				if strings.EqualFold(token.Value, "RECURSIVE") {
+					handled = true
+				}
+				if !handled && depth == frame.depth && (token.Type == IDENT || token.Type == QUOTED_IDENT) {
+					frame.phase = cteAs
+					handled = true
+				}
+			case cteAs:
+				if depth == frame.depth && token.Type == ALIAS_INDICATOR {
+					frame.phase = cteBodyStart
+					c.previousAS = true
+					return true
+				}
+				if depth == frame.depth && token.Type == PUNCTUATION && token.Value == "(" {
+					frame.phase = cteColumns
+					handled = true
+				}
+			case cteColumns:
+				if token.Type == PUNCTUATION && token.Value == ")" && depth == frame.depth+1 {
+					frame.phase = cteAs
+				}
+				handled = true
+			case cteBodyStart:
+				if token.Type == PUNCTUATION && token.Value == "(" && depth == frame.depth {
+					frame.phase = cteBody
+					handled = true
+				}
+				if strings.EqualFold(token.Value, "NOT") || strings.EqualFold(token.Value, "MATERIALIZED") {
+					handled = true
+				}
+			case cteBody:
+				if token.Type == PUNCTUATION && token.Value == ")" && depth == frame.depth+1 {
+					frame.phase = cteAfterBody
+				}
+				handled = true
+			case cteAfterBody:
+				if token.Type == PUNCTUATION && token.Value == "," && depth == frame.depth {
+					frame.phase = cteName
+					handled = true
+				}
+				if depth != frame.depth {
+					handled = true
+				}
+			}
+			if handled {
+				break
+			}
+			c.frames = c.frames[:len(c.frames)-1]
+		}
+	}
+	if token.Type == PUNCTUATION && token.Value == "(" {
+		c.depth++
+	} else if token.Type == PUNCTUATION && token.Value == ")" && c.depth > 0 {
+		c.depth--
+	}
+	return previousAS
+}
+
 type Normalizer struct {
 	config *normalizerConfig
 }
@@ -169,6 +270,7 @@ func (n *Normalizer) normalizeToken(lexer *Lexer, normalizedSQLBuilder *strings.
 	var groupablePlaceholder groupablePlaceholder
 	var headState headState
 	var colonCtx colonContext
+	var cteContext cteAliasContext
 	var ctes map[string]bool // Lazily initialized when first CTE is encountered
 	var inTableList bool
 
@@ -183,7 +285,7 @@ func (n *Normalizer) normalizeToken(lexer *Lexer, normalizedSQLBuilder *strings.
 		if n.shouldCollectMetadata() {
 			n.collectMetadata(token, lastValueToken, meta, statementMetadata, &ctes, &inTableList)
 		}
-		n.normalizeSQL(token, lastValueToken, normalizedSQLBuilder, &groupablePlaceholder, &headState, &colonCtx, lexerOpts...)
+		n.normalizeSQL(token, lastValueToken, normalizedSQLBuilder, &groupablePlaceholder, &headState, &colonCtx, cteContext.isCTEAS(token), lexerOpts...)
 		if token.Type == EOF {
 			break
 		}
@@ -283,7 +385,7 @@ func (n *Normalizer) collectMetadata(token *Token, lastValueToken *LastValueToke
 	}
 }
 
-func (n *Normalizer) normalizeSQL(token *Token, lastValueToken *LastValueToken, normalizedSQLBuilder *strings.Builder, groupablePlaceholder *groupablePlaceholder, headState *headState, colonCtx *colonContext, lexerOpts ...lexerOption) {
+func (n *Normalizer) normalizeSQL(token *Token, lastValueToken *LastValueToken, normalizedSQLBuilder *strings.Builder, groupablePlaceholder *groupablePlaceholder, headState *headState, colonCtx *colonContext, cteAS bool, lexerOpts ...lexerOption) {
 	if token.Type != SPACE && token.Type != COMMENT && token.Type != MULTILINE_COMMENT {
 		if token.Type == QUOTED_IDENT && !n.config.KeepIdentifierQuotation {
 			if n.shouldStripIdentifierQuotes(token, lastValueToken) {
@@ -338,11 +440,11 @@ func (n *Normalizer) normalizeSQL(token *Token, lastValueToken *LastValueToken, 
 
 		if !n.config.KeepSQLAlias {
 			// discard SQL alias
-			if token.Type == ALIAS_INDICATOR {
+			if token.Type == ALIAS_INDICATOR && !cteAS {
 				return
 			}
 
-			if lastValueToken != nil && lastValueToken.Type == ALIAS_INDICATOR {
+			if lastValueToken != nil && lastValueToken.Type == ALIAS_INDICATOR && !cteAS {
 				if token.Type == IDENT || token.Type == QUOTED_IDENT {
 					return
 				} else {
