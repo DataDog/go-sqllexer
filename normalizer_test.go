@@ -2,6 +2,7 @@ package sqllexer
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -1527,6 +1528,10 @@ func TestNormalizerCTEASWithAliasRemoval(t *testing.T) {
 		{"WITH c(v) AS (SELECT 1) SELECT * FROM c", "WITH c ( v ) AS ( SELECT 1 ) SELECT * FROM c"},
 		{"WITH RECURSIVE c AS (SELECT 1) SELECT * FROM c", "WITH RECURSIVE c AS ( SELECT 1 ) SELECT * FROM c"},
 		{"WITH c AS (WITH d AS (SELECT 1) SELECT * FROM d) SELECT * FROM c", "WITH c AS ( WITH d AS ( SELECT 1 ) SELECT * FROM d ) SELECT * FROM c"},
+		{strings.Repeat("WITH c AS (", 5) + "SELECT 1" + strings.Repeat(") SELECT * FROM c", 5), strings.Repeat("WITH c AS ( ", 5) + "SELECT 1" + strings.Repeat(" ) SELECT * FROM c", 5)},
+		{"SELECT * FROM (WITH c AS (SELECT 1) SELECT * FROM c) AS t", "SELECT * FROM ( WITH c AS ( SELECT 1 ) SELECT * FROM c )"},
+		{"SELECT * FROM (WITH c AS (SELECT 1) SELECT * FROM c) AS t UNION ALL SELECT * FROM (WITH d AS (SELECT 2) SELECT * FROM d) AS u", "SELECT * FROM ( WITH c AS ( SELECT 1 ) SELECT * FROM c ) UNION ALL SELECT * FROM ( WITH d AS ( SELECT 2 ) SELECT * FROM d )"},
+		{"wItH c aS (SELECT 1) SELECT * FROM c", "wItH c aS ( SELECT 1 ) SELECT * FROM c"},
 		{"SELECT 1 AS materialized FROM t AS alias", "SELECT 1 FROM t"},
 	}
 	normalizer := NewNormalizer(WithKeepSQLAlias(false))

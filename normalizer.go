@@ -159,9 +159,34 @@ type cteFrame struct {
 }
 
 type cteAliasContext struct {
-	depth      int
-	frames     []cteFrame
-	previousAS bool
+	depth          int
+	frames         [4]cteFrame
+	frameCount     int
+	overflowFrames []cteFrame
+	previousAS     bool
+}
+
+func (c *cteAliasContext) pushFrame(frame cteFrame) {
+	if c.frameCount < len(c.frames) {
+		c.frames[c.frameCount] = frame
+	} else {
+		c.overflowFrames = append(c.overflowFrames, frame)
+	}
+	c.frameCount++
+}
+
+func (c *cteAliasContext) lastFrame() *cteFrame {
+	if c.frameCount <= len(c.frames) {
+		return &c.frames[c.frameCount-1]
+	}
+	return &c.overflowFrames[len(c.overflowFrames)-1]
+}
+
+func (c *cteAliasContext) popFrame() {
+	if c.frameCount > len(c.frames) {
+		c.overflowFrames = c.overflowFrames[:len(c.overflowFrames)-1]
+	}
+	c.frameCount--
 }
 
 // isCTEAS keeps AS in a CTE header without retaining projection or table aliases.
@@ -172,16 +197,22 @@ func (c *cteAliasContext) isCTEAS(token *Token) bool {
 	}
 	c.previousAS = false
 	if token.Type == PUNCTUATION && token.Value == ";" {
-		c.frames = c.frames[:0]
+		c.frameCount = 0
+		c.overflowFrames = c.overflowFrames[:0]
 		c.depth = 0
 		return false
 	}
 	depth := c.depth
 	if token.Type == CTE_INDICATOR {
-		c.frames = append(c.frames, cteFrame{depth: depth, phase: cteName})
+		if c.frameCount == 0 {
+			// Frame depths are relative to this WITH. Earlier parentheses do not matter.
+			c.depth = 0
+			depth = 0
+		}
+		c.pushFrame(cteFrame{depth: depth, phase: cteName})
 	} else {
-		for len(c.frames) > 0 {
-			frame := &c.frames[len(c.frames)-1]
+		for c.frameCount > 0 {
+			frame := c.lastFrame()
 			handled := false
 			switch frame.phase {
 			case cteName:
@@ -232,7 +263,7 @@ func (c *cteAliasContext) isCTEAS(token *Token) bool {
 			if handled {
 				break
 			}
-			c.frames = c.frames[:len(c.frames)-1]
+			c.popFrame()
 		}
 	}
 	if token.Type == PUNCTUATION && token.Value == "(" {
@@ -275,6 +306,7 @@ func (n *Normalizer) normalizeToken(lexer *Lexer, normalizedSQLBuilder *strings.
 	var inTableList bool
 
 	var lastValueToken *LastValueToken
+	stripAliases := !n.config.KeepSQLAlias
 
 	for {
 		token := lexer.Scan()
@@ -285,7 +317,11 @@ func (n *Normalizer) normalizeToken(lexer *Lexer, normalizedSQLBuilder *strings.
 		if n.shouldCollectMetadata() {
 			n.collectMetadata(token, lastValueToken, meta, statementMetadata, &ctes, &inTableList)
 		}
-		n.normalizeSQL(token, lastValueToken, normalizedSQLBuilder, &groupablePlaceholder, &headState, &colonCtx, cteContext.isCTEAS(token), lexerOpts...)
+		cteAS := false
+		if stripAliases && (cteContext.frameCount > 0 || token.Type == CTE_INDICATOR) {
+			cteAS = cteContext.isCTEAS(token)
+		}
+		n.normalizeSQL(token, lastValueToken, normalizedSQLBuilder, &groupablePlaceholder, &headState, &colonCtx, cteAS, lexerOpts...)
 		if token.Type == EOF {
 			break
 		}
