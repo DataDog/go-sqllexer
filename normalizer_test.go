@@ -1705,3 +1705,12 @@ func TestNormalizerDoesNotPinLargeBackingArrays(t *testing.T) {
 		return BackingArrayTestResult{SQL: sql, Metadata: metadata}, err
 	})
 }
+
+func TestNormalizeQualifiedHyphenatedQuotedTable(t *testing.T) {
+	input := `SELECT * FROM example_schema."orders-dash"`
+	normalizer := NewNormalizer(WithCollectTables(true))
+	got, metadata, err := normalizer.Normalize(input, WithDBMS(DBMSPostgres))
+	assert.NoError(t, err)
+	assert.Equal(t, input, got)
+	assert.Equal(t, []string{`example_schema."orders-dash"`}, metadata.Tables)
+}

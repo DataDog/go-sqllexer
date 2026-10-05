@@ -1765,3 +1765,14 @@ func ExampleLexer() {
 		fmt.Println(token)
 	}
 }
+
+func TestLexerQualifiedHyphenatedQuotedIdentifier(t *testing.T) {
+	lexer := New(`example_schema."orders-dash"`)
+	token := lexer.Scan()
+	if token.Type != IDENT || token.Value != `example_schema."orders-dash"` {
+		t.Fatalf("expected complete qualified identifier, got %v %q", token.Type, token.Value)
+	}
+	if token := lexer.Scan(); token.Type != EOF {
+		t.Fatalf("expected EOF, got %v %q", token.Type, token.Value)
+	}
+}
