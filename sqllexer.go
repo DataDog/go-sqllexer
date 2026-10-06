@@ -396,9 +396,8 @@ func (s *Lexer) scanIdentifier(ch rune) *Token {
 
 	// If first character is Unicode, skip trie lookup
 	if ch > 127 {
-		for isIdentifier(ch) {
-			s.hasDigits = s.hasDigits || isDigit(ch)
-			ch = s.nextBy(utf8.RuneLen(ch))
+		if !s.consumeIdentifier() {
+			return s.emit(ERROR)
 		}
 		if s.start == s.cursor {
 			return s.scanUnknown()
@@ -449,16 +448,15 @@ func (s *Lexer) scanIdentifier(ch rune) *Token {
 	}
 
 	// Continue scanning identifier if no keyword match
-	for isIdentifier(ch) {
-		s.hasDigits = s.hasDigits || isDigit(ch)
-		ch = s.nextBy(utf8.RuneLen(ch))
+	if !s.consumeIdentifier() {
+		return s.emit(ERROR)
 	}
 
 	if s.start == s.cursor {
 		return s.scanUnknown()
 	}
 
-	if ch == '(' {
+	if s.peek() == '(' {
 		return s.emit(FUNCTION)
 	}
 	if s.config.DBMS == DBMSMySQL {
@@ -467,19 +465,56 @@ func (s *Lexer) scanIdentifier(ch rune) *Token {
 	return s.emit(IDENT)
 }
 
+func (s *Lexer) consumeIdentifier() bool {
+	for ch := s.peek(); isIdentifier(ch); ch = s.peek() {
+		if s.config.DBMS != DBMSMySQL && ch == '"' && s.cursor > s.start && s.src[s.cursor-1] == '.' { // opening quote right after a `.`, ex. schema."table-name"
+			if !s.consumeQuotedIdentifier('"') {
+				return false // returns false when no closing quote is found
+			}
+			continue
+		}
+		s.hasDigits = s.hasDigits || isDigit(ch)
+		s.nextBy(utf8.RuneLen(ch))
+	}
+	return true
+}
+
 func (s *Lexer) scanDoubleQuotedIdentifier(delimiter rune) *Token {
 	return s.scanDoubleQuotedIdentifierComponent(delimiter, true)
 }
 
 func (s *Lexer) scanDoubleQuotedIdentifierComponent(delimiter rune, joinQualified bool) *Token {
+	s.start = s.cursor
+	s.hasQuotes = true
+	s.isSimpleIdentifier = true
+
+	if !s.consumeQuotedIdentifier(delimiter) {
+		s.hasQuotes = false
+		s.isSimpleIdentifier = false
+		return s.emit(ERROR)
+	}
+
+	if joinQualified && s.config.DBMS == DBMSMySQL {
+		return s.checkForSpacesInIdentifier(QUOTED_IDENT)
+	}
+
+	if joinQualified && s.peek() == '.' { // continue through an unquoted component, ex. "schema".table
+		s.isSimpleIdentifier = false
+		if !s.consumeIdentifier() {
+			s.hasQuotes = false
+			return s.emit(ERROR)
+		}
+	}
+
+	return s.emit(QUOTED_IDENT)
+}
+
+func (s *Lexer) consumeQuotedIdentifier(delimiter rune) bool {
 	closingDelimiter := delimiter
 	if delimiter == '[' {
 		closingDelimiter = ']'
 	}
 
-	s.start = s.cursor
-	s.hasQuotes = true
-	s.isSimpleIdentifier = true
 	firstRune := true
 	ch := s.next() // consume the opening quote
 	specialCase := []rune{closingDelimiter, '.', delimiter}
@@ -500,9 +535,7 @@ func (s *Lexer) scanDoubleQuotedIdentifierComponent(delimiter rune, joinQualifie
 			break
 		}
 		if isEOF(ch) {
-			s.hasQuotes = false // if we hit EOF, we clear the quotes
-			s.isSimpleIdentifier = false
-			return s.emit(ERROR)
+			return false
 		}
 		s.hasDigits = s.hasDigits || isDigit(ch)
 		if s.isSimpleIdentifier {
@@ -521,10 +554,7 @@ func (s *Lexer) scanDoubleQuotedIdentifierComponent(delimiter rune, joinQualifie
 		ch = s.nextBy(size)
 	}
 	s.next() // consume the closing quote (ASCII)
-	if joinQualified && s.config.DBMS == DBMSMySQL {
-		return s.checkForSpacesInIdentifier(QUOTED_IDENT)
-	}
-	return s.emit(QUOTED_IDENT)
+	return true
 }
 
 // scanMySQLQualifiedIdentifierComponent scans an unquoted identifier after a
