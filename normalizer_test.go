@@ -1707,28 +1707,30 @@ func TestNormalizerDoesNotPinLargeBackingArrays(t *testing.T) {
 }
 
 func TestNormalizeQualifiedUnquotedSchemaQuotedTable(t *testing.T) {
-	input := `SELECT * FROM example_schema."orders-dash"`
-	normalizer := NewNormalizer(WithCollectTables(true))
-	got, metadata, err := normalizer.Normalize(input, WithDBMS(DBMSPostgres))
-	assert.NoError(t, err)
-	assert.Equal(t, input, got)
-	assert.Equal(t, []string{`example_schema."orders-dash"`}, metadata.Tables)
-}
+	t.Run("unquoted schema, quoted table", func(t *testing.T) {
+		input := `SELECT * FROM example_schema."orders-dash"`
+		normalizer := NewNormalizer(WithCollectTables(true))
+		got, metadata, err := normalizer.Normalize(input, WithDBMS(DBMSPostgres))
+		assert.NoError(t, err)
+		assert.Equal(t, input, got)
+		assert.Equal(t, []string{`example_schema."orders-dash"`}, metadata.Tables)
+	})
 
-func TestNormalizeQuotedSchemaUnquotedTable(t *testing.T) {
-	input := `SELECT * FROM "example_schema".orders_underscore`
-	normalizer := NewNormalizer(WithCollectTables(true))
-	got, metadata, err := normalizer.Normalize(input, WithDBMS(DBMSPostgres))
-	assert.NoError(t, err)
-	assert.Equal(t, `SELECT * FROM example_schema.orders_underscore`, got)
-	assert.Equal(t, []string{`example_schema.orders_underscore`}, metadata.Tables)
-}
+	t.Run("quoted schema, unquoted table", func(t *testing.T) {
+		input := `SELECT * FROM "example_schema".orders_underscore`
+		normalizer := NewNormalizer(WithCollectTables(true))
+		got, metadata, err := normalizer.Normalize(input, WithDBMS(DBMSPostgres))
+		assert.NoError(t, err)
+		assert.Equal(t, `SELECT * FROM example_schema.orders_underscore`, got)
+		assert.Equal(t, []string{`example_schema.orders_underscore`}, metadata.Tables)
+	})
 
-func TestNormalizeQuotedSchemaQuotedTable(t *testing.T) {
-	input := `SELECT * FROM "example_schema"."orders-hyphen"`
-	normalizer := NewNormalizer(WithCollectTables(true))
-	got, metadata, err := normalizer.Normalize(input, WithDBMS(DBMSPostgres))
-	assert.NoError(t, err)
-	assert.Equal(t, `SELECT * FROM example_schema.orders-hyphen`, got)
-	assert.Equal(t, []string{`example_schema.orders-hyphen`}, metadata.Tables)
+	t.Run("quoted schema, quoted table", func(t *testing.T) {
+		input := `SELECT * FROM "example_schema"."orders-hyphen"`
+		normalizer := NewNormalizer(WithCollectTables(true))
+		got, metadata, err := normalizer.Normalize(input, WithDBMS(DBMSPostgres))
+		assert.NoError(t, err)
+		assert.Equal(t, `SELECT * FROM example_schema.orders-hyphen`, got)
+		assert.Equal(t, []string{`example_schema.orders-hyphen`}, metadata.Tables)
+	})
 }
