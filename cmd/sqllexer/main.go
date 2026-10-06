@@ -87,7 +87,7 @@ func parseFlags() *CLIConfig {
 	flag.StringVar(&cfg.Mode, "mode", "obfuscate_and_normalize", "Operation mode: obfuscate, normalize, tokenize, obfuscate_and_normalize")
 	flag.StringVar(&cfg.InputFile, "input", "", "Input file (default: stdin)")
 	flag.StringVar(&cfg.OutputFile, "output", "", "Output file (default: stdout)")
-	flag.StringVar(&cfg.DBMS, "dbms", "", "Database type: mssql, postgresql, mysql, oracle, snowflake")
+	flag.StringVar(&cfg.DBMS, "dbms", "", "Database type: mssql, postgresql, mysql, oracle, snowflake, ibm_db2")
 	flag.BoolVar(&cfg.WithMetadata, "with-metadata", false, "Output result with metadata as JSON (normalize and obfuscate_and_normalize modes)")
 
 	// Obfuscator options
