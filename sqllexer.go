@@ -497,6 +497,15 @@ func (s *Lexer) scanDoubleQuotedIdentifierComponent(delimiter rune, joinQualifie
 	if joinQualified && s.config.DBMS == DBMSMySQL {
 		return s.checkForSpacesInIdentifier(QUOTED_IDENT)
 	}
+
+	if joinQualified && s.peek() == '.' { // continue through an unquoted component, ex. "schema".table
+		s.isSimpleIdentifier = false
+		if !s.consumeIdentifier() {
+			s.hasQuotes = false
+			return s.emit(ERROR)
+		}
+	}
+
 	return s.emit(QUOTED_IDENT)
 }
 

@@ -1766,10 +1766,32 @@ func ExampleLexer() {
 	}
 }
 
-func TestLexerQualifiedHyphenatedQuotedIdentifier(t *testing.T) {
-	lexer := New(`example_schema."orders-dash"`)
+func TestLexerQualifiedIdentifierMixedQuoteIdentifier(t *testing.T) {
+	lexer := New(`example_schema."orders-hyphen"`)
 	token := lexer.Scan()
-	if token.Type != IDENT || token.Value != `example_schema."orders-dash"` {
+	if token.Type != IDENT || token.Value != `example_schema."orders-hyphen"` {
+		t.Fatalf("expected complete qualified identifier, got %v %q", token.Type, token.Value)
+	}
+	if token := lexer.Scan(); token.Type != EOF {
+		t.Fatalf("expected EOF, got %v %q", token.Type, token.Value)
+	}
+}
+
+func TestLexerQualifiedIdentifierQuotedSchemaUnquotedTable(t *testing.T) {
+	lexer := New(`"example_schema".orders_underscore`) // unquoted hyphen would not be part of a table name, using underscore here
+	token := lexer.Scan()
+	if token.Type != QUOTED_IDENT || token.Value != `"example_schema".orders_underscore` {
+		t.Fatalf("expected complete qualified identifier, got %v %q", token.Type, token.Value)
+	}
+	if token := lexer.Scan(); token.Type != EOF {
+		t.Fatalf("expected EOF, got %v %q", token.Type, token.Value)
+	}
+}
+
+func TestLexerQualifiedIdentifierQuotedSchemaQuotedTable(t *testing.T) {
+	lexer := New(`"example_schema"."orders-hyphen"`)
+	token := lexer.Scan()
+	if token.Type != QUOTED_IDENT || token.Value != `"example_schema"."orders-hyphen"` {
 		t.Fatalf("expected complete qualified identifier, got %v %q", token.Type, token.Value)
 	}
 	if token := lexer.Scan(); token.Type != EOF {
