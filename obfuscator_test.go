@@ -171,6 +171,14 @@ func TestObfuscator(t *testing.T) {
 			expected: "SELECT * FROM users where id = ?",
 		},
 		{
+			input:    "SELECT * FROM users where id = $$test",
+			expected: "SELECT * FROM users where id = ?",
+		},
+		{
+			input:    "SELECT * FROM users where id = $tag$test",
+			expected: "SELECT * FROM users where id = ?",
+		},
+		{
 			input:    "SELECT * FROM users where id = $$test$$",
 			expected: "SELECT * FROM users where id = ?",
 		},
