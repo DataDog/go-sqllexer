@@ -786,6 +786,10 @@ func (s *Lexer) scanDollarQuotedString() *Token {
 	for s.cursor < len(s.src) && ch != '$' {
 		ch = s.next()
 	}
+	if ch != '$' {
+		// the tag itself is not terminated
+		return s.emit(ERROR)
+	}
 	s.next()                            // consume the closing dollar sign of the tag
 	tag := s.src[tagStart-1 : s.cursor] // include the opening and closing dollar sign e.g. $tag$
 	tagRune := []rune(tag)
@@ -801,7 +805,9 @@ func (s *Lexer) scanDollarQuotedString() *Token {
 		}
 		s.next()
 	}
-	return s.emit(ERROR)
+	// If we get here, we hit EOF before finding the closing tag, e.g. the
+	// query was truncated. Emit it as an incomplete string so it is obfuscated.
+	return s.emit(INCOMPLETE_STRING)
 }
 
 func (s *Lexer) scanPositionalParameter() *Token {
