@@ -110,6 +110,11 @@ func (s *Lexer) Scan() *Token {
 	case isSpace(ch):
 		return s.scanWhitespace()
 	case isLetter(ch):
+		if s.config.DBMS == DBMSOracle {
+			if prefixLen := s.oracleQuotedStringPrefixLen(ch); prefixLen > 0 {
+				return s.scanOracleQuotedString(prefixLen)
+			}
+		}
 		return s.scanIdentifier(ch)
 	case isDoubleQuote(ch):
 		// MySQL by default (without ANSI_QUOTES mode) treats double quotes as string literals
@@ -387,6 +392,56 @@ func (s *Lexer) hasPostgresEscapeStringPrefix() bool {
 	}
 	prev, _ := utf8.DecodeLastRuneInString(s.src[:s.start-size])
 	return !isLetter(prev) && !isDigit(prev)
+}
+
+// oracleQuotedStringPrefixLen returns the length of the q' or nq' prefix when
+// the cursor is at an Oracle alternative quoted string such as q'[it's]', or
+// 0 otherwise. Oracle accepts any delimiter except space, tab and return.
+func (s *Lexer) oracleQuotedStringPrefixLen(ch rune) int {
+	n := 0
+	if ch == 'n' || ch == 'N' {
+		n = 1
+		ch = s.lookAhead(1)
+	}
+	if (ch != 'q' && ch != 'Q') || s.lookAhead(n+1) != '\'' {
+		return 0
+	}
+	switch s.lookAhead(n + 2) {
+	case 0, ' ', '\t', '\n', '\r':
+		return 0
+	}
+	return n + 2
+}
+
+// scanOracleQuotedString scans an Oracle alternative quoted string. The
+// literal ends at the closing delimiter followed by a quote, so quotes inside
+// it do not end the string.
+func (s *Lexer) scanOracleQuotedString(prefixLen int) *Token {
+	s.start = s.cursor
+	delimiter := s.nextBy(prefixLen) // consume the prefix and the opening quote
+	closingDelimiter := delimiter
+	switch delimiter {
+	case '[':
+		closingDelimiter = ']'
+	case '{':
+		closingDelimiter = '}'
+	case '<':
+		closingDelimiter = '>'
+	case '(':
+		closingDelimiter = ')'
+	}
+	_, size := utf8.DecodeRuneInString(s.src[s.cursor:])
+	ch := s.nextBy(size) // consume the opening delimiter
+	for !isEOF(ch) {
+		_, size = utf8.DecodeRuneInString(s.src[s.cursor:])
+		if ch == closingDelimiter && s.lookAhead(size) == '\'' {
+			s.nextBy(size + 1) // consume the closing delimiter and quote
+			return s.emit(STRING)
+		}
+		ch = s.nextBy(size)
+	}
+	// The query was truncated before the closing delimiter.
+	return s.emit(INCOMPLETE_STRING)
 }
 
 func (s *Lexer) scanIdentifier(ch rune) *Token {
