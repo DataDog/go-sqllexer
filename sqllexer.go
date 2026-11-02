@@ -110,11 +110,6 @@ func (s *Lexer) Scan() *Token {
 	case isSpace(ch):
 		return s.scanWhitespace()
 	case isLetter(ch):
-		if s.config.DBMS == DBMSOracle {
-			if prefixLen := s.oracleQuotedStringPrefixLen(ch); prefixLen > 0 {
-				return s.scanOracleQuotedString(prefixLen)
-			}
-		}
 		return s.scanIdentifier(ch)
 	case isDoubleQuote(ch):
 		// MySQL by default (without ANSI_QUOTES mode) treats double quotes as string literals
@@ -394,31 +389,27 @@ func (s *Lexer) hasPostgresEscapeStringPrefix() bool {
 	return !isLetter(prev) && !isDigit(prev)
 }
 
-// oracleQuotedStringPrefixLen returns the length of the q' or nq' prefix when
-// the cursor is at an Oracle alternative quoted string such as q'[it's]', or
-// 0 otherwise. Oracle accepts any delimiter except space, tab and return.
-func (s *Lexer) oracleQuotedStringPrefixLen(ch rune) int {
-	n := 0
-	if ch == 'n' || ch == 'N' {
-		n = 1
-		ch = s.lookAhead(1)
+// isOracleQuotedStringStart reports whether the word just scanned is the q or
+// nq prefix of an Oracle alternative quoted string such as q'[it's]'. The
+// cursor is at the quote. Oracle accepts any delimiter except space, tab and
+// return.
+func (s *Lexer) isOracleQuotedStringStart() bool {
+	word := s.src[s.start:s.cursor]
+	if !strings.EqualFold(word, "q") && !strings.EqualFold(word, "nq") {
+		return false
 	}
-	if (ch != 'q' && ch != 'Q') || s.lookAhead(n+1) != '\'' {
-		return 0
-	}
-	switch s.lookAhead(n + 2) {
+	switch s.lookAhead(1) {
 	case 0, ' ', '\t', '\n', '\r':
-		return 0
+		return false
 	}
-	return n + 2
+	return true
 }
 
-// scanOracleQuotedString scans an Oracle alternative quoted string. The
-// literal ends at the closing delimiter followed by a quote, so quotes inside
-// it do not end the string.
-func (s *Lexer) scanOracleQuotedString(prefixLen int) *Token {
-	s.start = s.cursor
-	delimiter := s.nextBy(prefixLen) // consume the prefix and the opening quote
+// scanOracleQuotedString scans the rest of an Oracle alternative quoted string
+// after its prefix. The literal ends at the closing delimiter followed by a
+// quote, so quotes inside it do not end the string.
+func (s *Lexer) scanOracleQuotedString() *Token {
+	delimiter := s.next() // consume the opening quote
 	closingDelimiter := delimiter
 	switch delimiter {
 	case '[':
@@ -430,17 +421,24 @@ func (s *Lexer) scanOracleQuotedString(prefixLen int) *Token {
 	case '(':
 		closingDelimiter = ')'
 	}
-	_, size := utf8.DecodeRuneInString(s.src[s.cursor:])
-	ch := s.nextBy(size) // consume the opening delimiter
-	for !isEOF(ch) {
-		_, size = utf8.DecodeRuneInString(s.src[s.cursor:])
-		if ch == closingDelimiter && s.lookAhead(size) == '\'' {
-			s.nextBy(size + 1) // consume the closing delimiter and quote
+	s.cursor += utf8.RuneLen(delimiter) // consume the opening delimiter
+	body := s.cursor
+	// The literal can only end at a quote, and a quote byte never appears
+	// inside a multi-byte character, so jump from quote to quote.
+	for search := body; search < len(s.src); {
+		i := strings.IndexByte(s.src[search:], '\'')
+		if i < 0 {
+			break
+		}
+		quote := search + i
+		if r, size := utf8.DecodeLastRuneInString(s.src[body:quote]); size > 0 && r == closingDelimiter {
+			s.cursor = quote + 1 // consume the closing delimiter and quote
 			return s.emit(STRING)
 		}
-		ch = s.nextBy(size)
+		search = quote + 1
 	}
 	// The query was truncated before the closing delimiter.
+	s.cursor = len(s.src)
 	return s.emit(INCOMPLETE_STRING)
 }
 
@@ -515,6 +513,9 @@ func (s *Lexer) scanIdentifier(ch rune) *Token {
 
 	if ch == '(' {
 		return s.emit(FUNCTION)
+	}
+	if ch == '\'' && s.config.DBMS == DBMSOracle && s.isOracleQuotedStringStart() {
+		return s.scanOracleQuotedString()
 	}
 	if s.config.DBMS == DBMSMySQL {
 		return s.checkForSpacesInIdentifier(IDENT)
