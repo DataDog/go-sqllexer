@@ -456,6 +456,11 @@ func TestObfuscator(t *testing.T) {
 			dbms:     DBMSOracle,
 		},
 		{
+			input:    "SELECT * FROM users WHERE note = q'[it's a secret]' OR name = nq'{O'Brien}'",
+			expected: "SELECT * FROM users WHERE note = ? OR name = ?",
+			dbms:     DBMSOracle,
+		},
+		{
 			input:    "SELECT * FROM #users where id = @id and name = @1",
 			expected: "SELECT * FROM #users where id = @id and name = @1",
 			dbms:     DBMSSQLServer,

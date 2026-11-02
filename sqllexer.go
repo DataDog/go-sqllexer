@@ -389,6 +389,59 @@ func (s *Lexer) hasPostgresEscapeStringPrefix() bool {
 	return !isLetter(prev) && !isDigit(prev)
 }
 
+// isOracleQuotedStringStart reports whether the word just scanned is the q or
+// nq prefix of an Oracle alternative quoted string such as q'[it's]'. The
+// cursor is at the quote. Oracle accepts any delimiter except space, tab and
+// return.
+func (s *Lexer) isOracleQuotedStringStart() bool {
+	word := s.src[s.start:s.cursor]
+	if !strings.EqualFold(word, "q") && !strings.EqualFold(word, "nq") {
+		return false
+	}
+	switch s.lookAhead(1) {
+	case 0, ' ', '\t', '\n', '\r':
+		return false
+	}
+	return true
+}
+
+// scanOracleQuotedString scans the rest of an Oracle alternative quoted string
+// after its prefix. The literal ends at the closing delimiter followed by a
+// quote, so quotes inside it do not end the string.
+func (s *Lexer) scanOracleQuotedString() *Token {
+	delimiter := s.next() // consume the opening quote
+	closingDelimiter := delimiter
+	switch delimiter {
+	case '[':
+		closingDelimiter = ']'
+	case '{':
+		closingDelimiter = '}'
+	case '<':
+		closingDelimiter = '>'
+	case '(':
+		closingDelimiter = ')'
+	}
+	s.cursor += utf8.RuneLen(delimiter) // consume the opening delimiter
+	body := s.cursor
+	// The literal can only end at a quote, and a quote byte never appears
+	// inside a multi-byte character, so jump from quote to quote.
+	for search := body; search < len(s.src); {
+		i := strings.IndexByte(s.src[search:], '\'')
+		if i < 0 {
+			break
+		}
+		quote := search + i
+		if r, size := utf8.DecodeLastRuneInString(s.src[body:quote]); size > 0 && r == closingDelimiter {
+			s.cursor = quote + 1 // consume the closing delimiter and quote
+			return s.emit(STRING)
+		}
+		search = quote + 1
+	}
+	// The query was truncated before the closing delimiter.
+	s.cursor = len(s.src)
+	return s.emit(INCOMPLETE_STRING)
+}
+
 func (s *Lexer) scanIdentifier(ch rune) *Token {
 	s.start = s.cursor
 	node := keywordRoot
@@ -460,6 +513,9 @@ func (s *Lexer) scanIdentifier(ch rune) *Token {
 
 	if ch == '(' {
 		return s.emit(FUNCTION)
+	}
+	if ch == '\'' && s.config.DBMS == DBMSOracle && s.isOracleQuotedStringStart() {
+		return s.scanOracleQuotedString()
 	}
 	if s.config.DBMS == DBMSMySQL {
 		return s.checkForSpacesInIdentifier(IDENT)

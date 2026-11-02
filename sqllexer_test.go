@@ -1122,6 +1122,27 @@ here */`,
 			lexerOpts: []lexerOption{WithDBMS(DBMSOracle)},
 		},
 		{
+			// Oracle alternative quoting: a quote inside q'[...]' does not end the
+			// literal, only the closing delimiter followed by a quote does.
+			name:  "oracle alternative quoted strings",
+			input: "SELECT q'[it's]', nQ'{a 'b'}', q'!x!', q'[cut it's",
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
+				{STRING, "q'[it's]'"},
+				{PUNCTUATION, ","},
+				{SPACE, " "},
+				{STRING, "nQ'{a 'b'}'"},
+				{PUNCTUATION, ","},
+				{SPACE, " "},
+				{STRING, "q'!x!'"},
+				{PUNCTUATION, ","},
+				{SPACE, " "},
+				{INCOMPLETE_STRING, "q'[cut it's"},
+			},
+			lexerOpts: []lexerOption{WithDBMS(DBMSOracle)},
+		},
+		{
 			// PostgreSQL standard strings (standard_conforming_strings, the default
 			// since 9.1) do not treat backslash as an escape. A quote inside a
 			// literal is written by doubling it, so '\' followed by another quote
