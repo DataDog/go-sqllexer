@@ -17,6 +17,7 @@ type ObfuscatorConfig struct {
 	ReplaceDigits              bool
 	ReplaceBoolean             bool
 	ReplaceNull                bool
+	KeepISPredicate            bool
 	ReplaceBindParameter       bool
 	ReplacePositionalParameter bool
 	DollarQuotedFunc           bool
@@ -53,6 +54,7 @@ func (c *ObfuscatorConfig) NewObfuscator() *sqllexer.Obfuscator {
 		sqllexer.WithReplaceDigits(c.ReplaceDigits),
 		sqllexer.WithReplaceBoolean(c.ReplaceBoolean),
 		sqllexer.WithReplaceNull(c.ReplaceNull),
+		sqllexer.WithKeepISPredicate(c.KeepISPredicate),
 		sqllexer.WithReplaceBindParameter(c.ReplaceBindParameter),
 		sqllexer.WithReplacePositionalParameter(c.ReplacePositionalParameter),
 		sqllexer.WithDollarQuotedFunc(c.DollarQuotedFunc),
@@ -94,6 +96,7 @@ func parseFlags() *CLIConfig {
 	flag.BoolVar(&cfg.Obfuscator.ReplaceDigits, "replace-digits", true, "Replace digits in identifiers with placeholders")
 	flag.BoolVar(&cfg.Obfuscator.ReplaceBoolean, "replace-boolean", true, "Replace boolean values with placeholders")
 	flag.BoolVar(&cfg.Obfuscator.ReplaceNull, "replace-null", true, "Replace NULL values with placeholders")
+	flag.BoolVar(&cfg.Obfuscator.KeepISPredicate, "keep-is-predicate", false, "Keep PostgreSQL TRUE, FALSE, and NULL after IS or IS NOT")
 	flag.BoolVar(&cfg.Obfuscator.ReplaceBindParameter, "replace-bind-parameter", false, "Replace bind parameters with placeholders")
 	flag.BoolVar(&cfg.Obfuscator.ReplacePositionalParameter, "replace-positional-parameter", false, "Replace positional parameters ($1, $2, etc.) with placeholders")
 	flag.BoolVar(&cfg.Obfuscator.DollarQuotedFunc, "dollar-quoted-func", false, "Obfuscate content inside $func$...$func$ blocks instead of replacing entirely")
@@ -287,6 +290,8 @@ Obfuscator Flags:
         Replace boolean values with placeholders (default true)
   -replace-null
         Replace NULL values with placeholders (default true)
+  -keep-is-predicate
+        Keep PostgreSQL TRUE, FALSE, and NULL after IS or IS NOT (default false)
   -replace-bind-parameter
         Replace bind parameters with placeholders (default false)
   -replace-positional-parameter

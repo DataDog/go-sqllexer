@@ -114,6 +114,7 @@ func TestQueriesPerDBMS(t *testing.T) {
 							WithReplacePositionalParameter(defaultObfuscatorConfig.ReplacePositionalParameter),
 							WithReplaceBoolean(defaultObfuscatorConfig.ReplaceBoolean),
 							WithReplaceNull(defaultObfuscatorConfig.ReplaceNull),
+							WithKeepISPredicate(defaultObfuscatorConfig.KeepISPredicate),
 							WithKeepJsonPath(defaultObfuscatorConfig.KeepJsonPath),
 						)
 
