@@ -142,6 +142,55 @@ type headState struct {
 	parenthesesDepth                    int
 	// pendingAlias holds a discarded AS that preceded MATERIALIZED.
 	pendingAlias string
+	// aliasParenDepth and castParens track which open parentheses belong to a
+	// CAST-like function, where AS separates the expression from the target type.
+	// Bit n is set when the parenthesis at depth n is a cast; depths >= 64 are not tracked.
+	aliasParenDepth int
+	castParens      uint64
+}
+
+func (h *headState) trackCastParens(token *Token, lastValueToken *LastValueToken) {
+	switch token.Value {
+	case "(":
+		h.aliasParenDepth++
+		if lastValueToken != nil && isCastFunction(lastValueToken.Value) {
+			h.castParens |= 1 << h.aliasParenDepth
+		}
+	case ")":
+		h.castParens &^= 1 << h.aliasParenDepth
+		if h.aliasParenDepth > 0 {
+			h.aliasParenDepth--
+		}
+	case ";":
+		h.aliasParenDepth = 0
+		h.castParens = 0
+	}
+}
+
+func (h *headState) inCastParens() bool {
+	return h.castParens&(1<<h.aliasParenDepth) != 0
+}
+
+// isCastFunction reports whether name is a function whose arguments use AS
+// before a type: CAST, TRY_CAST (SQL Server, Snowflake), SAFE_CAST, XMLCAST
+// (Oracle, Db2), TREAT (Oracle), PARSE and TRY_PARSE (SQL Server), and
+// XMLSERIALIZE (PostgreSQL, Oracle, Db2).
+func isCastFunction(name string) bool {
+	switch len(name) {
+	case 4:
+		return strings.EqualFold(name, "CAST")
+	case 5:
+		return strings.EqualFold(name, "TREAT") || strings.EqualFold(name, "PARSE")
+	case 7:
+		return strings.EqualFold(name, "XMLCAST")
+	case 8:
+		return strings.EqualFold(name, "TRY_CAST")
+	case 9:
+		return strings.EqualFold(name, "SAFE_CAST") || strings.EqualFold(name, "TRY_PARSE")
+	case 12:
+		return strings.EqualFold(name, "XMLSERIALIZE")
+	}
+	return false
 }
 
 func (h *headState) outputBuilder(normalizedSQLBuilder *strings.Builder) *strings.Builder {
@@ -345,7 +394,11 @@ func (n *Normalizer) normalizeSQL(token *Token, lastValueToken *LastValueToken, 
 			}
 		}
 
-		if !n.config.KeepSQLAlias {
+		if !n.config.KeepSQLAlias && token.Type == PUNCTUATION {
+			headState.trackCastParens(token, lastValueToken)
+		}
+
+		if !n.config.KeepSQLAlias && !headState.inCastParens() {
 			if headState.pendingAlias != "" {
 				// AS MATERIALIZED is a CTE modifier only when the body follows.
 				pendingAlias := headState.pendingAlias

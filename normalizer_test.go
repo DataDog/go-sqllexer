@@ -1611,6 +1611,104 @@ func TestObfuscateAndNormalizeCTEASMaterialized(t *testing.T) {
 	assert.Equal(t, "WITH c AS MATERIALIZED ( SELECT ? FROM t WHERE id = ? ) SELECT * FROM c", got)
 }
 
+func TestNormalizerCastASWithAliasRemoval(t *testing.T) {
+	tests := []struct {
+		dbms  DBMSType
+		input string
+		want  string
+	}{
+		{DBMSPostgres, "SELECT CAST(x AS integer) FROM t", "SELECT CAST ( x AS integer ) FROM t"},
+		{DBMSPostgres, "SELECT CAST (x AS integer) FROM t", "SELECT CAST ( x AS integer ) FROM t"},
+		{DBMSPostgres, "SELECT CAST /* c */ (x AS integer) FROM t", "SELECT CAST ( x AS integer ) FROM t"},
+		{DBMSPostgres, "SELECT cAsT(x aS integer) FROM t", "SELECT cAsT ( x aS integer ) FROM t"},
+		{DBMSPostgres, "SELECT CAST(x AS TIMESTAMP WITH TIME ZONE) FROM t", "SELECT CAST ( x AS TIMESTAMP WITH TIME ZONE ) FROM t"},
+		{DBMSPostgres, "SELECT CAST(x AS double precision) FROM t", "SELECT CAST ( x AS double precision ) FROM t"},
+		{DBMSPostgres, "SELECT CAST(x AS \"MyType\") FROM t", "SELECT CAST ( x AS MyType ) FROM t"},
+		{DBMSPostgres, "SELECT CAST(x AS public.mytype) FROM t", "SELECT CAST ( x AS public.mytype ) FROM t"},
+		{DBMSPostgres, "SELECT CAST(x AS int[]) FROM t", "SELECT CAST ( x AS int [ ] ) FROM t"},
+		{DBMSPostgres, "SELECT CAST(x AS varchar(10)) FROM t", "SELECT CAST ( x AS varchar ( 10 ) ) FROM t"},
+		{DBMSPostgres, "SELECT CAST(x AS integer) AS y FROM t AS a", "SELECT CAST ( x AS integer ) FROM t"},
+		{DBMSPostgres, "SELECT CAST(CAST(x AS text) AS integer) AS y", "SELECT CAST ( CAST ( x AS text ) AS integer )"},
+		{DBMSPostgres, "SELECT " + strings.Repeat("CAST(", 5) + "x" + strings.Repeat(" AS integer)", 5), "SELECT " + strings.Repeat("CAST ( ", 5) + "x" + strings.Repeat(" AS integer )", 5)},
+		{DBMSPostgres, "SELECT CAST((SELECT x AS y FROM t AS a) AS integer)", "SELECT CAST ( ( SELECT x FROM t ) AS integer )"},
+		{DBMSPostgres, "SELECT COALESCE(CAST(x AS int), y) AS z FROM t", "SELECT COALESCE ( CAST ( x AS int ), y ) FROM t"},
+		{DBMSPostgres, "SELECT rank() OVER (ORDER BY CAST(x AS int)) AS r FROM t", "SELECT rank ( ) OVER ( ORDER BY CAST ( x AS int ) ) FROM t"},
+		{DBMSPostgres, "SELECT XMLSERIALIZE(CONTENT x AS text) AS s FROM t", "SELECT XMLSERIALIZE ( CONTENT x AS text ) FROM t"},
+		{DBMSPostgres, "(SELECT CAST(x AS integer) AS y FROM t)", "( SELECT CAST ( x AS integer ) FROM t )"},
+		{DBMSPostgres, "WITH c AS MATERIALIZED (SELECT CAST(x AS int) AS v FROM t) SELECT * FROM c AS a", "WITH c AS MATERIALIZED ( SELECT CAST ( x AS int ) FROM t ) SELECT * FROM c"},
+		{DBMSPostgres, "SELECT CAST(x AS int) FROM t; SELECT y AS z FROM u AS v", "SELECT CAST ( x AS int ) FROM t; SELECT y FROM u"},
+		{DBMSPostgres, "SELECT CAST(x AS int)) AS y FROM t AS a", "SELECT CAST ( x AS int ) ) FROM t"},
+		{DBMSPostgres, "SELECT x AS cast FROM t AS a", "SELECT x FROM t"},
+		{DBMSPostgres, "SELECT x AS cast, (SELECT 1 AS y) FROM t", "SELECT x, ( SELECT 1 ) FROM t"},
+		{DBMSMySQL, "SELECT CAST(x AS UNSIGNED INTEGER) FROM t", "SELECT CAST ( x AS UNSIGNED INTEGER ) FROM t"},
+		{DBMSMySQL, "SELECT CAST(x AS CHAR(10) CHARACTER SET utf8mb4) FROM t", "SELECT CAST ( x AS CHAR ( 10 ) CHARACTER SET utf8mb4 ) FROM t"},
+		{DBMSMySQL, "SELECT CAST(j->'$.a' AS UNSIGNED ARRAY) FROM t", "SELECT CAST ( j -> '$.a' AS UNSIGNED ARRAY ) FROM t"},
+		{DBMSSQLServer, "SELECT TRY_CAST(x AS int) AS y FROM t", "SELECT TRY_CAST ( x AS int ) FROM t"},
+		{DBMSSQLServer, "SELECT CAST(x AS [int]) FROM t", "SELECT CAST ( x AS int ) FROM t"},
+		{DBMSSQLServer, "SELECT TRY_PARSE(x AS datetime2 USING 'en-US') FROM t", "SELECT TRY_PARSE ( x AS datetime2 USING 'en-US' ) FROM t"},
+		{DBMSSQLServer, "SELECT PARSE(x AS int) FROM t", "SELECT PARSE ( x AS int ) FROM t"},
+		{DBMSOracle, "SELECT CAST(x AS NUMBER) FROM dual", "SELECT CAST ( x AS NUMBER ) FROM dual"},
+		{DBMSOracle, "SELECT CAST(MULTISET(SELECT a FROM t) AS my_tab) FROM dual", "SELECT CAST ( MULTISET ( SELECT a FROM t ) AS my_tab ) FROM dual"},
+		{DBMSOracle, "SELECT TREAT(x AS my_type) FROM dual", "SELECT TREAT ( x AS my_type ) FROM dual"},
+		{DBMSDB2, "SELECT XMLCAST(x AS INTEGER) FROM t", "SELECT XMLCAST ( x AS INTEGER ) FROM t"},
+		{DBMSSnowflake, "SELECT TRY_CAST(x AS NUMBER) FROM t", "SELECT TRY_CAST ( x AS NUMBER ) FROM t"},
+		{"", "SELECT SAFE_CAST(x AS INT64) FROM t", "SELECT SAFE_CAST ( x AS INT64 ) FROM t"},
+		{"", "SELECT " + strings.Repeat("(", 70) + "CAST(x AS int)" + strings.Repeat(")", 70), "SELECT " + strings.Repeat("( ", 70) + "CAST ( x )" + strings.Repeat(" )", 70)},
+	}
+	normalizer := NewNormalizer(WithKeepSQLAlias(false))
+	for _, test := range tests {
+		t.Run(string(test.dbms)+" "+test.input, func(t *testing.T) {
+			got, _, err := normalizer.Normalize(test.input, WithDBMS(test.dbms))
+			assert.NoError(t, err)
+			assert.Equal(t, test.want, got)
+		})
+	}
+}
+
+func TestNormalizerCastASWithAliasRemovalOptions(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+		opts  []normalizerOption
+	}{
+		{
+			name:  "remove space between parentheses",
+			input: "SELECT CAST(x AS integer) AS y FROM t",
+			want:  "SELECT CAST(x AS integer) FROM t",
+			opts:  []normalizerOption{WithRemoveSpaceBetweenParentheses(true)},
+		},
+		{
+			name:  "uppercase keywords",
+			input: "select cast(x as integer) as y from t",
+			want:  "SELECT cast ( x as integer ) FROM t",
+			opts:  []normalizerOption{WithUppercaseKeywords(true)},
+		},
+		{
+			name:  "keep alias",
+			input: "SELECT CAST(x AS integer) AS y FROM t AS a",
+			want:  "SELECT CAST ( x AS integer ) AS y FROM t AS a",
+			opts:  []normalizerOption{WithKeepSQLAlias(true)},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			normalizer := NewNormalizer(append([]normalizerOption{WithKeepSQLAlias(false)}, test.opts...)...)
+			got, _, err := normalizer.Normalize(test.input)
+			assert.NoError(t, err)
+			assert.Equal(t, test.want, got)
+		})
+	}
+}
+
+func TestObfuscateAndNormalizeCastAS(t *testing.T) {
+	obfuscator := NewObfuscator()
+	normalizer := NewNormalizer(WithKeepSQLAlias(false))
+	got, _, err := ObfuscateAndNormalize("SELECT CAST('42' AS integer) AS v FROM t AS a WHERE id IN (CAST(1 AS bigint), 2)", obfuscator, normalizer)
+	assert.NoError(t, err)
+	assert.Equal(t, "SELECT CAST ( ? AS integer ) FROM t WHERE id IN ( CAST ( ? AS bigint ), ? )", got)
+}
+
 func TestNormalizerOracleBindVariables(t *testing.T) {
 	// This test is to ensure that Oracle bind variables with colons are normalized correctly
 	// without adding unwanted spaces between the colon and the parameter name.
