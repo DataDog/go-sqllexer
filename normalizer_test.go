@@ -2,6 +2,7 @@ package sqllexer
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -1512,6 +1513,102 @@ func TestNormalizerCTEWithoutCollectTables(t *testing.T) {
 			assert.Equal(t, test.expected, got)
 		})
 	}
+}
+
+func TestNormalizerCTEASWithAliasRemoval(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"WITH c AS MATERIALIZED (SELECT 1) SELECT * FROM c", "WITH c AS MATERIALIZED ( SELECT 1 ) SELECT * FROM c"},
+		{"WITH c AS NOT MATERIALIZED (SELECT 1) SELECT * FROM c", "WITH c AS NOT MATERIALIZED ( SELECT 1 ) SELECT * FROM c"},
+		{"WITH c AS MATERIALIZED(SELECT 1) SELECT * FROM c", "WITH c AS MATERIALIZED ( SELECT 1 ) SELECT * FROM c"},
+		{"WITH c AS /* hint */ MATERIALIZED /* hint */ (SELECT 1) SELECT * FROM c", "WITH c AS MATERIALIZED ( SELECT 1 ) SELECT * FROM c"},
+		{"WITH c AS (SELECT 1) SELECT * FROM c", "WITH c AS ( SELECT 1 ) SELECT * FROM c"},
+		{"WITH c AS MATERIALIZED (SELECT 1 AS value) SELECT * FROM c AS alias", "WITH c AS MATERIALIZED ( SELECT 1 ) SELECT * FROM c"},
+		{"WITH c AS (SELECT 1), d AS MATERIALIZED (SELECT * FROM c) SELECT * FROM d", "WITH c AS ( SELECT 1 ), d AS MATERIALIZED ( SELECT * FROM c ) SELECT * FROM d"},
+		{"WITH c(v) AS (SELECT 1) SELECT * FROM c", "WITH c ( v ) AS ( SELECT 1 ) SELECT * FROM c"},
+		{"WITH RECURSIVE c AS (SELECT 1) SELECT * FROM c", "WITH RECURSIVE c AS ( SELECT 1 ) SELECT * FROM c"},
+		{"WITH RECURSIVE c AS MATERIALIZED (SELECT 1) SELECT * FROM c", "WITH RECURSIVE c AS MATERIALIZED ( SELECT 1 ) SELECT * FROM c"},
+		{"WITH \"c\" AS MATERIALIZED (SELECT 1) SELECT * FROM c", "WITH c AS MATERIALIZED ( SELECT 1 ) SELECT * FROM c"},
+		{"WITH window AS MATERIALIZED (SELECT 1) SELECT * FROM window", "WITH window AS MATERIALIZED ( SELECT 1 ) SELECT * FROM window"},
+		{"WITH key AS MATERIALIZED (SELECT 1) SELECT * FROM key", "WITH key AS MATERIALIZED ( SELECT 1 ) SELECT * FROM key"},
+		{"WITH c AS (WITH d AS (SELECT 1) SELECT * FROM d) SELECT * FROM c", "WITH c AS ( WITH d AS ( SELECT 1 ) SELECT * FROM d ) SELECT * FROM c"},
+		{strings.Repeat("WITH c AS (", 5) + "SELECT 1" + strings.Repeat(") SELECT * FROM c", 5), strings.Repeat("WITH c AS ( ", 5) + "SELECT 1" + strings.Repeat(" ) SELECT * FROM c", 5)},
+		{"SELECT * FROM (WITH c AS (SELECT 1) SELECT * FROM c) AS t", "SELECT * FROM ( WITH c AS ( SELECT 1 ) SELECT * FROM c )"},
+		{"SELECT * FROM (WITH c AS (SELECT 1) SELECT * FROM c) AS t UNION ALL SELECT * FROM (WITH d AS (SELECT 2) SELECT * FROM d) AS u", "SELECT * FROM ( WITH c AS ( SELECT 1 ) SELECT * FROM c ) UNION ALL SELECT * FROM ( WITH d AS ( SELECT 2 ) SELECT * FROM d )"},
+		{"wItH c aS (SELECT 1) SELECT * FROM c", "wItH c aS ( SELECT 1 ) SELECT * FROM c"},
+		{"wItH c aS mAtErIaLiZeD (SELECT 1) SELECT * FROM c", "wItH c aS mAtErIaLiZeD ( SELECT 1 ) SELECT * FROM c"},
+		{"SELECT 1 AS materialized FROM t AS alias", "SELECT 1 FROM t"},
+		{"SELECT x AS \"materialized\" FROM t", "SELECT x FROM t"},
+		{"SELECT * FROM t AS materialized", "SELECT * FROM t"},
+		{"WITH c(v) AS MATERIALIZED (SELECT 1) SELECT * FROM c", "WITH c ( v ) AS MATERIALIZED ( SELECT 1 ) SELECT * FROM c"},
+		{"WITH a AS (SELECT 1), c(v) AS MATERIALIZED (SELECT 1) SELECT * FROM c", "WITH a AS ( SELECT 1 ), c ( v ) AS MATERIALIZED ( SELECT 1 ) SELECT * FROM c"},
+		{"WITH a AS (WITH b AS MATERIALIZED (SELECT 1) SELECT * FROM b), c AS MATERIALIZED (SELECT 2) SELECT * FROM a, c", "WITH a AS ( WITH b AS MATERIALIZED ( SELECT 1 ) SELECT * FROM b ), c AS MATERIALIZED ( SELECT 2 ) SELECT * FROM a, c"},
+		{strings.Repeat("WITH c AS MATERIALIZED (", 8) + "SELECT 1" + strings.Repeat(") SELECT * FROM c", 8), strings.Repeat("WITH c AS MATERIALIZED ( ", 8) + "SELECT 1" + strings.Repeat(" ) SELECT * FROM c", 8)},
+		{"(WITH c AS (SELECT 1) SELECT * FROM c)", "( WITH c AS ( SELECT 1 ) SELECT * FROM c )"},
+		{"(WITH c AS MATERIALIZED (SELECT 1) SELECT * FROM c)", "( WITH c AS MATERIALIZED ( SELECT 1 ) SELECT * FROM c )"},
+		{"WITH c AS MATERIALIZED (SELECT 1) SELECT * FROM c; WITH d AS MATERIALIZED (SELECT 2) SELECT * FROM d AS x", "WITH c AS MATERIALIZED ( SELECT 1 ) SELECT * FROM c; WITH d AS MATERIALIZED ( SELECT 2 ) SELECT * FROM d"},
+		{"INSERT INTO t WITH c AS MATERIALIZED (SELECT 1) SELECT * FROM c", "INSERT INTO t WITH c AS MATERIALIZED ( SELECT 1 ) SELECT * FROM c"},
+		{"SELECT * FROM unnest(arr) WITH ORDINALITY AS t", "SELECT * FROM unnest ( arr ) WITH ORDINALITY"},
+		{"SELECT * FROM unnest(arr) WITH ORDINALITY AS materialized", "SELECT * FROM unnest ( arr ) WITH ORDINALITY"},
+		{"WITH c AS (SELECT * FROM unnest(a) WITH ORDINALITY AS t) SELECT * FROM c AS z", "WITH c AS ( SELECT * FROM unnest ( a ) WITH ORDINALITY ) SELECT * FROM c"},
+		{"WITH c AS (SELECT * FROM t WITH (NOLOCK)), d AS MATERIALIZED (SELECT 1) SELECT * FROM d", "WITH c AS ( SELECT * FROM t WITH ( NOLOCK ) ), d AS MATERIALIZED ( SELECT 1 ) SELECT * FROM d"},
+		{"WITH RECURSIVE t(n) AS (SELECT 1) SEARCH DEPTH FIRST BY n SET ord, u AS MATERIALIZED (SELECT 1) SELECT * FROM u", "WITH RECURSIVE t ( n ) AS ( SELECT 1 ) SEARCH DEPTH FIRST BY n SET ord, u AS MATERIALIZED ( SELECT 1 ) SELECT * FROM u"},
+		{"WITH RECURSIVE t(n) AS (SELECT 1) CYCLE n SET is_cycle USING path, u AS MATERIALIZED (SELECT 1) SELECT * FROM u", "WITH RECURSIVE t ( n ) AS ( SELECT 1 ) CYCLE n SET is_cycle USING path, u AS MATERIALIZED ( SELECT 1 ) SELECT * FROM u"},
+	}
+	normalizer := NewNormalizer(WithKeepSQLAlias(false))
+	for _, test := range tests {
+		t.Run(test.input, func(t *testing.T) {
+			got, _, err := normalizer.Normalize(test.input)
+			assert.NoError(t, err)
+			assert.Equal(t, test.want, got)
+		})
+	}
+}
+
+func TestNormalizerCTEASWithAliasRemovalOptions(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+		opts  []normalizerOption
+	}{
+		{
+			name:  "remove space between parentheses",
+			input: "WITH c AS MATERIALIZED (SELECT 1 AS v) SELECT * FROM c",
+			want:  "WITH c AS MATERIALIZED (SELECT 1) SELECT * FROM c",
+			opts:  []normalizerOption{WithRemoveSpaceBetweenParentheses(true)},
+		},
+		{
+			name:  "uppercase keywords",
+			input: "with c as materialized (select 1) select * from c",
+			want:  "with c as materialized ( SELECT 1 ) SELECT * FROM c",
+			opts:  []normalizerOption{WithUppercaseKeywords(true)},
+		},
+		{
+			name:  "keep alias",
+			input: "WITH c AS MATERIALIZED (SELECT 1 AS materialized) SELECT * FROM c AS x",
+			want:  "WITH c AS MATERIALIZED ( SELECT 1 AS materialized ) SELECT * FROM c AS x",
+			opts:  []normalizerOption{WithKeepSQLAlias(true)},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			normalizer := NewNormalizer(append([]normalizerOption{WithKeepSQLAlias(false)}, test.opts...)...)
+			got, _, err := normalizer.Normalize(test.input)
+			assert.NoError(t, err)
+			assert.Equal(t, test.want, got)
+		})
+	}
+}
+
+func TestObfuscateAndNormalizeCTEASMaterialized(t *testing.T) {
+	obfuscator := NewObfuscator()
+	normalizer := NewNormalizer(WithKeepSQLAlias(false))
+	got, _, err := ObfuscateAndNormalize("WITH c AS MATERIALIZED (SELECT 1 AS v FROM t WHERE id = 42) SELECT * FROM c AS x", obfuscator, normalizer)
+	assert.NoError(t, err)
+	assert.Equal(t, "WITH c AS MATERIALIZED ( SELECT ? FROM t WHERE id = ? ) SELECT * FROM c", got)
 }
 
 func TestNormalizerOracleBindVariables(t *testing.T) {

@@ -140,6 +140,15 @@ type headState struct {
 	expressionInParentheses             strings.Builder
 	hasCommandInLeadingParentheses      bool
 	parenthesesDepth                    int
+	// pendingAlias holds a discarded AS that preceded MATERIALIZED.
+	pendingAlias string
+}
+
+func (h *headState) outputBuilder(normalizedSQLBuilder *strings.Builder) *strings.Builder {
+	if h.inLeadingParenthesesExpression {
+		return &h.expressionInParentheses
+	}
+	return normalizedSQLBuilder
 }
 
 type Normalizer struct {
@@ -337,6 +346,19 @@ func (n *Normalizer) normalizeSQL(token *Token, lastValueToken *LastValueToken, 
 		}
 
 		if !n.config.KeepSQLAlias {
+			if headState.pendingAlias != "" {
+				// AS MATERIALIZED is a CTE modifier only when the body follows.
+				pendingAlias := headState.pendingAlias
+				headState.pendingAlias = ""
+				if token.Type == PUNCTUATION && token.Value == "(" {
+					builder := headState.outputBuilder(normalizedSQLBuilder)
+					builder.WriteByte(' ')
+					n.writeToken(ALIAS_INDICATOR, pendingAlias, builder)
+					builder.WriteByte(' ')
+					n.writeToken(lastValueToken.Type, lastValueToken.Value, builder)
+				}
+			}
+
 			// discard SQL alias
 			if token.Type == ALIAS_INDICATOR {
 				return
@@ -344,13 +366,17 @@ func (n *Normalizer) normalizeSQL(token *Token, lastValueToken *LastValueToken, 
 
 			if lastValueToken != nil && lastValueToken.Type == ALIAS_INDICATOR {
 				if token.Type == IDENT || token.Type == QUOTED_IDENT {
+					if token.Type == IDENT && strings.EqualFold(token.Value, "MATERIALIZED") {
+						headState.pendingAlias = lastValueToken.Value
+					}
 					return
 				} else {
 					// if the last token is AS and the current token is not IDENT,
 					// this could be a CTE like WITH ... AS (...),
 					// so we do not discard the current token
-					n.appendSpace(token, lastValueToken, normalizedSQLBuilder, colonCtx)
-					n.writeToken(lastValueToken.Type, lastValueToken.Value, normalizedSQLBuilder)
+					builder := headState.outputBuilder(normalizedSQLBuilder)
+					n.appendSpace(token, lastValueToken, builder, colonCtx)
+					n.writeToken(lastValueToken.Type, lastValueToken.Value, builder)
 				}
 			}
 		}
