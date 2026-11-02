@@ -2,6 +2,7 @@ package sqllexer
 
 import (
 	"fmt"
+	"math/bits"
 	"strings"
 )
 
@@ -153,125 +154,120 @@ const (
 	cteAfterBody
 )
 
-type cteFrame struct {
-	depth int
-	phase ctePhase
-}
-
+// cteAliasContext tracks CTE headers so that AS MATERIALIZED is not mistaken
+// for a projection alias. Only the innermost CTE list has a non-body phase;
+// enclosing lists are always inside a body, so they are kept as a depth bitmask.
 type cteAliasContext struct {
-	depth          int
-	frames         [4]cteFrame
-	frameCount     int
-	overflowFrames []cteFrame
-	previousAS     bool
+	enclosing uint64
+	depth     int32
+	topDepth  int32
+	phase     ctePhase
+	active    bool
 }
 
-func (c *cteAliasContext) pushFrame(frame cteFrame) {
-	if c.frameCount < len(c.frames) {
-		c.frames[c.frameCount] = frame
-	} else {
-		c.overflowFrames = append(c.overflowFrames, frame)
+func (c *cteAliasContext) pop() {
+	if c.enclosing == 0 {
+		c.active = false
+		return
 	}
-	c.frameCount++
+	c.topDepth = int32(63 - bits.LeadingZeros64(c.enclosing))
+	c.enclosing &^= 1 << uint(c.topDepth)
+	c.phase = cteBody
 }
 
-func (c *cteAliasContext) lastFrame() *cteFrame {
-	if c.frameCount <= len(c.frames) {
-		return &c.frames[c.frameCount-1]
-	}
-	return &c.overflowFrames[len(c.overflowFrames)-1]
-}
-
-func (c *cteAliasContext) popFrame() {
-	if c.frameCount > len(c.frames) {
-		c.overflowFrames = c.overflowFrames[:len(c.overflowFrames)-1]
-	}
-	c.frameCount--
-}
-
-// isCTEAS keeps AS in a CTE header without retaining projection or table aliases.
-func (c *cteAliasContext) isCTEAS(token *Token) bool {
-	previousAS := c.previousAS
-	if !isValueToken(token) {
-		return previousAS
-	}
-	c.previousAS = false
-	if token.Type == PUNCTUATION && token.Value == ";" {
-		c.frameCount = 0
-		c.overflowFrames = c.overflowFrames[:0]
-		c.depth = 0
+// tracks reports whether token can change the CTE state. Inside a CTE body only
+// parentheses, statement separators, and nested WITH matter.
+func (c *cteAliasContext) tracks(token *Token) bool {
+	switch token.Type {
+	case CTE_INDICATOR:
+		return true
+	case PUNCTUATION:
+		return c.active && (c.phase != cteBody || token.Value == "(" || token.Value == ")" || token.Value == ";")
+	case SPACE, COMMENT, MULTILINE_COMMENT, EOF:
 		return false
 	}
+	return c.active && c.phase != cteBody
+}
+
+// isCTEMaterialized reports whether token is MATERIALIZED directly following a CTE AS.
+func (c *cteAliasContext) isCTEMaterialized(token *Token) bool {
+	isPunct := token.Type == PUNCTUATION
+	if isPunct && token.Value == ";" {
+		*c = cteAliasContext{}
+		return false
+	}
+	result := false
 	depth := c.depth
 	if token.Type == CTE_INDICATOR {
-		if c.frameCount == 0 {
-			// Frame depths are relative to this WITH. Earlier parentheses do not matter.
-			c.depth = 0
-			depth = 0
+		if !c.active {
+			c.depth, depth = 0, 0
+		} else if c.phase == cteBody {
+			if c.topDepth >= 64 {
+				*c = cteAliasContext{}
+				return false
+			}
+			c.enclosing |= 1 << uint(c.topDepth)
 		}
-		c.pushFrame(cteFrame{depth: depth, phase: cteName})
+		c.topDepth, c.phase, c.active = depth, cteName, true
 	} else {
-		for c.frameCount > 0 {
-			frame := c.lastFrame()
-			handled := false
-			switch frame.phase {
+		for c.active {
+			handled := true
+			switch c.phase {
 			case cteName:
-				if strings.EqualFold(token.Value, "RECURSIVE") {
-					handled = true
-				}
-				if !handled && depth == frame.depth && (token.Type == IDENT || token.Type == QUOTED_IDENT) {
-					frame.phase = cteAs
-					handled = true
+				if depth != c.topDepth {
+					handled = false
+				} else if token.Type == IDENT || token.Type == QUOTED_IDENT || token.Type == FUNCTION {
+					c.phase = cteAs
+				} else if token.Type != KEYWORD || !strings.EqualFold(token.Value, "RECURSIVE") {
+					handled = false
 				}
 			case cteAs:
-				if depth == frame.depth && token.Type == ALIAS_INDICATOR {
-					frame.phase = cteBodyStart
-					c.previousAS = true
-					return true
-				}
-				if depth == frame.depth && token.Type == PUNCTUATION && token.Value == "(" {
-					frame.phase = cteColumns
-					handled = true
+				if depth != c.topDepth {
+					handled = false
+				} else if token.Type == ALIAS_INDICATOR {
+					c.phase = cteBodyStart
+				} else if isPunct && token.Value == "(" {
+					c.phase = cteColumns
+				} else {
+					handled = false
 				}
 			case cteColumns:
-				if token.Type == PUNCTUATION && token.Value == ")" && depth == frame.depth+1 {
-					frame.phase = cteAs
+				if isPunct && token.Value == ")" && depth == c.topDepth+1 {
+					c.phase = cteAs
 				}
-				handled = true
 			case cteBodyStart:
-				if token.Type == PUNCTUATION && token.Value == "(" && depth == frame.depth {
-					frame.phase = cteBody
-					handled = true
-				}
-				if strings.EqualFold(token.Value, "NOT") || strings.EqualFold(token.Value, "MATERIALIZED") {
-					handled = true
+				if isPunct && token.Value == "(" {
+					c.phase = cteBody
+				} else if token.Type == IDENT && strings.EqualFold(token.Value, "MATERIALIZED") {
+					result = true
+				} else if token.Type != KEYWORD || !strings.EqualFold(token.Value, "NOT") {
+					handled = false
 				}
 			case cteBody:
-				if token.Type == PUNCTUATION && token.Value == ")" && depth == frame.depth+1 {
-					frame.phase = cteAfterBody
+				if isPunct && token.Value == ")" && depth == c.topDepth+1 {
+					c.phase = cteAfterBody
 				}
-				handled = true
 			case cteAfterBody:
-				if token.Type == PUNCTUATION && token.Value == "," && depth == frame.depth {
-					frame.phase = cteName
-					handled = true
-				}
-				if depth != frame.depth {
-					handled = true
+				if isPunct && token.Value == "," && depth == c.topDepth {
+					c.phase = cteName
+				} else {
+					handled = false
 				}
 			}
 			if handled {
 				break
 			}
-			c.popFrame()
+			c.pop()
 		}
 	}
-	if token.Type == PUNCTUATION && token.Value == "(" {
-		c.depth++
-	} else if token.Type == PUNCTUATION && token.Value == ")" && c.depth > 0 {
-		c.depth--
+	if isPunct {
+		if token.Value == "(" {
+			c.depth++
+		} else if token.Value == ")" && c.depth > 0 {
+			c.depth--
+		}
 	}
-	return previousAS
+	return result
 }
 
 type Normalizer struct {
@@ -317,11 +313,11 @@ func (n *Normalizer) normalizeToken(lexer *Lexer, normalizedSQLBuilder *strings.
 		if n.shouldCollectMetadata() {
 			n.collectMetadata(token, lastValueToken, meta, statementMetadata, &ctes, &inTableList)
 		}
-		cteAS := false
-		if stripAliases && (cteContext.frameCount > 0 || token.Type == CTE_INDICATOR) {
-			cteAS = cteContext.isCTEAS(token)
+		cteMaterialized := false
+		if stripAliases && cteContext.tracks(token) {
+			cteMaterialized = cteContext.isCTEMaterialized(token)
 		}
-		n.normalizeSQL(token, lastValueToken, normalizedSQLBuilder, &groupablePlaceholder, &headState, &colonCtx, cteAS, lexerOpts...)
+		n.normalizeSQL(token, lastValueToken, normalizedSQLBuilder, &groupablePlaceholder, &headState, &colonCtx, cteMaterialized, lexerOpts...)
 		if token.Type == EOF {
 			break
 		}
@@ -421,7 +417,7 @@ func (n *Normalizer) collectMetadata(token *Token, lastValueToken *LastValueToke
 	}
 }
 
-func (n *Normalizer) normalizeSQL(token *Token, lastValueToken *LastValueToken, normalizedSQLBuilder *strings.Builder, groupablePlaceholder *groupablePlaceholder, headState *headState, colonCtx *colonContext, cteAS bool, lexerOpts ...lexerOption) {
+func (n *Normalizer) normalizeSQL(token *Token, lastValueToken *LastValueToken, normalizedSQLBuilder *strings.Builder, groupablePlaceholder *groupablePlaceholder, headState *headState, colonCtx *colonContext, cteMaterialized bool, lexerOpts ...lexerOption) {
 	if token.Type != SPACE && token.Type != COMMENT && token.Type != MULTILINE_COMMENT {
 		if token.Type == QUOTED_IDENT && !n.config.KeepIdentifierQuotation {
 			if n.shouldStripIdentifierQuotes(token, lastValueToken) {
@@ -476,19 +472,23 @@ func (n *Normalizer) normalizeSQL(token *Token, lastValueToken *LastValueToken, 
 
 		if !n.config.KeepSQLAlias {
 			// discard SQL alias
-			if token.Type == ALIAS_INDICATOR && !cteAS {
+			if token.Type == ALIAS_INDICATOR {
 				return
 			}
 
-			if lastValueToken != nil && lastValueToken.Type == ALIAS_INDICATOR && !cteAS {
-				if token.Type == IDENT || token.Type == QUOTED_IDENT {
+			if lastValueToken != nil && lastValueToken.Type == ALIAS_INDICATOR {
+				if (token.Type == IDENT || token.Type == QUOTED_IDENT) && !cteMaterialized {
 					return
 				} else {
 					// if the last token is AS and the current token is not IDENT,
 					// this could be a CTE like WITH ... AS (...),
 					// so we do not discard the current token
-					n.appendSpace(token, lastValueToken, normalizedSQLBuilder, colonCtx)
-					n.writeToken(lastValueToken.Type, lastValueToken.Value, normalizedSQLBuilder)
+					builder := normalizedSQLBuilder
+					if headState.inLeadingParenthesesExpression {
+						builder = &headState.expressionInParentheses
+					}
+					n.appendSpace(token, lastValueToken, builder, colonCtx)
+					n.writeToken(lastValueToken.Type, lastValueToken.Value, builder)
 				}
 			}
 		}
