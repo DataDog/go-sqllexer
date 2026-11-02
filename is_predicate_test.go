@@ -21,7 +21,6 @@ func checkISPredicateOutputs(t *testing.T, input string, obfuscator *Obfuscator,
 	}
 }
 
-// The off goldens were captured from origin/main before this option was added.
 func TestKeepISPredicateGoldens(t *testing.T) {
 	const input = "SELECT TRUE, NULL, a IS TRUE, b IS NOT FALSE, c IS NULL, d IS DISTINCT FROM TRUE, e IS NOT DISTINCT FROM NULL, TRUE = FALSE FROM t WHERE $1 IS TRUE"
 	tests := []struct {
@@ -114,8 +113,8 @@ func TestKeepISPredicateTokenBoundaries(t *testing.T) {
 		{
 			name:       "casts aliases JSON and invalid bind",
 			input:      "SELECT (x::boolean) IS /* a */ tRuE AS ok, NULL IS NOT FALSE, data ? 'IS TRUE' FROM t WHERE $1 IS TRUE AND x IS $1 AND x IS DISTINCT FROM 42 AND x IS NOT UNKNOWN",
-			obfuscated: "SELECT (x::boolean) IS /* a */ tRuE AS ok, ? IS NOT FALSE, data ? ? FROM t WHERE ? IS TRUE AND x IS ? AND x IS DISTINCT FROM ? AND x IS NOT UNKNOWN",
-			normalized: "SELECT ( x :: boolean ) IS tRuE, ? IS NOT FALSE, data ? ? FROM t WHERE ? IS TRUE AND x IS ? AND x IS DISTINCT FROM ? AND x IS NOT UNKNOWN",
+			obfuscated: "SELECT (x::boolean) IS /* a */ TRUE AS ok, ? IS NOT FALSE, data ? ? FROM t WHERE ? IS TRUE AND x IS ? AND x IS DISTINCT FROM ? AND x IS NOT UNKNOWN",
+			normalized: "SELECT ( x :: boolean ) IS TRUE, ? IS NOT FALSE, data ? ? FROM t WHERE ? IS TRUE AND x IS ? AND x IS DISTINCT FROM ? AND x IS NOT UNKNOWN",
 		},
 		{
 			name:       "comments strings and quoted identifiers",
@@ -144,8 +143,8 @@ func TestKeepISPredicateTokenBoundaries(t *testing.T) {
 		{
 			name:       "case line comments and nested parentheses",
 			input:      "SELECT (x iS -- comment IS NOT NULL\n tRuE) IS FALSE, y Is NoT DiStInCt -- comment FROM TRUE\n FrOm nUlL, TRUE::boolean IS FALSE",
-			obfuscated: "SELECT (x iS -- comment IS NOT NULL\n tRuE) IS FALSE, y Is NoT DiStInCt -- comment FROM TRUE\n FrOm ?, ?::boolean IS FALSE",
-			normalized: "SELECT ( x iS tRuE ) IS FALSE, y Is NoT DiStInCt FrOm ?, ? :: boolean IS FALSE",
+			obfuscated: "SELECT (x iS -- comment IS NOT NULL\n TRUE) IS FALSE, y Is NoT DiStInCt -- comment FROM TRUE\n FrOm ?, ?::boolean IS FALSE",
+			normalized: "SELECT ( x iS TRUE ) IS FALSE, y Is NoT DiStInCt FrOm ?, ? :: boolean IS FALSE",
 		},
 	}
 	for _, tt := range tests {
@@ -154,6 +153,16 @@ func TestKeepISPredicateTokenBoundaries(t *testing.T) {
 			checkISPredicateOutputs(t, tt.input, obfuscator, DBMSPostgres, tt.obfuscated, tt.normalized)
 		})
 	}
+}
+
+func TestKeepISPredicateCanonicalCase(t *testing.T) {
+	obfuscator := NewObfuscator(WithReplaceBoolean(true), WithReplaceNull(true), WithKeepISPredicate(true))
+	checkISPredicateOutputs(t,
+		"SELECT x iS tRuE, y Is NoT fAlSe, z IS nUlL",
+		obfuscator, DBMSPostgres,
+		"SELECT x iS TRUE, y Is NoT FALSE, z IS NULL",
+		"SELECT x iS TRUE, y Is NoT FALSE, z IS NULL",
+	)
 }
 
 // These representative texts were observed on PostgreSQL 18.6 with

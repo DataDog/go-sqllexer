@@ -15,6 +15,13 @@ type isPredicateContext struct {
 }
 
 func (c *isPredicateContext) keep(token *Token) bool {
+	if c.state == noISPredicate && token.Type != KEYWORD {
+		return false
+	}
+	return c.advance(token)
+}
+
+func (c *isPredicateContext) advance(token *Token) bool {
 	switch token.Type {
 	case SPACE, COMMENT, MULTILINE_COMMENT:
 		return false
@@ -32,9 +39,25 @@ func (c *isPredicateContext) keep(token *Token) bool {
 	case BOOLEAN, NULL:
 		keep := c.state == afterIS || c.state == afterISNot
 		c.state = noISPredicate
+		if keep {
+			canonicalizeISLiteral(token)
+		}
 		return keep
 	}
 
 	c.state = noISPredicate
 	return false
+}
+
+func canonicalizeISLiteral(token *Token) {
+	switch token.Type {
+	case BOOLEAN:
+		if token.Value[0]|0x20 == 't' {
+			token.Value = "TRUE"
+		} else {
+			token.Value = "FALSE"
+		}
+	case NULL:
+		token.Value = "NULL"
+	}
 }
