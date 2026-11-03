@@ -1901,7 +1901,7 @@ func TestNormalizerDoesNotPinLargeBackingArrays(t *testing.T) {
 	})
 }
 
-func TestNormalizeQualifiedUnquotedSchemaQuotedTable(t *testing.T) {
+func TestNormalizeMixedQuoteQualifiedIdentifier(t *testing.T) {
 	t.Run("unquoted schema, quoted table", func(t *testing.T) {
 		input := `SELECT * FROM example_schema."orders-dash"`
 		normalizer := NewNormalizer(WithCollectTables(true))
@@ -1927,5 +1927,32 @@ func TestNormalizeQualifiedUnquotedSchemaQuotedTable(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, `SELECT * FROM example_schema.orders-hyphen`, got)
 		assert.Equal(t, []string{`example_schema.orders-hyphen`}, metadata.Tables)
+	})
+
+	t.Run("truncated identifier", func(t *testing.T) {
+		input := `SELECT * FROM schema."tbl`
+		normalizer := NewNormalizer(WithCollectTables(true))
+		got, metadata, err := normalizer.Normalize(input, WithDBMS(DBMSPostgres))
+		assert.NoError(t, err)
+		assert.Equal(t, input, got)
+		assert.Equal(t, []string{`schema."tbl`}, metadata.Tables)
+	})
+
+	t.Run("truncated quoted component treats hyphen as an operator", func(t *testing.T) {
+		input := `SELECT * FROM schema."t-x`
+		normalizer := NewNormalizer(WithCollectTables(true))
+		got, metadata, err := normalizer.Normalize(input, WithDBMS(DBMSPostgres))
+		assert.NoError(t, err)
+		assert.Equal(t, `SELECT * FROM schema."t - x`, got)
+		assert.Equal(t, []string{`schema."t`}, metadata.Tables)
+	})
+
+	t.Run("multi part mixed quote identifier", func(t *testing.T) {
+		input := `SELECT * FROM a."b".c."d-e"`
+		normalizer := NewNormalizer(WithCollectTables(true))
+		got, metadata, err := normalizer.Normalize(input, WithDBMS(DBMSPostgres))
+		assert.NoError(t, err)
+		assert.Equal(t, `SELECT * FROM a."b".c."d-e"`, got)
+		assert.Equal(t, []string{`a."b".c."d-e"`}, metadata.Tables)
 	})
 }

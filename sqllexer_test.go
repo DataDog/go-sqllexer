@@ -1841,5 +1841,15 @@ func TestLexerMixedQuoteQualifiedIdentifier(t *testing.T) {
 			t.Fatalf("expected EOF, got %v %q", token.Type, token.Value)
 		}
 	})
-
+	t.Run("several mixed quoted and unquoted components", func(t *testing.T) {
+		input := `a."b".c."d-e"`
+		lexer := New(input)
+		token := lexer.Scan()
+		if token.Type != IDENT || token.Value != input {
+			t.Fatalf("expected complete qualified identifier, got %v %q", token.Type, token.Value)
+		}
+		if token := lexer.Scan(); token.Type != EOF {
+			t.Fatalf("expected EOF, got %v %q", token.Type, token.Value)
+		}
+	})
 }
