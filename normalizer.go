@@ -140,6 +140,64 @@ type headState struct {
 	expressionInParentheses             strings.Builder
 	hasCommandInLeadingParentheses      bool
 	parenthesesDepth                    int
+	// pendingAlias holds a discarded AS that preceded MATERIALIZED.
+	pendingAlias string
+	// aliasParenDepth and castParens track which open parentheses belong to a
+	// CAST-like function, where AS separates the expression from the target type.
+	// Bit n is set when the parenthesis at depth n is a cast; depths >= 64 are not tracked.
+	aliasParenDepth int
+	castParens      uint64
+}
+
+func (h *headState) trackCastParens(token *Token, lastValueToken *LastValueToken) {
+	switch token.Value {
+	case "(":
+		h.aliasParenDepth++
+		if lastValueToken != nil && isCastFunction(lastValueToken.Value) {
+			h.castParens |= 1 << h.aliasParenDepth
+		}
+	case ")":
+		h.castParens &^= 1 << h.aliasParenDepth
+		if h.aliasParenDepth > 0 {
+			h.aliasParenDepth--
+		}
+	case ";":
+		h.aliasParenDepth = 0
+		h.castParens = 0
+	}
+}
+
+func (h *headState) inCastParens() bool {
+	return h.castParens&(1<<h.aliasParenDepth) != 0
+}
+
+// isCastFunction reports whether name is a function whose arguments use AS
+// before a type: CAST, TRY_CAST (SQL Server, Snowflake), SAFE_CAST, XMLCAST
+// (Oracle, Db2), TREAT (Oracle), PARSE and TRY_PARSE (SQL Server), and
+// XMLSERIALIZE (PostgreSQL, Oracle, Db2).
+func isCastFunction(name string) bool {
+	switch len(name) {
+	case 4:
+		return strings.EqualFold(name, "CAST")
+	case 5:
+		return strings.EqualFold(name, "TREAT") || strings.EqualFold(name, "PARSE")
+	case 7:
+		return strings.EqualFold(name, "XMLCAST")
+	case 8:
+		return strings.EqualFold(name, "TRY_CAST")
+	case 9:
+		return strings.EqualFold(name, "SAFE_CAST") || strings.EqualFold(name, "TRY_PARSE")
+	case 12:
+		return strings.EqualFold(name, "XMLSERIALIZE")
+	}
+	return false
+}
+
+func (h *headState) outputBuilder(normalizedSQLBuilder *strings.Builder) *strings.Builder {
+	if h.inLeadingParenthesesExpression {
+		return &h.expressionInParentheses
+	}
+	return normalizedSQLBuilder
 }
 
 type Normalizer struct {
@@ -196,13 +254,13 @@ func (n *Normalizer) normalizeToken(lexer *Lexer, normalizedSQLBuilder *strings.
 }
 
 func (n *Normalizer) Normalize(input string, lexerOpts ...lexerOption) (normalizedSQL string, statementMetadata *StatementMetadata, err error) {
-	return n.normalize(input, nil, lexerOpts...)
+	return n.normalize(New(input, lexerOpts...), nil, lexerOpts...)
 }
 
-// normalize is the internal implementation that handles the common normalization logic.
-// preProcessToken is an optional function to process tokens before normalization (e.g., obfuscation).
-func (n *Normalizer) normalize(input string, preProcessToken func(*Token, *LastValueToken), lexerOpts ...lexerOption) (normalizedSQL string, statementMetadata *StatementMetadata, err error) {
-	lexer := New(input, lexerOpts...)
+// normalize processes a prepared lexer so the combined path can use its DBMS configuration.
+// preProcessToken optionally handles tokens before normalization (e.g., obfuscation).
+func (n *Normalizer) normalize(lexer *Lexer, preProcessToken func(*Token, *LastValueToken), lexerOpts ...lexerOption) (normalizedSQL string, statementMetadata *StatementMetadata, err error) {
+	input := lexer.src
 	var normalizedSQLBuilder strings.Builder
 	normalizedSQLBuilder.Grow(len(input))
 
@@ -336,7 +394,24 @@ func (n *Normalizer) normalizeSQL(token *Token, lastValueToken *LastValueToken, 
 			}
 		}
 
-		if !n.config.KeepSQLAlias {
+		if !n.config.KeepSQLAlias && token.Type == PUNCTUATION {
+			headState.trackCastParens(token, lastValueToken)
+		}
+
+		if !n.config.KeepSQLAlias && !headState.inCastParens() {
+			if headState.pendingAlias != "" {
+				// AS MATERIALIZED is a CTE modifier only when the body follows.
+				pendingAlias := headState.pendingAlias
+				headState.pendingAlias = ""
+				if token.Type == PUNCTUATION && token.Value == "(" {
+					builder := headState.outputBuilder(normalizedSQLBuilder)
+					builder.WriteByte(' ')
+					n.writeToken(ALIAS_INDICATOR, pendingAlias, builder)
+					builder.WriteByte(' ')
+					n.writeToken(lastValueToken.Type, lastValueToken.Value, builder)
+				}
+			}
+
 			// discard SQL alias
 			if token.Type == ALIAS_INDICATOR {
 				return
@@ -344,13 +419,17 @@ func (n *Normalizer) normalizeSQL(token *Token, lastValueToken *LastValueToken, 
 
 			if lastValueToken != nil && lastValueToken.Type == ALIAS_INDICATOR {
 				if token.Type == IDENT || token.Type == QUOTED_IDENT {
+					if token.Type == IDENT && strings.EqualFold(token.Value, "MATERIALIZED") {
+						headState.pendingAlias = lastValueToken.Value
+					}
 					return
 				} else {
 					// if the last token is AS and the current token is not IDENT,
 					// this could be a CTE like WITH ... AS (...),
 					// so we do not discard the current token
-					n.appendSpace(token, lastValueToken, normalizedSQLBuilder, colonCtx)
-					n.writeToken(lastValueToken.Type, lastValueToken.Value, normalizedSQLBuilder)
+					builder := headState.outputBuilder(normalizedSQLBuilder)
+					n.appendSpace(token, lastValueToken, builder, colonCtx)
+					n.writeToken(lastValueToken.Type, lastValueToken.Value, builder)
 				}
 			}
 		}

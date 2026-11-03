@@ -171,6 +171,14 @@ func TestObfuscator(t *testing.T) {
 			expected: "SELECT * FROM users where id = ?",
 		},
 		{
+			input:    "SELECT * FROM users where id = $$test",
+			expected: "SELECT * FROM users where id = ?",
+		},
+		{
+			input:    "SELECT * FROM users where id = $tag$test",
+			expected: "SELECT * FROM users where id = ?",
+		},
+		{
 			input:    "SELECT * FROM users where id = $$test$$",
 			expected: "SELECT * FROM users where id = ?",
 		},
@@ -445,6 +453,11 @@ func TestObfuscator(t *testing.T) {
 		{
 			input:    "begin execute immediate 'alter session set sql_trace=true'; end;",
 			expected: "begin execute immediate ?; end;",
+			dbms:     DBMSOracle,
+		},
+		{
+			input:    "SELECT * FROM users WHERE note = q'[it's a secret]' OR name = nq'{O'Brien}'",
+			expected: "SELECT * FROM users WHERE note = ? OR name = ?",
 			dbms:     DBMSOracle,
 		},
 		{

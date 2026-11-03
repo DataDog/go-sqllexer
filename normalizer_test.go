@@ -2,6 +2,7 @@ package sqllexer
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -1512,6 +1513,200 @@ func TestNormalizerCTEWithoutCollectTables(t *testing.T) {
 			assert.Equal(t, test.expected, got)
 		})
 	}
+}
+
+func TestNormalizerCTEASWithAliasRemoval(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"WITH c AS MATERIALIZED (SELECT 1) SELECT * FROM c", "WITH c AS MATERIALIZED ( SELECT 1 ) SELECT * FROM c"},
+		{"WITH c AS NOT MATERIALIZED (SELECT 1) SELECT * FROM c", "WITH c AS NOT MATERIALIZED ( SELECT 1 ) SELECT * FROM c"},
+		{"WITH c AS MATERIALIZED(SELECT 1) SELECT * FROM c", "WITH c AS MATERIALIZED ( SELECT 1 ) SELECT * FROM c"},
+		{"WITH c AS /* hint */ MATERIALIZED /* hint */ (SELECT 1) SELECT * FROM c", "WITH c AS MATERIALIZED ( SELECT 1 ) SELECT * FROM c"},
+		{"WITH c AS (SELECT 1) SELECT * FROM c", "WITH c AS ( SELECT 1 ) SELECT * FROM c"},
+		{"WITH c AS MATERIALIZED (SELECT 1 AS value) SELECT * FROM c AS alias", "WITH c AS MATERIALIZED ( SELECT 1 ) SELECT * FROM c"},
+		{"WITH c AS (SELECT 1), d AS MATERIALIZED (SELECT * FROM c) SELECT * FROM d", "WITH c AS ( SELECT 1 ), d AS MATERIALIZED ( SELECT * FROM c ) SELECT * FROM d"},
+		{"WITH c(v) AS (SELECT 1) SELECT * FROM c", "WITH c ( v ) AS ( SELECT 1 ) SELECT * FROM c"},
+		{"WITH RECURSIVE c AS (SELECT 1) SELECT * FROM c", "WITH RECURSIVE c AS ( SELECT 1 ) SELECT * FROM c"},
+		{"WITH RECURSIVE c AS MATERIALIZED (SELECT 1) SELECT * FROM c", "WITH RECURSIVE c AS MATERIALIZED ( SELECT 1 ) SELECT * FROM c"},
+		{"WITH \"c\" AS MATERIALIZED (SELECT 1) SELECT * FROM c", "WITH c AS MATERIALIZED ( SELECT 1 ) SELECT * FROM c"},
+		{"WITH window AS MATERIALIZED (SELECT 1) SELECT * FROM window", "WITH window AS MATERIALIZED ( SELECT 1 ) SELECT * FROM window"},
+		{"WITH key AS MATERIALIZED (SELECT 1) SELECT * FROM key", "WITH key AS MATERIALIZED ( SELECT 1 ) SELECT * FROM key"},
+		{"WITH c AS (WITH d AS (SELECT 1) SELECT * FROM d) SELECT * FROM c", "WITH c AS ( WITH d AS ( SELECT 1 ) SELECT * FROM d ) SELECT * FROM c"},
+		{strings.Repeat("WITH c AS (", 5) + "SELECT 1" + strings.Repeat(") SELECT * FROM c", 5), strings.Repeat("WITH c AS ( ", 5) + "SELECT 1" + strings.Repeat(" ) SELECT * FROM c", 5)},
+		{"SELECT * FROM (WITH c AS (SELECT 1) SELECT * FROM c) AS t", "SELECT * FROM ( WITH c AS ( SELECT 1 ) SELECT * FROM c )"},
+		{"SELECT * FROM (WITH c AS (SELECT 1) SELECT * FROM c) AS t UNION ALL SELECT * FROM (WITH d AS (SELECT 2) SELECT * FROM d) AS u", "SELECT * FROM ( WITH c AS ( SELECT 1 ) SELECT * FROM c ) UNION ALL SELECT * FROM ( WITH d AS ( SELECT 2 ) SELECT * FROM d )"},
+		{"wItH c aS (SELECT 1) SELECT * FROM c", "wItH c aS ( SELECT 1 ) SELECT * FROM c"},
+		{"wItH c aS mAtErIaLiZeD (SELECT 1) SELECT * FROM c", "wItH c aS mAtErIaLiZeD ( SELECT 1 ) SELECT * FROM c"},
+		{"SELECT 1 AS materialized FROM t AS alias", "SELECT 1 FROM t"},
+		{"SELECT x AS \"materialized\" FROM t", "SELECT x FROM t"},
+		{"SELECT * FROM t AS materialized", "SELECT * FROM t"},
+		{"WITH c(v) AS MATERIALIZED (SELECT 1) SELECT * FROM c", "WITH c ( v ) AS MATERIALIZED ( SELECT 1 ) SELECT * FROM c"},
+		{"WITH a AS (SELECT 1), c(v) AS MATERIALIZED (SELECT 1) SELECT * FROM c", "WITH a AS ( SELECT 1 ), c ( v ) AS MATERIALIZED ( SELECT 1 ) SELECT * FROM c"},
+		{"WITH a AS (WITH b AS MATERIALIZED (SELECT 1) SELECT * FROM b), c AS MATERIALIZED (SELECT 2) SELECT * FROM a, c", "WITH a AS ( WITH b AS MATERIALIZED ( SELECT 1 ) SELECT * FROM b ), c AS MATERIALIZED ( SELECT 2 ) SELECT * FROM a, c"},
+		{strings.Repeat("WITH c AS MATERIALIZED (", 8) + "SELECT 1" + strings.Repeat(") SELECT * FROM c", 8), strings.Repeat("WITH c AS MATERIALIZED ( ", 8) + "SELECT 1" + strings.Repeat(" ) SELECT * FROM c", 8)},
+		{"(WITH c AS (SELECT 1) SELECT * FROM c)", "( WITH c AS ( SELECT 1 ) SELECT * FROM c )"},
+		{"(WITH c AS MATERIALIZED (SELECT 1) SELECT * FROM c)", "( WITH c AS MATERIALIZED ( SELECT 1 ) SELECT * FROM c )"},
+		{"WITH c AS MATERIALIZED (SELECT 1) SELECT * FROM c; WITH d AS MATERIALIZED (SELECT 2) SELECT * FROM d AS x", "WITH c AS MATERIALIZED ( SELECT 1 ) SELECT * FROM c; WITH d AS MATERIALIZED ( SELECT 2 ) SELECT * FROM d"},
+		{"INSERT INTO t WITH c AS MATERIALIZED (SELECT 1) SELECT * FROM c", "INSERT INTO t WITH c AS MATERIALIZED ( SELECT 1 ) SELECT * FROM c"},
+		{"SELECT * FROM unnest(arr) WITH ORDINALITY AS t", "SELECT * FROM unnest ( arr ) WITH ORDINALITY"},
+		{"SELECT * FROM unnest(arr) WITH ORDINALITY AS materialized", "SELECT * FROM unnest ( arr ) WITH ORDINALITY"},
+		{"WITH c AS (SELECT * FROM unnest(a) WITH ORDINALITY AS t) SELECT * FROM c AS z", "WITH c AS ( SELECT * FROM unnest ( a ) WITH ORDINALITY ) SELECT * FROM c"},
+		{"WITH c AS (SELECT * FROM t WITH (NOLOCK)), d AS MATERIALIZED (SELECT 1) SELECT * FROM d", "WITH c AS ( SELECT * FROM t WITH ( NOLOCK ) ), d AS MATERIALIZED ( SELECT 1 ) SELECT * FROM d"},
+		{"WITH RECURSIVE t(n) AS (SELECT 1) SEARCH DEPTH FIRST BY n SET ord, u AS MATERIALIZED (SELECT 1) SELECT * FROM u", "WITH RECURSIVE t ( n ) AS ( SELECT 1 ) SEARCH DEPTH FIRST BY n SET ord, u AS MATERIALIZED ( SELECT 1 ) SELECT * FROM u"},
+		{"WITH RECURSIVE t(n) AS (SELECT 1) CYCLE n SET is_cycle USING path, u AS MATERIALIZED (SELECT 1) SELECT * FROM u", "WITH RECURSIVE t ( n ) AS ( SELECT 1 ) CYCLE n SET is_cycle USING path, u AS MATERIALIZED ( SELECT 1 ) SELECT * FROM u"},
+	}
+	normalizer := NewNormalizer(WithKeepSQLAlias(false))
+	for _, test := range tests {
+		t.Run(test.input, func(t *testing.T) {
+			got, _, err := normalizer.Normalize(test.input)
+			assert.NoError(t, err)
+			assert.Equal(t, test.want, got)
+		})
+	}
+}
+
+func TestNormalizerCTEASWithAliasRemovalOptions(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+		opts  []normalizerOption
+	}{
+		{
+			name:  "remove space between parentheses",
+			input: "WITH c AS MATERIALIZED (SELECT 1 AS v) SELECT * FROM c",
+			want:  "WITH c AS MATERIALIZED (SELECT 1) SELECT * FROM c",
+			opts:  []normalizerOption{WithRemoveSpaceBetweenParentheses(true)},
+		},
+		{
+			name:  "uppercase keywords",
+			input: "with c as materialized (select 1) select * from c",
+			want:  "with c as materialized ( SELECT 1 ) SELECT * FROM c",
+			opts:  []normalizerOption{WithUppercaseKeywords(true)},
+		},
+		{
+			name:  "keep alias",
+			input: "WITH c AS MATERIALIZED (SELECT 1 AS materialized) SELECT * FROM c AS x",
+			want:  "WITH c AS MATERIALIZED ( SELECT 1 AS materialized ) SELECT * FROM c AS x",
+			opts:  []normalizerOption{WithKeepSQLAlias(true)},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			normalizer := NewNormalizer(append([]normalizerOption{WithKeepSQLAlias(false)}, test.opts...)...)
+			got, _, err := normalizer.Normalize(test.input)
+			assert.NoError(t, err)
+			assert.Equal(t, test.want, got)
+		})
+	}
+}
+
+func TestObfuscateAndNormalizeCTEASMaterialized(t *testing.T) {
+	obfuscator := NewObfuscator()
+	normalizer := NewNormalizer(WithKeepSQLAlias(false))
+	got, _, err := ObfuscateAndNormalize("WITH c AS MATERIALIZED (SELECT 1 AS v FROM t WHERE id = 42) SELECT * FROM c AS x", obfuscator, normalizer)
+	assert.NoError(t, err)
+	assert.Equal(t, "WITH c AS MATERIALIZED ( SELECT ? FROM t WHERE id = ? ) SELECT * FROM c", got)
+}
+
+func TestNormalizerCastASWithAliasRemoval(t *testing.T) {
+	tests := []struct {
+		dbms  DBMSType
+		input string
+		want  string
+	}{
+		{DBMSPostgres, "SELECT CAST(x AS integer) FROM t", "SELECT CAST ( x AS integer ) FROM t"},
+		{DBMSPostgres, "SELECT CAST (x AS integer) FROM t", "SELECT CAST ( x AS integer ) FROM t"},
+		{DBMSPostgres, "SELECT CAST /* c */ (x AS integer) FROM t", "SELECT CAST ( x AS integer ) FROM t"},
+		{DBMSPostgres, "SELECT cAsT(x aS integer) FROM t", "SELECT cAsT ( x aS integer ) FROM t"},
+		{DBMSPostgres, "SELECT CAST(x AS TIMESTAMP WITH TIME ZONE) FROM t", "SELECT CAST ( x AS TIMESTAMP WITH TIME ZONE ) FROM t"},
+		{DBMSPostgres, "SELECT CAST(x AS double precision) FROM t", "SELECT CAST ( x AS double precision ) FROM t"},
+		{DBMSPostgres, "SELECT CAST(x AS \"MyType\") FROM t", "SELECT CAST ( x AS MyType ) FROM t"},
+		{DBMSPostgres, "SELECT CAST(x AS public.mytype) FROM t", "SELECT CAST ( x AS public.mytype ) FROM t"},
+		{DBMSPostgres, "SELECT CAST(x AS int[]) FROM t", "SELECT CAST ( x AS int [ ] ) FROM t"},
+		{DBMSPostgres, "SELECT CAST(x AS varchar(10)) FROM t", "SELECT CAST ( x AS varchar ( 10 ) ) FROM t"},
+		{DBMSPostgres, "SELECT CAST(x AS integer) AS y FROM t AS a", "SELECT CAST ( x AS integer ) FROM t"},
+		{DBMSPostgres, "SELECT CAST(CAST(x AS text) AS integer) AS y", "SELECT CAST ( CAST ( x AS text ) AS integer )"},
+		{DBMSPostgres, "SELECT " + strings.Repeat("CAST(", 5) + "x" + strings.Repeat(" AS integer)", 5), "SELECT " + strings.Repeat("CAST ( ", 5) + "x" + strings.Repeat(" AS integer )", 5)},
+		{DBMSPostgres, "SELECT CAST((SELECT x AS y FROM t AS a) AS integer)", "SELECT CAST ( ( SELECT x FROM t ) AS integer )"},
+		{DBMSPostgres, "SELECT COALESCE(CAST(x AS int), y) AS z FROM t", "SELECT COALESCE ( CAST ( x AS int ), y ) FROM t"},
+		{DBMSPostgres, "SELECT rank() OVER (ORDER BY CAST(x AS int)) AS r FROM t", "SELECT rank ( ) OVER ( ORDER BY CAST ( x AS int ) ) FROM t"},
+		{DBMSPostgres, "SELECT XMLSERIALIZE(CONTENT x AS text) AS s FROM t", "SELECT XMLSERIALIZE ( CONTENT x AS text ) FROM t"},
+		{DBMSPostgres, "(SELECT CAST(x AS integer) AS y FROM t)", "( SELECT CAST ( x AS integer ) FROM t )"},
+		{DBMSPostgres, "WITH c AS MATERIALIZED (SELECT CAST(x AS int) AS v FROM t) SELECT * FROM c AS a", "WITH c AS MATERIALIZED ( SELECT CAST ( x AS int ) FROM t ) SELECT * FROM c"},
+		{DBMSPostgres, "SELECT CAST(x AS int) FROM t; SELECT y AS z FROM u AS v", "SELECT CAST ( x AS int ) FROM t; SELECT y FROM u"},
+		{DBMSPostgres, "SELECT CAST(x AS int)) AS y FROM t AS a", "SELECT CAST ( x AS int ) ) FROM t"},
+		{DBMSPostgres, "SELECT x AS cast FROM t AS a", "SELECT x FROM t"},
+		{DBMSPostgres, "SELECT x AS cast, (SELECT 1 AS y) FROM t", "SELECT x, ( SELECT 1 ) FROM t"},
+		{DBMSMySQL, "SELECT CAST(x AS UNSIGNED INTEGER) FROM t", "SELECT CAST ( x AS UNSIGNED INTEGER ) FROM t"},
+		{DBMSMySQL, "SELECT CAST(x AS CHAR(10) CHARACTER SET utf8mb4) FROM t", "SELECT CAST ( x AS CHAR ( 10 ) CHARACTER SET utf8mb4 ) FROM t"},
+		{DBMSMySQL, "SELECT CAST(j->'$.a' AS UNSIGNED ARRAY) FROM t", "SELECT CAST ( j -> '$.a' AS UNSIGNED ARRAY ) FROM t"},
+		{DBMSSQLServer, "SELECT TRY_CAST(x AS int) AS y FROM t", "SELECT TRY_CAST ( x AS int ) FROM t"},
+		{DBMSSQLServer, "SELECT CAST(x AS [int]) FROM t", "SELECT CAST ( x AS int ) FROM t"},
+		{DBMSSQLServer, "SELECT TRY_PARSE(x AS datetime2 USING 'en-US') FROM t", "SELECT TRY_PARSE ( x AS datetime2 USING 'en-US' ) FROM t"},
+		{DBMSSQLServer, "SELECT PARSE(x AS int) FROM t", "SELECT PARSE ( x AS int ) FROM t"},
+		{DBMSOracle, "SELECT CAST(x AS NUMBER) FROM dual", "SELECT CAST ( x AS NUMBER ) FROM dual"},
+		{DBMSOracle, "SELECT CAST(MULTISET(SELECT a FROM t) AS my_tab) FROM dual", "SELECT CAST ( MULTISET ( SELECT a FROM t ) AS my_tab ) FROM dual"},
+		{DBMSOracle, "SELECT TREAT(x AS my_type) FROM dual", "SELECT TREAT ( x AS my_type ) FROM dual"},
+		{DBMSDB2, "SELECT XMLCAST(x AS INTEGER) FROM t", "SELECT XMLCAST ( x AS INTEGER ) FROM t"},
+		{DBMSSnowflake, "SELECT TRY_CAST(x AS NUMBER) FROM t", "SELECT TRY_CAST ( x AS NUMBER ) FROM t"},
+		{"", "SELECT SAFE_CAST(x AS INT64) FROM t", "SELECT SAFE_CAST ( x AS INT64 ) FROM t"},
+		{"", "SELECT " + strings.Repeat("(", 70) + "CAST(x AS int)" + strings.Repeat(")", 70), "SELECT " + strings.Repeat("( ", 70) + "CAST ( x )" + strings.Repeat(" )", 70)},
+	}
+	normalizer := NewNormalizer(WithKeepSQLAlias(false))
+	for _, test := range tests {
+		t.Run(string(test.dbms)+" "+test.input, func(t *testing.T) {
+			got, _, err := normalizer.Normalize(test.input, WithDBMS(test.dbms))
+			assert.NoError(t, err)
+			assert.Equal(t, test.want, got)
+		})
+	}
+}
+
+func TestNormalizerCastASWithAliasRemovalOptions(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+		opts  []normalizerOption
+	}{
+		{
+			name:  "remove space between parentheses",
+			input: "SELECT CAST(x AS integer) AS y FROM t",
+			want:  "SELECT CAST(x AS integer) FROM t",
+			opts:  []normalizerOption{WithRemoveSpaceBetweenParentheses(true)},
+		},
+		{
+			name:  "uppercase keywords",
+			input: "select cast(x as integer) as y from t",
+			want:  "SELECT cast ( x as integer ) FROM t",
+			opts:  []normalizerOption{WithUppercaseKeywords(true)},
+		},
+		{
+			name:  "keep alias",
+			input: "SELECT CAST(x AS integer) AS y FROM t AS a",
+			want:  "SELECT CAST ( x AS integer ) AS y FROM t AS a",
+			opts:  []normalizerOption{WithKeepSQLAlias(true)},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			normalizer := NewNormalizer(append([]normalizerOption{WithKeepSQLAlias(false)}, test.opts...)...)
+			got, _, err := normalizer.Normalize(test.input)
+			assert.NoError(t, err)
+			assert.Equal(t, test.want, got)
+		})
+	}
+}
+
+func TestObfuscateAndNormalizeCastAS(t *testing.T) {
+	obfuscator := NewObfuscator()
+	normalizer := NewNormalizer(WithKeepSQLAlias(false))
+	got, _, err := ObfuscateAndNormalize("SELECT CAST('42' AS integer) AS v FROM t AS a WHERE id IN (CAST(1 AS bigint), 2)", obfuscator, normalizer)
+	assert.NoError(t, err)
+	assert.Equal(t, "SELECT CAST ( ? AS integer ) FROM t WHERE id IN ( CAST ( ? AS bigint ), ? )", got)
 }
 
 func TestNormalizerOracleBindVariables(t *testing.T) {
