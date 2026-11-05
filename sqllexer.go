@@ -272,6 +272,17 @@ func (s *Lexer) scanNumberic(ch rune) *Token {
 		nextCh := s.lookAhead(1)
 		if nextCh == 'x' || nextCh == 'X' {
 			return s.scanHexNumber()
+		} else if nextCh == 'b' || nextCh == 'B' {
+			// MySQL and PostgreSQL 16+ binary literal, e.g. 0b1010
+			if digit := s.lookAhead(2); digit == '0' || digit == '1' {
+				return s.scanBinaryNumber()
+			}
+		} else if nextCh == 'o' || nextCh == 'O' {
+			// PostgreSQL 16+ octal literal, e.g. 0o755
+			if digit := s.lookAhead(2); digit >= '0' && digit <= '7' {
+				s.next() // consume the 0, scanOctalNumber consumes the o
+				return s.scanOctalNumber()
+			}
 		} else if nextCh >= '0' && nextCh <= '7' {
 			return s.scanOctalNumber()
 		}
@@ -300,6 +311,15 @@ func (s *Lexer) scanHexNumber() *Token {
 	ch := s.nextBy(2) // consume 0x or 0X
 
 	for isDigit(ch) || ('a' <= ch && ch <= 'f') || ('A' <= ch && ch <= 'F') {
+		ch = s.next()
+	}
+	return s.emit(NUMBER)
+}
+
+func (s *Lexer) scanBinaryNumber() *Token {
+	ch := s.nextBy(2) // consume 0b or 0B
+
+	for ch == '0' || ch == '1' {
 		ch = s.next()
 	}
 	return s.emit(NUMBER)

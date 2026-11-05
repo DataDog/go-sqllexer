@@ -36,6 +36,16 @@ func TestObfuscator(t *testing.T) {
 			replaceDigits: true,
 		},
 		{
+			input:    "SELECT * FROM users where flags = 0b10110 or flags = 0B1",
+			expected: "SELECT * FROM users where flags = ? or flags = ?",
+			dbms:     DBMSMySQL,
+		},
+		{
+			input:    "SELECT * FROM files where flags = 0b1010 and mode = 0o755",
+			expected: "SELECT * FROM files where flags = ? and mode = ?",
+			dbms:     DBMSPostgres,
+		},
+		{
 			input:         "SELECT * FROM users where id = '12'",
 			expected:      "SELECT * FROM users where id = ?",
 			replaceDigits: true,
