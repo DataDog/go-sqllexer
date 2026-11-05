@@ -373,6 +373,18 @@ func isDigit(ch rune) bool {
 	return ch >= '0' && ch <= '9'
 }
 
+func isBinaryDigit(ch rune) bool {
+	return ch == '0' || ch == '1'
+}
+
+func isOctalDigit(ch rune) bool {
+	return ch >= '0' && ch <= '7'
+}
+
+func isHexDigit(ch rune) bool {
+	return isDigit(ch) || ('a' <= ch && ch <= 'f') || ('A' <= ch && ch <= 'F')
+}
+
 // isLeadingDigit checks if a rune is + or -
 func isLeadingSign(ch rune) bool {
 	return ch == '+' || ch == '-'
