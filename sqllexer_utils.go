@@ -462,7 +462,13 @@ func isEOF(ch rune) bool {
 
 // isIdentifier checks if a rune is an identifier
 func isIdentifier(ch rune) bool {
-	return ch == '"' || ch == '.' || ch == '?' || ch == '$' || ch == '#' || ch == '/' || ch == '@' || ch == '!' || isLetter(ch) || isDigit(ch)
+	return ch == '"' || isUnquotedIdentifier(ch)
+}
+
+// isUnquotedIdentifier checks if a rune is an identifier character other than
+// a double quote
+func isUnquotedIdentifier(ch rune) bool {
+	return ch == '.' || ch == '?' || ch == '$' || ch == '#' || ch == '/' || ch == '@' || ch == '!' || isLetter(ch) || isDigit(ch)
 }
 
 // isValueToken checks if a token is a value token

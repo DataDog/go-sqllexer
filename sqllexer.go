@@ -556,15 +556,20 @@ func (s *Lexer) scanIdentifier(ch rune) *Token {
 // Outside MySQL, a double quote right after a dot opens a quoted component,
 // e.g. schema."table-name", which may contain any character.
 func (s *Lexer) scanIdentifierRest(ch rune) rune {
-	for isIdentifier(ch) {
-		if ch == '"' && s.cursor > 0 && s.src[s.cursor-1] == '.' && s.config.DBMS != DBMSMySQL && s.skipQuotedIdentifierPart() {
-			ch = s.peek()
-			continue
+	for {
+		for isUnquotedIdentifier(ch) {
+			s.hasDigits = s.hasDigits || isDigit(ch)
+			ch = s.nextBy(utf8.RuneLen(ch))
 		}
-		s.hasDigits = s.hasDigits || isDigit(ch)
-		ch = s.nextBy(utf8.RuneLen(ch))
+		if ch != '"' {
+			return ch
+		}
+		if s.cursor > 0 && s.src[s.cursor-1] == '.' && s.config.DBMS != DBMSMySQL && s.skipQuotedIdentifierPart() {
+			ch = s.peek()
+		} else {
+			ch = s.next()
+		}
 	}
-	return ch
 }
 
 // skipQuotedIdentifierPart advances past the "..." part that starts at the
