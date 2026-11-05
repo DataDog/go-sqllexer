@@ -258,32 +258,35 @@ func (s *Lexer) matchAt(match []rune) bool {
 func (s *Lexer) scanNumberWithLeadingSign() *Token {
 	s.start = s.cursor
 	ch := s.next() // consume the leading sign
-	return s.scanDecimalNumber(ch)
+	// A signed literal does not use the legacy leading-zero octal form.
+	return s.scanNumberic(ch, false)
 }
 
 func (s *Lexer) scanNumber(ch rune) *Token {
 	s.start = s.cursor
-	return s.scanNumberic(ch)
+	return s.scanNumberic(ch, true)
 }
 
-func (s *Lexer) scanNumberic(ch rune) *Token {
-	s.start = s.cursor
+// scanNumberic scans the literal that starts with ch. The cursor is on that
+// digit. Callers set s.start; a leading sign sits before the cursor and stays
+// part of the token. legacyOctal selects the unsigned 0[0-7]+ form.
+func (s *Lexer) scanNumberic(ch rune, legacyOctal bool) *Token {
 	if ch == '0' {
 		nextCh := s.lookAhead(1)
 		if nextCh == 'x' || nextCh == 'X' {
 			return s.scanHexNumber()
 		} else if nextCh == 'b' || nextCh == 'B' {
-			// MySQL and PostgreSQL 16+ binary literal, e.g. 0b1010
-			if digit := s.lookAhead(2); digit == '0' || digit == '1' {
+			// MySQL and PostgreSQL 16+ binary literal, e.g. 0b1010.
+			// PostgreSQL also accepts a separator before the first digit, e.g. 0b_10.
+			if d := s.lookAhead(2); isBinaryDigit(d) || (d == '_' && isBinaryDigit(s.lookAhead(3))) {
 				return s.scanBinaryNumber()
 			}
 		} else if nextCh == 'o' || nextCh == 'O' {
-			// PostgreSQL 16+ octal literal, e.g. 0o755
-			if digit := s.lookAhead(2); digit >= '0' && digit <= '7' {
-				s.next() // consume the 0, scanOctalNumber consumes the o
-				return s.scanOctalNumber()
+			// PostgreSQL 16+ octal literal, e.g. 0o755.
+			if d := s.lookAhead(2); isOctalDigit(d) || (d == '_' && isOctalDigit(s.lookAhead(3))) {
+				return s.scanPrefixedOctalNumber()
 			}
-		} else if nextCh >= '0' && nextCh <= '7' {
+		} else if legacyOctal && isOctalDigit(nextCh) {
 			return s.scanOctalNumber()
 		}
 	}
@@ -293,8 +296,8 @@ func (s *Lexer) scanNumberic(ch rune) *Token {
 }
 
 func (s *Lexer) scanDecimalNumber(ch rune) *Token {
-	// scan digits
-	for isDigit(ch) || ch == '.' || isExpontent(ch) {
+	// scan digits, including separators between them (1_000)
+	for isDigit(ch) || ch == '.' || isExpontent(ch) || (ch == '_' && isDigit(s.lookAhead(1))) {
 		if isExpontent(ch) {
 			ch = s.next()
 			if isLeadingSign(ch) {
@@ -310,16 +313,27 @@ func (s *Lexer) scanDecimalNumber(ch rune) *Token {
 func (s *Lexer) scanHexNumber() *Token {
 	ch := s.nextBy(2) // consume 0x or 0X
 
-	for isDigit(ch) || ('a' <= ch && ch <= 'f') || ('A' <= ch && ch <= 'F') {
+	for isHexDigit(ch) || (ch == '_' && isHexDigit(s.lookAhead(1))) {
 		ch = s.next()
 	}
 	return s.emit(NUMBER)
 }
 
 func (s *Lexer) scanBinaryNumber() *Token {
-	ch := s.nextBy(2) // consume 0b or 0B
+	// 0, the prefix, and the first digit or separator are already validated.
+	ch := s.nextBy(3)
 
-	for ch == '0' || ch == '1' {
+	for isBinaryDigit(ch) || (ch == '_' && isBinaryDigit(s.lookAhead(1))) {
+		ch = s.next()
+	}
+	return s.emit(NUMBER)
+}
+
+func (s *Lexer) scanPrefixedOctalNumber() *Token {
+	// 0, the prefix, and the first digit or separator are already validated.
+	ch := s.nextBy(3)
+
+	for isOctalDigit(ch) || (ch == '_' && isOctalDigit(s.lookAhead(1))) {
 		ch = s.next()
 	}
 	return s.emit(NUMBER)
@@ -328,7 +342,7 @@ func (s *Lexer) scanBinaryNumber() *Token {
 func (s *Lexer) scanOctalNumber() *Token {
 	ch := s.nextBy(2) // consume the leading 0 and number
 
-	for '0' <= ch && ch <= '7' {
+	for isOctalDigit(ch) || (ch == '_' && isOctalDigit(s.lookAhead(1))) {
 		ch = s.next()
 	}
 	return s.emit(NUMBER)

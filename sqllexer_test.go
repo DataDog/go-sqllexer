@@ -1370,6 +1370,53 @@ here */`,
 	}
 }
 
+func TestLexerSignedPrefixedAndSeparatedNumbers(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected []TokenSpec
+	}{
+		{name: "signed binary", input: "-0b1010", expected: []TokenSpec{{NUMBER, "-0b1010"}}},
+		{name: "signed hex", input: "-0X1f", expected: []TokenSpec{{NUMBER, "-0X1f"}}},
+		{name: "positive octal", input: "+0o17", expected: []TokenSpec{{NUMBER, "+0o17"}}},
+		{name: "signed decimal is unchanged", input: "-1.2e-3", expected: []TokenSpec{{NUMBER, "-1.2e-3"}}},
+		{name: "signed leading zero stays decimal", input: "-0129", expected: []TokenSpec{{NUMBER, "-0129"}}},
+		{name: "binary separators", input: "0b1010_1010", expected: []TokenSpec{{NUMBER, "0b1010_1010"}}},
+		{name: "binary separator before first digit", input: "0B_10", expected: []TokenSpec{{NUMBER, "0B_10"}}},
+		{name: "octal separators", input: "0o7_55", expected: []TokenSpec{{NUMBER, "0o7_55"}}},
+		{name: "octal separator before first digit", input: "0O_7", expected: []TokenSpec{{NUMBER, "0O_7"}}},
+		{name: "hex separators", input: "0xFF_FF", expected: []TokenSpec{{NUMBER, "0xFF_FF"}}},
+		{name: "hex separator before first digit", input: "0x_ff", expected: []TokenSpec{{NUMBER, "0x_ff"}}},
+		{name: "decimal separators", input: "1_000_000", expected: []TokenSpec{{NUMBER, "1_000_000"}}},
+		{name: "fraction and exponent separators", input: "1_000.50e-1_2", expected: []TokenSpec{{NUMBER, "1_000.50e-1_2"}}},
+		{name: "signed decimal separator", input: "-1_000", expected: []TokenSpec{{NUMBER, "-1_000"}}},
+		{name: "legacy octal separator", input: "012_3", expected: []TokenSpec{{NUMBER, "012_3"}}},
+		// A separator counts only when a digit follows it.
+		{name: "trailing separator", input: "1_000_", expected: []TokenSpec{{NUMBER, "1_000"}, {IDENT, "_"}}},
+		{name: "doubled separator", input: "1__000", expected: []TokenSpec{{NUMBER, "1"}, {IDENT, "__000"}}},
+		{name: "bare binary prefix", input: "0b", expected: []TokenSpec{{NUMBER, "0"}, {IDENT, "b"}}},
+		{name: "binary prefix without a binary digit", input: "0b2", expected: []TokenSpec{{NUMBER, "0"}, {IDENT, "b2"}}},
+		{name: "binary prefix with only a separator", input: "0b_", expected: []TokenSpec{{NUMBER, "0"}, {IDENT, "b_"}}},
+		{name: "octal prefix without an octal digit", input: "0o8", expected: []TokenSpec{{NUMBER, "0"}, {IDENT, "o8"}}},
+		{name: "signed bare prefix", input: "-0b", expected: []TokenSpec{{NUMBER, "-0"}, {IDENT, "b"}}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lexer := New(tt.input)
+			for i, want := range tt.expected {
+				got := lexer.Scan()
+				if got.Type != want.Type || got.Value != want.Value {
+					t.Fatalf("token[%d] got {%v %q}, want {%v %q}", i, got.Type, got.Value, want.Type, want.Value)
+				}
+			}
+			if got := lexer.Scan(); got.Type != EOF {
+				t.Fatalf("got extra token {%v %q}", got.Type, got.Value)
+			}
+		})
+	}
+}
+
 func TestLexerMySQLQualifiedIdentifiersWithSpaces(t *testing.T) {
 	tests := []struct {
 		name           string

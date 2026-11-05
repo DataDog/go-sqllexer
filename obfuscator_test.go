@@ -46,6 +46,20 @@ func TestObfuscator(t *testing.T) {
 			dbms:     DBMSPostgres,
 		},
 		{
+			input:    "SELECT * FROM t where a = -0b1010 or a = +0o17 or a = -0x1F",
+			expected: "SELECT * FROM t where a = ? or a = ? or a = ?",
+		},
+		{
+			input:    "SELECT * FROM t where a = 0b1010_1010 or a = 0o7_55 or a = 0xFF_FF or a = 1_000.50",
+			expected: "SELECT * FROM t where a = ? or a = ? or a = ? or a = ?",
+			dbms:     DBMSPostgres,
+		},
+		{
+			input:    "SELECT * FROM t where a = 0b_1010 or a = 0o_755 or a = 0x_FF",
+			expected: "SELECT * FROM t where a = ? or a = ? or a = ?",
+			dbms:     DBMSPostgres,
+		},
+		{
 			input:         "SELECT * FROM users where id = '12'",
 			expected:      "SELECT * FROM users where id = ?",
 			replaceDigits: true,
