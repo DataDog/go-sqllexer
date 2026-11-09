@@ -1928,4 +1928,42 @@ func TestLexerMixedQuoteQualifiedIdentifier(t *testing.T) {
 			t.Fatalf("expected EOF, got %v %q", token.Type, token.Value)
 		}
 	})
+
+	tests := []struct {
+		name      string
+		input     string
+		lexerOpts []lexerOption
+		expected  []TokenSpec
+	}{
+		{
+			name:     "quote not after a dot is an identifier character",
+			input:    `ab"cd-e`,
+			expected: []TokenSpec{{IDENT, `ab"cd`}, {OPERATOR, "-"}, {IDENT, "e"}},
+		},
+		{
+			name:     "unterminated quoted component",
+			input:    `s."t-x`,
+			expected: []TokenSpec{{IDENT, `s."t`}, {OPERATOR, "-"}, {IDENT, "x"}},
+		},
+		{
+			name:      "mysql does not open a quoted component",
+			input:     `s."t-x"`,
+			lexerOpts: []lexerOption{WithDBMS(DBMSMySQL)},
+			expected:  []TokenSpec{{IDENT, `s."t`}, {OPERATOR, "-"}, {IDENT, `x"`}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lexer := New(tt.input, tt.lexerOpts...)
+			for _, want := range tt.expected {
+				token := lexer.Scan()
+				if token.Type != want.Type || token.Value != want.Value {
+					t.Fatalf("expected %v %q, got %v %q", want.Type, want.Value, token.Type, token.Value)
+				}
+			}
+			if token := lexer.Scan(); token.Type != EOF {
+				t.Fatalf("expected EOF, got %v %q", token.Type, token.Value)
+			}
+		})
+	}
 }
