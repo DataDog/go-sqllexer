@@ -694,3 +694,41 @@ func TestObfuscatorDoesNotPinLargeBackingArrays(t *testing.T) {
 		return BackingArrayTestResult{SQL: sql, Metadata: nil}, nil
 	})
 }
+
+func TestObfuscateTruncatedMixedQuoteIdentifier(t *testing.T) {
+	t.Run("truncated identifier", func(t *testing.T) {
+		input := `SELECT * FROM schema."tbl`
+		got := NewObfuscator().Obfuscate(input, WithDBMS(DBMSPostgres))
+		assert.Equal(t, input, got)
+	})
+
+	t.Run("truncated identifier with hyphen", func(t *testing.T) {
+		input := `SELECT * FROM schema."t-x`
+		got := NewObfuscator().Obfuscate(input, WithDBMS(DBMSPostgres))
+		assert.Equal(t, input, got)
+	})
+
+	t.Run("literals in truncated identifier remain obfuscated", func(t *testing.T) {
+		input := `SELECT * FROM s."t WHERE password = 'hunter2' AND ssn = 123456789`
+		got := NewObfuscator().Obfuscate(input, WithDBMS(DBMSPostgres))
+		assert.Equal(t, `SELECT * FROM s."t WHERE password = ? AND ssn = ?`, got)
+	})
+
+	t.Run("literals in truncated identifier with hyphen remain obfuscated", func(t *testing.T) {
+		input := `SELECT * FROM schema."t-x WHERE password = 'hunter2' AND ssn = 123456789`
+		got := NewObfuscator().Obfuscate(input, WithDBMS(DBMSPostgres))
+		assert.Equal(t, `SELECT * FROM schema."t-x WHERE password = ? AND ssn = ?`, got)
+	})
+
+	t.Run("obfuscating MySQL with double quotes does not change input", func(t *testing.T) {
+		input := `s."t-x"`
+		got := NewObfuscator().Obfuscate(input, WithDBMS(DBMSMySQL))
+		assert.Equal(t, input, got)
+	})
+
+	t.Run("WithReplaceDigits inside a quoted identifier", func(t *testing.T) {
+		obfuscator := NewObfuscator(WithReplaceDigits(true))
+		got := obfuscator.Obfuscate(`s."t-1"`, WithDBMS(DBMSPostgres))
+		assert.Equal(t, `s."t-?"`, got)
+	})
+}

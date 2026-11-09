@@ -483,10 +483,7 @@ func (s *Lexer) scanIdentifier(ch rune) *Token {
 
 	// If first character is Unicode, skip trie lookup
 	if ch > 127 {
-		for isIdentifier(ch) {
-			s.hasDigits = s.hasDigits || isDigit(ch)
-			ch = s.nextBy(utf8.RuneLen(ch))
-		}
+		s.scanIdentifierRest(ch)
 		if s.start == s.cursor {
 			return s.scanUnknown()
 		}
@@ -536,10 +533,7 @@ func (s *Lexer) scanIdentifier(ch rune) *Token {
 	}
 
 	// Continue scanning identifier if no keyword match
-	for isIdentifier(ch) {
-		s.hasDigits = s.hasDigits || isDigit(ch)
-		ch = s.nextBy(utf8.RuneLen(ch))
-	}
+	ch = s.scanIdentifierRest(ch)
 
 	if s.start == s.cursor {
 		return s.scanUnknown()
@@ -555,6 +549,38 @@ func (s *Lexer) scanIdentifier(ch rune) *Token {
 		return s.checkForSpacesInIdentifier(IDENT)
 	}
 	return s.emit(IDENT)
+}
+
+// scanIdentifierRest consumes identifier characters starting at ch, the rune at
+// the cursor, and returns the first rune that is not part of the identifier.
+// Outside MySQL, a double quote right after a dot opens a quoted component,
+// e.g. schema."table-name", which may contain any character.
+func (s *Lexer) scanIdentifierRest(ch rune) rune {
+	for isIdentifier(ch) {
+		if ch == '"' && s.cursor > 0 && s.src[s.cursor-1] == '.' && s.config.DBMS != DBMSMySQL && s.skipQuotedIdentifierPart() {
+			ch = s.peek()
+			continue
+		}
+		s.hasDigits = s.hasDigits || isDigit(ch)
+		ch = s.nextBy(utf8.RuneLen(ch))
+	}
+	return ch
+}
+
+// skipQuotedIdentifierPart advances past the "..." part that starts at the
+// cursor. An unterminated part, e.g. from a truncated query, is left alone.
+func (s *Lexer) skipQuotedIdentifierPart() bool {
+	hasDigits := false
+	for i := s.cursor + 1; i < len(s.src); i++ {
+		c := s.src[i]
+		if c == '"' {
+			s.cursor = i + 1
+			s.hasDigits = s.hasDigits || hasDigits
+			return true
+		}
+		hasDigits = hasDigits || ('0' <= c && c <= '9')
+	}
+	return false
 }
 
 func (s *Lexer) scanDoubleQuotedIdentifier(delimiter rune) *Token {
@@ -610,9 +636,15 @@ func (s *Lexer) scanDoubleQuotedIdentifierComponent(delimiter rune, joinQualifie
 		_, size := utf8.DecodeRuneInString(s.src[s.cursor:])
 		ch = s.nextBy(size)
 	}
-	s.next() // consume the closing quote (ASCII)
+
+	ch = s.next() // consume the closing quote (ASCII)
 	if joinQualified && s.config.DBMS == DBMSMySQL {
 		return s.checkForSpacesInIdentifier(QUOTED_IDENT)
+	}
+	if joinQualified && ch == '.' {
+		// continue through unquoted components, e.g. "schema".table
+		s.isSimpleIdentifier = false
+		s.scanIdentifierRest(ch)
 	}
 	return s.emit(QUOTED_IDENT)
 }
