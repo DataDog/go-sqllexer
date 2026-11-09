@@ -449,7 +449,7 @@ func (s *Lexer) scanIdentifier(ch rune) *Token {
 
 	// If first character is Unicode, skip trie lookup
 	if ch > 127 {
-		ch = s.scanIdentifierRest(ch)
+		s.scanIdentifierRest(ch)
 		if s.start == s.cursor {
 			return s.scanUnknown()
 		}
