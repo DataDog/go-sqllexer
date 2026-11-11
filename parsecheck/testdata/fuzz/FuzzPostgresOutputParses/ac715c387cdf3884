@@ -1,0 +1,2 @@
+go test fuzz v1
+string("VALUES($0!A,A0)")
