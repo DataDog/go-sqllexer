@@ -207,6 +207,24 @@ func TestObfuscator(t *testing.T) {
 			expected: "SELECT * FROM users where id = ?",
 		},
 		{
+			input:    "SELECT * FROM users where id = $user_id and password = 'hunter2'",
+			expected: "SELECT * FROM users where id = $user_id and password = ?",
+			dbms:     DBMSSnowflake,
+		},
+		{
+			input:    "SELECT $name FROM users where password = 'hunter2'",
+			expected: "SELECT $name FROM users where password = ?",
+			dbms:     DBMSMySQL,
+		},
+		{
+			input:    "SELECT $a, 'hunter2', $b FROM users",
+			expected: "SELECT $a, ?, $b FROM users",
+		},
+		{
+			input:    "SELECT $ 'hunter2' FROM users",
+			expected: "SELECT $ ? FROM users",
+		},
+		{
 			input:    "SELECT 1.2, 1.2e3, 1.2e-3, 1.2E3, 1.2E-3 FROM users where id = 1",
 			expected: "SELECT ?, ?, ?, ?, ? FROM users where id = ?",
 		},

@@ -910,12 +910,19 @@ func (s *Lexer) scanDollarQuotedString() *Token {
 	ch := s.next() // consume the dollar sign
 	tagStart := s.cursor
 
-	for s.cursor < len(s.src) && ch != '$' {
-		ch = s.next()
+	// The tag follows the rules of an unquoted identifier, minus the dollar sign.
+	for isAlphaNumeric(ch) {
+		ch = s.nextBy(utf8.RuneLen(ch))
 	}
 	if ch != '$' {
-		// the tag itself is not terminated
-		return s.emit(ERROR)
+		// This is not a dollar quoted string, e.g. a Snowflake $variable or a
+		// MySQL identifier that starts with $. Scan only the $ word so the
+		// rest of the query is still lexed, and its literals obfuscated.
+		s.cursor = s.start
+		if isLetter(s.lookAhead(1)) {
+			return s.scanIdentifier('$')
+		}
+		return s.scanUnknown()
 	}
 	s.next()                            // consume the closing dollar sign of the tag
 	tag := s.src[tagStart-1 : s.cursor] // include the opening and closing dollar sign e.g. $tag$
