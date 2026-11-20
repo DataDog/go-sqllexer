@@ -1,0 +1,2 @@
+go test fuzz v1
+string("WITH A AS(SELECT 0)SELECT I(0,@0+0)")

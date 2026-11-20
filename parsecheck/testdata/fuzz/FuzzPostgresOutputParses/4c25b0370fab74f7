@@ -1,0 +1,2 @@
+go test fuzz v1
+string("UPDATE A SET A=CASE.0 WHEN 0 THEN 0 ENd")

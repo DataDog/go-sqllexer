@@ -34,3 +34,6 @@ jobs:
         run: go test -fuzz=FuzzNormalizer -fuzztime 60s
       - name: Fuzz Obfuscator and Normalizer
         run: go test -fuzz=FuzzObfuscatorAndNormalizer -fuzztime 60s
+      - name: Test that obfuscated output still parses (Postgres)
+        working-directory: parsecheck
+        run: go test -v ./...
