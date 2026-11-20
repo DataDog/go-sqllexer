@@ -1,5 +1,46 @@
 # Changelog
 
+## v0.2.7
+
+### Bug Fixes
+
+- **Keep lexing after a `$` that does not open a dollar-quoted string** ([#129](https://github.com/DataDog/go-sqllexer/pull/129))
+  A `$` that is not the start of a dollar-quoted string (a Snowflake session variable such as `$user_id`, a MySQL identifier starting with `$`, or a bare `$`) is now scanned as an identifier or an unknown token, and lexing continues. Previously the lexer consumed through the next `$`, or through the end of the query when there was none, so literals after the `$` could leak into the obfuscated query or the rest of the statement could be dropped.
+
+- **Match dollar-quoted strings with a non-ASCII tag** ([#130](https://github.com/DataDog/go-sqllexer/pull/130))
+  PostgreSQL tags such as `$é$...$é$` now close correctly. The lexer previously compared the closing tag byte by byte against the tag's runes, so a multi-byte character never matched and everything after the opening tag was swallowed.
+
+- **Keep mixed-quote qualified identifiers intact** ([#116](https://github.com/DataDog/go-sqllexer/pull/116))
+  Names such as `schema."table-name"` are now one qualified identifier for dialects other than MySQL. A double quote opens a quoted component only when it comes immediately after a dot.
+
+- **Obfuscate signed prefixed numbers and digit separators** ([#126](https://github.com/DataDog/go-sqllexer/pull/126))
+  A leading sign is scanned together with `0x`, `0b`, and `0o`, so `-0b1010`, `+0o17`, and `-0x1F` obfuscate to `?`. A PostgreSQL underscore stays inside a decimal, hex, binary, or octal literal when a digit of that base follows it (`0b_1010`). A trailing or doubled underscore stays outside the number, and the legacy unsigned `0123` octal form is unchanged for signed values.
+
+- **Obfuscate binary and octal prefixed number literals** ([#125](https://github.com/DataDog/go-sqllexer/pull/125))
+  `0b`/`0B` and `0o`/`0O` literals are now a single number token, the same way `0x` already was, in every dialect. Previously the leading `0` was replaced and the rest of the value (`b1010`, `o755`) stayed in the query. The prefix counts only when a valid digit follows it.
+
+- **Obfuscate Oracle alternative quoted strings** ([#120](https://github.com/DataDog/go-sqllexer/pull/120))
+  With the Oracle dialect, `q'[...]'` and `nq'[...]'` (any case) are scanned as one string through the matching closing delimiter, so quotes inside the literal no longer leak into the obfuscated query. `[`, `{`, `<`, and `(` close with the matching bracket; any other character closes with itself. A truncated alternative quote is an incomplete string and is still replaced. Other dialects are unchanged.
+
+- **Preserve `CAST ... AS type` when removing aliases** ([#123](https://github.com/DataDog/go-sqllexer/pull/123))
+  Alias removal no longer drops the `AS` and type from `CAST(expr AS type)`, including multi-word types such as `TIMESTAMP WITH TIME ZONE`. The same applies to `TRY_CAST`, `SAFE_CAST`, `XMLCAST`, `TREAT`, `PARSE`, `TRY_PARSE`, and `XMLSERIALIZE`. Aliases outside the cast are still removed. Normalized output changes for these expressions, so query signatures derived from it will change.
+
+- **Preserve `AS MATERIALIZED` on CTEs when removing aliases** ([#122](https://github.com/DataDog/go-sqllexer/pull/122))
+  `WITH c AS MATERIALIZED (...)` no longer loses `AS MATERIALIZED` during alias removal. `AS (` and `AS NOT MATERIALIZED` were already preserved. A leading parenthesized statement such as `(WITH c AS (SELECT 1) SELECT * FROM c)` also no longer gains a stray leading `AS`. Normalized output changes for these queries, so query signatures derived from it will change.
+
+- **Obfuscate truncated dollar-quoted strings** ([#118](https://github.com/DataDog/go-sqllexer/pull/118))
+  A dollar-quoted string whose opening tag is complete but whose closing tag is missing is now an incomplete string and is replaced with `?`. Previously it was emitted as an `ERROR` token and written through unchanged, so a truncated query such as `$$hunter2` kept the literal. A `$` whose tag itself never closes is unchanged by this fix.
+
+### Performance Improvements
+
+- **Keep the quote check out of the identifier loop** ([#127](https://github.com/DataDog/go-sqllexer/pull/127))
+  Ordinary identifier characters are scanned without a second double-quote comparison on every character. Quoted components after a dot are handled only when the scan stops on a quote. Output and allocations are unchanged.
+
+### Enhancements
+
+- **Add opt-in PostgreSQL `IS` predicate literal preservation** ([#114](https://github.com/DataDog/go-sqllexer/pull/114))
+  `WithKeepISPredicate(true)` (CLI `-keep-is-predicate`, JSON `keep_is_predicate`) preserves `TRUE`, `FALSE`, and `NULL` on the right of `IS` and `IS NOT` for PostgreSQL. It is off by default. `IS [NOT] DISTINCT FROM`, other dialects, ordinary literals, and the existing `keep_boolean` and `keep_null` behavior are unchanged.
+
 ## v0.2.6
 
 ### Bug Fixes
