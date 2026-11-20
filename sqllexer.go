@@ -926,19 +926,16 @@ func (s *Lexer) scanDollarQuotedString() *Token {
 	}
 	s.next()                            // consume the closing dollar sign of the tag
 	tag := s.src[tagStart-1 : s.cursor] // include the opening and closing dollar sign e.g. $tag$
-	tagRune := []rune(tag)
-	tagLen := len(tagRune)
 
-	for s.cursor < len(s.src) {
-		if s.matchAt(tagRune) {
-			s.nextBy(tagLen) // consume the closing tag
-			if tag == "$func$" {
-				return s.emit(DOLLAR_QUOTED_FUNCTION)
-			}
-			return s.emit(DOLLAR_QUOTED_STRING)
+	// The tag may contain multi-byte characters, so look for it as a byte string.
+	if i := strings.Index(s.src[s.cursor:], tag); i >= 0 {
+		s.cursor += i + len(tag) // consume the closing tag
+		if tag == "$func$" {
+			return s.emit(DOLLAR_QUOTED_FUNCTION)
 		}
-		s.next()
+		return s.emit(DOLLAR_QUOTED_STRING)
 	}
+	s.cursor = len(s.src)
 	// If we get here, we hit EOF before finding the closing tag, e.g. the
 	// query was truncated. Emit it as an incomplete string so it is obfuscated.
 	return s.emit(INCOMPLETE_STRING)
