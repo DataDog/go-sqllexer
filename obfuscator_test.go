@@ -100,6 +100,11 @@ func TestObfuscator(t *testing.T) {
 			dbms:     DBMSPostgres,
 		},
 		{
+			input:    "SELECT E'first line'\n'Bob\\'s secret', 1;",
+			expected: "SELECT E?\n?, ?;",
+			dbms:     DBMSPostgres,
+		},
+		{
 			// MySQL genuinely uses backslash as a string escape
 			input:    `SELECT col FROM tbl WHERE col LIKE '%foo%' ESCAPE '\' AND flag = 1`,
 			expected: `SELECT col FROM tbl WHERE col LIKE ? ESCAPE ?`,

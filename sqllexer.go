@@ -80,15 +80,18 @@ func WithDBMS(dbms DBMSType) lexerOption {
 
 // SQL Lexer inspired from Rob Pike's talk on Lexical Scanning in Go
 type Lexer struct {
-	src                string // the input src string
-	cursor             int    // the current position of the cursor
-	start              int    // the start position of the current token
-	config             *LexerConfig
-	token              *Token
-	hasQuotes          bool // true if any quotes in token
-	hasDigits          bool // true if the token has digits
-	isTableIndicator   bool // true if the token is a table indicator
-	isSimpleIdentifier bool // true if current quoted ident started with a letter and only used alphanumerics afterwards
+	src                                        string // the input src string
+	cursor                                     int    // the current position of the cursor
+	start                                      int    // the start position of the current token
+	config                                     *LexerConfig
+	token                                      *Token
+	hasQuotes                                  bool // true if any quotes in token
+	hasDigits                                  bool // true if the token has digits
+	isTableIndicator                           bool // true if the token is a table indicator
+	isSimpleIdentifier                         bool // true if current quoted ident started with a letter and only used alphanumerics afterwards
+	postgresEscapeStringContinuation           bool
+	postgresEscapeStringContinuationHasNewline bool
+	postgresStringBackslashEscapes             bool
 }
 
 func New(input string, opts ...lexerOption) *Lexer {
@@ -353,6 +356,7 @@ func (s *Lexer) scanStringWithDelimiter(delimiter rune) *Token {
 	escaped := false
 	escapedQuote := false
 	backslashEscapes := s.stringBackslashEscapes()
+	s.postgresStringBackslashEscapes = backslashEscapes
 
 	ch := s.next() // consume opening quote
 
@@ -398,7 +402,8 @@ func (s *Lexer) stringBackslashEscapes() bool {
 	case DBMSSQLServer, DBMSOracle, DBMSDB2:
 		return false
 	case DBMSPostgres:
-		return s.hasPostgresEscapeStringPrefix()
+		return s.hasPostgresEscapeStringPrefix() ||
+			(s.postgresEscapeStringContinuation && s.postgresEscapeStringContinuationHasNewline)
 	default:
 		return true
 	}
@@ -985,11 +990,14 @@ func (s *Lexer) scanUnknown() *Token {
 func (s *Lexer) emit(t TokenType) *Token {
 	tok := s.token
 	lastValueToken := tok.lastValueToken
+	value := s.src[s.start:s.cursor]
+
+	s.updatePostgresEscapeStringContinuation(t, value)
 
 	// Zero other fields
 	*tok = Token{
 		Type:             t,
-		Value:            s.src[s.start:s.cursor],
+		Value:            value,
 		isTableIndicator: s.isTableIndicator,
 		lastValueToken:   lastValueToken,
 	}
@@ -1005,4 +1013,25 @@ func (s *Lexer) emit(t TokenType) *Token {
 	s.isSimpleIdentifier = false
 
 	return tok
+}
+
+func (s *Lexer) updatePostgresEscapeStringContinuation(tokenType TokenType, value string) {
+	if s.config.DBMS != DBMSPostgres {
+		return
+	}
+
+	switch tokenType {
+	case STRING:
+		s.postgresEscapeStringContinuation = s.postgresStringBackslashEscapes
+		s.postgresEscapeStringContinuationHasNewline = false
+	case SPACE, COMMENT, MULTILINE_COMMENT:
+		if s.postgresEscapeStringContinuation && strings.ContainsAny(value, "\r\n") {
+			s.postgresEscapeStringContinuationHasNewline = true
+		}
+	default:
+		s.postgresEscapeStringContinuation = false
+		s.postgresEscapeStringContinuationHasNewline = false
+	}
+
+	s.postgresStringBackslashEscapes = false
 }
