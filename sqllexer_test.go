@@ -391,6 +391,24 @@ here */`,
 			},
 		},
 		{
+			name:  "dollar quoted string with underscore and digit in the tag",
+			input: "SELECT $tag_name1$secret$tag_name1$",
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
+				{DOLLAR_QUOTED_STRING, "$tag_name1$secret$tag_name1$"},
+			},
+		},
+		{
+			name:  "dollar quoted string with an underscore tag",
+			input: "SELECT $_$x$_$",
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
+				{DOLLAR_QUOTED_STRING, "$_$x$_$"},
+			},
+		},
+		{
 			name:  "truncated dollar quoted string",
 			input: "SELECT * FROM users where id = $tag$test",
 			expected: []TokenSpec{
