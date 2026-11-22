@@ -327,6 +327,11 @@ func TestObfuscator(t *testing.T) {
 			replaceDigits: true,
 		},
 		{
+			input:         `SELECT * FROM Items WHERE score > .5 AND ratio < .25e-1 AND w = x*.5`,
+			expected:      `SELECT * FROM Items WHERE score > ? AND ratio < ? AND w = x*?`,
+			replaceDigits: true,
+		},
+		{
 			input:         "USING $1 SELECT",
 			expected:      `USING $1 SELECT`,
 			replaceDigits: true,
