@@ -1474,6 +1474,10 @@ func TestLexerSignedPrefixedAndSeparatedNumbers(t *testing.T) {
 		{name: "binary prefix without a binary digit", input: "0b2", expected: []TokenSpec{{NUMBER, "0"}, {IDENT, "b2"}}},
 		{name: "binary prefix with only a separator", input: "0b_", expected: []TokenSpec{{NUMBER, "0"}, {IDENT, "b_"}}},
 		{name: "octal prefix without an octal digit", input: "0o8", expected: []TokenSpec{{NUMBER, "0"}, {IDENT, "o8"}}},
+		{name: "decimal without integer part", input: ".5", expected: []TokenSpec{{NUMBER, ".5"}}},
+		{name: "decimal without integer part and exponent", input: ".5e-3", expected: []TokenSpec{{NUMBER, ".5e-3"}}},
+		{name: "decimal without integer part after operator", input: "x>.5", expected: []TokenSpec{{IDENT, "x"}, {OPERATOR, ">"}, {NUMBER, ".5"}}},
+		{name: "dot before digits after a name", input: "t.5", expected: []TokenSpec{{IDENT, "t.5"}}},
 		{name: "signed bare prefix", input: "-0b", expected: []TokenSpec{{NUMBER, "-0"}, {IDENT, "b"}}},
 	}
 

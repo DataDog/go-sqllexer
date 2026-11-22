@@ -133,6 +133,9 @@ func (s *Lexer) Scan() *Token {
 		return s.scanOperator(ch)
 	case isDigit(ch):
 		return s.scanNumber(ch)
+	case ch == '.' && isDigit(s.lookAhead(1)) && !s.followsNameOrQuote():
+		// a decimal without an integer part, e.g. .5
+		return s.scanNumber(ch)
 	case isWildcard(ch):
 		return s.scanWildcard()
 	case ch == '$':
@@ -195,6 +198,17 @@ func (s *Lexer) Scan() *Token {
 	default:
 		return s.scanUnknown()
 	}
+}
+
+// followsNameOrQuote reports whether the character before the cursor ends a
+// name or a quoted part, which makes a following dot a qualifier and not the
+// start of a number.
+func (s *Lexer) followsNameOrQuote() bool {
+	if s.cursor == 0 {
+		return false
+	}
+	prev, _ := utf8.DecodeLastRuneInString(s.src[:s.cursor])
+	return isAlphaNumeric(prev) || prev == '"' || prev == '`' || prev == ']' || prev == ')'
 }
 
 // lookAhead returns the rune n positions ahead of the cursor.
