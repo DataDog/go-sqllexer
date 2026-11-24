@@ -35,6 +35,13 @@ type normalizerConfig struct {
 
 	// KeepIdentifierQuotation specifies whether the normalizer should keep the quotation of identifiers.
 	KeepIdentifierQuotation bool `json:"keep_identifier_quotation"`
+
+	// SkipNormalization specifies whether the normalizer should leave the SQL text as it is
+	// and only collect the requested metadata. Normalize returns the input string unchanged,
+	// which saves the work of rebuilding the query when the caller only wants the tables,
+	// commands, comments or procedures. It has no effect on ObfuscateAndNormalize, because
+	// the obfuscated text is produced by the same pass and must not be dropped.
+	SkipNormalization bool `json:"skip_normalization"`
 }
 
 type normalizerOption func(*normalizerConfig)
@@ -90,6 +97,12 @@ func WithKeepTrailingSemicolon(keepTrailingSemicolon bool) normalizerOption {
 func WithKeepIdentifierQuotation(keepIdentifierQuotation bool) normalizerOption {
 	return func(c *normalizerConfig) {
 		c.KeepIdentifierQuotation = keepIdentifierQuotation
+	}
+}
+
+func WithSkipNormalization(skipNormalization bool) normalizerOption {
+	return func(c *normalizerConfig) {
+		c.SkipNormalization = skipNormalization
 	}
 }
 
@@ -254,7 +267,59 @@ func (n *Normalizer) normalizeToken(lexer *Lexer, normalizedSQLBuilder *strings.
 }
 
 func (n *Normalizer) Normalize(input string, lexerOpts ...lexerOption) (normalizedSQL string, statementMetadata *StatementMetadata, err error) {
-	return n.normalize(New(input, lexerOpts...), nil, lexerOpts...)
+	lexer := New(input, lexerOpts...)
+	if n.config.SkipNormalization {
+		statementMetadata, err = n.collectOnly(lexer)
+		if err != nil {
+			return "", nil, err
+		}
+		return input, statementMetadata, nil
+	}
+	return n.normalize(lexer, nil, lexerOpts...)
+}
+
+// collectOnly scans the query for metadata without building the normalized text.
+func (n *Normalizer) collectOnly(lexer *Lexer) (statementMetadata *StatementMetadata, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			statementMetadata, err = nil, fmt.Errorf("error collecting SQL metadata: %v", r)
+		}
+	}()
+
+	meta, statementMetadata := newMetadata()
+	if n.shouldCollectMetadata() {
+		var ctes map[string]bool
+		var inTableList bool
+		var lastValueToken *LastValueToken
+		for {
+			token := lexer.Scan()
+			n.collectMetadata(token, lastValueToken, meta, statementMetadata, &ctes, &inTableList)
+			if token.Type == EOF {
+				break
+			}
+			if isValueToken(token) {
+				lastValueToken = token.getLastValueToken()
+			}
+		}
+	}
+	statementMetadata.Size = meta.size
+	return statementMetadata, nil
+}
+
+func newMetadata() (*metadataSet, *StatementMetadata) {
+	meta := &metadataSet{
+		tablesSet:     map[string]struct{}{},
+		commentsSet:   map[string]struct{}{},
+		commandsSet:   map[string]struct{}{},
+		proceduresSet: map[string]struct{}{},
+	}
+	statementMetadata := &StatementMetadata{
+		Tables:     []string{},
+		Comments:   []string{},
+		Commands:   []string{},
+		Procedures: []string{},
+	}
+	return meta, statementMetadata
 }
 
 // normalize processes a prepared lexer so the combined path can use its DBMS configuration.
@@ -264,19 +329,7 @@ func (n *Normalizer) normalize(lexer *Lexer, preProcessToken func(*Token, *LastV
 	var normalizedSQLBuilder strings.Builder
 	normalizedSQLBuilder.Grow(len(input))
 
-	meta := &metadataSet{
-		tablesSet:     map[string]struct{}{},
-		commentsSet:   map[string]struct{}{},
-		commandsSet:   map[string]struct{}{},
-		proceduresSet: map[string]struct{}{},
-	}
-
-	statementMetadata = &StatementMetadata{
-		Tables:     []string{},
-		Comments:   []string{},
-		Commands:   []string{},
-		Procedures: []string{},
-	}
+	meta, statementMetadata := newMetadata()
 
 	if err = n.normalizeToken(lexer, &normalizedSQLBuilder, meta, statementMetadata, preProcessToken, lexerOpts...); err != nil {
 		return "", nil, err

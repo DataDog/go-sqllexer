@@ -35,6 +35,7 @@ type NormalizerConfig struct {
 	RemoveSpaceBetweenParentheses bool
 	KeepTrailingSemicolon         bool
 	KeepIdentifierQuotation       bool
+	SkipNormalization             bool
 }
 
 // CLIConfig holds all CLI configuration
@@ -74,6 +75,7 @@ func (c *NormalizerConfig) NewNormalizer() *sqllexer.Normalizer {
 		sqllexer.WithRemoveSpaceBetweenParentheses(c.RemoveSpaceBetweenParentheses),
 		sqllexer.WithKeepTrailingSemicolon(c.KeepTrailingSemicolon),
 		sqllexer.WithKeepIdentifierQuotation(c.KeepIdentifierQuotation),
+		sqllexer.WithSkipNormalization(c.SkipNormalization),
 	)
 }
 
@@ -112,6 +114,7 @@ func parseFlags() *CLIConfig {
 	flag.BoolVar(&cfg.Normalizer.RemoveSpaceBetweenParentheses, "remove-space-between-parentheses", false, "Remove spaces inside parentheses")
 	flag.BoolVar(&cfg.Normalizer.KeepTrailingSemicolon, "keep-trailing-semicolon", false, "Keep trailing semicolon (useful for PL/SQL)")
 	flag.BoolVar(&cfg.Normalizer.KeepIdentifierQuotation, "keep-identifier-quotation", false, "Keep identifier quotes (backticks, double quotes, brackets)")
+	flag.BoolVar(&cfg.Normalizer.SkipNormalization, "skip-normalization", false, "Collect metadata but return the SQL unchanged (normalize mode only)")
 
 	flag.Usage = printUsage
 	flag.Parse()

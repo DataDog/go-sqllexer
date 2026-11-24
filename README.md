@@ -92,6 +92,18 @@ func main() {
 }
 ```
 
+If you only need the metadata, `WithSkipNormalization(true)` collects tables, commands, comments and procedures and returns the query text untouched, without building the normalized string. `ObfuscateAndNormalize` ignores the option so obfuscated output is never replaced by the raw query.
+
+```go
+normalizer := sqllexer.NewNormalizer(
+    sqllexer.WithCollectTables(true),
+    sqllexer.WithCollectCommands(true),
+    sqllexer.WithSkipNormalization(true),
+)
+sql, statementMetadata, err := normalizer.Normalize("SELECT  *  FROM users")
+// sql is "SELECT  *  FROM users", statementMetadata.Tables is ["users"]
+```
+
 ## Command-Line Usage
 
 The `sqllexer` binary provides a command-line interface for all the library functionality:
