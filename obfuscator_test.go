@@ -177,6 +177,17 @@ func TestObfuscator(t *testing.T) {
 			with multiple lines */`,
 		},
 		{
+			input:    "SELECT id /* outer /* inner */ don't */ FROM users WHERE email = 'alice@example.com'",
+			expected: "SELECT id /* outer /* inner */ don't */ FROM users WHERE email = ?",
+			dbms:     DBMSSQLServer,
+		},
+		{
+			// unbalanced: the comment still ends at the first closing, which overlaps the nested opening
+			input:    "SELECT /*/*/ 'secret' FROM t",
+			expected: "SELECT /*/*/ ? FROM t",
+			dbms:     DBMSPostgres,
+		},
+		{
 			input:    "SELECT * FROM users where id = 'Joh",
 			expected: "SELECT * FROM users where id = ?",
 		},

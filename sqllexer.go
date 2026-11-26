@@ -89,6 +89,7 @@ type Lexer struct {
 	hasDigits          bool // true if the token has digits
 	isTableIndicator   bool // true if the token is a table indicator
 	isSimpleIdentifier bool // true if current quoted ident started with a letter and only used alphanumerics afterwards
+	unbalancedComment  bool // true once a nested comment ran to EOF, after which comments no longer nest
 }
 
 func New(input string, opts ...lexerOption) *Lexer {
@@ -883,13 +884,40 @@ func (s *Lexer) scanSingleLineComment(ch rune) *Token {
 
 func (s *Lexer) scanMultiLineComment() *Token {
 	s.start = s.cursor
+	// PostgreSQL and SQL Server allow block comments to nest
+	nested := (s.config.DBMS == DBMSPostgres || s.config.DBMS == DBMSSQLServer) && !s.unbalancedComment
+	depth := 0
+	firstEnd := -1
 	ch := s.nextBy(2) // consume the opening slash and asterisk
 	for {
 		if ch == '*' && s.lookAhead(1) == '/' {
-			s.nextBy(2) // consume the closing asterisk and slash
-			break
+			ch = s.nextBy(2) // consume the closing asterisk and slash
+			if depth == 0 {
+				break
+			}
+			if firstEnd < 0 {
+				firstEnd = s.cursor
+			}
+			depth--
+			continue
+		}
+		if nested && ch == '/' && s.lookAhead(1) == '*' {
+			if firstEnd < 0 && s.lookAhead(2) == '/' {
+				// in "/*/" the asterisk also starts the first closing asterisk and slash
+				firstEnd = s.cursor + 3
+			}
+			ch = s.nextBy(2) // consume the nested opening slash and asterisk
+			depth++
+			continue
 		}
 		if isEOF(ch) {
+			if firstEnd >= 0 {
+				// the nested comments are not balanced, so end at the first closing asterisk and slash,
+				// and stop nesting so later comments are not scanned to EOF again (that would be quadratic)
+				s.cursor = firstEnd
+				s.unbalancedComment = true
+				break
+			}
 			// encountered EOF before closing comment
 			// this usually happens when the comment is truncated
 			return s.emit(ERROR)
