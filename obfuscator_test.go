@@ -177,6 +177,11 @@ func TestObfuscator(t *testing.T) {
 			with multiple lines */`,
 		},
 		{
+			input:    "SELECT id /* outer /* inner */ don't */ FROM users WHERE email = 'alice@example.com'",
+			expected: "SELECT id /* outer /* inner */ don't */ FROM users WHERE email = ?",
+			dbms:     DBMSSQLServer,
+		},
+		{
 			input:    "SELECT * FROM users where id = 'Joh",
 			expected: "SELECT * FROM users where id = ?",
 		},
