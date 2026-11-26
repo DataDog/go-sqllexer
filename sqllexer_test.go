@@ -888,6 +888,20 @@ here */`,
 			lexerOpts: []lexerOption{WithDBMS(DBMSMySQL)},
 		},
 		{
+			name:  "MySQL double dash without a space is not a comment",
+			input: "SELECT a--1 -- comment",
+			expected: []TokenSpec{
+				{COMMAND, "SELECT"},
+				{SPACE, " "},
+				{IDENT, "a"},
+				{OPERATOR, "-"},
+				{NUMBER, "-1"},
+				{SPACE, " "},
+				{COMMENT, "-- comment"},
+			},
+			lexerOpts: []lexerOption{WithDBMS(DBMSMySQL)},
+		},
+		{
 			name:  "drop table if exists",
 			input: `DROP TABLE IF EXISTS users`,
 			expected: []TokenSpec{

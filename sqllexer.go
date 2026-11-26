@@ -120,6 +120,13 @@ func (s *Lexer) Scan() *Token {
 	case isSingleQuote(ch):
 		return s.scanStringWithDelimiter('\'')
 	case isSingleLineComment(ch, s.lookAhead(1)):
+		// MySQL only starts a -- comment when whitespace or a control character follows,
+		// so credit--1 is credit - -1. Emit the first dash and let the second one sign the number.
+		if next := s.lookAhead(2); s.config.DBMS == DBMSMySQL && next > ' ' && next != 0x7f {
+			s.start = s.cursor
+			s.next()
+			return s.emit(OPERATOR)
+		}
 		return s.scanSingleLineComment(ch)
 	case isMultiLineComment(ch, s.lookAhead(1)):
 		return s.scanMultiLineComment()

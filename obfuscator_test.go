@@ -156,6 +156,12 @@ func TestObfuscator(t *testing.T) {
 			replaceDigits: true,
 		},
 		{
+			// MySQL needs whitespace after -- for a comment, so credit--1 is credit - -1
+			input:    "UPDATE account SET credit=credit--1, note='secret' WHERE id=5 -- this is a comment",
+			expected: "UPDATE account SET credit=credit-?, note=? WHERE id=? -- this is a comment",
+			dbms:     DBMSMySQL,
+		},
+		{
 			input: `/* this is a comment
 			with multiple lines
 			*/
