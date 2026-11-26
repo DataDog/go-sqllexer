@@ -902,6 +902,10 @@ func (s *Lexer) scanMultiLineComment() *Token {
 			continue
 		}
 		if nested && ch == '/' && s.lookAhead(1) == '*' {
+			if firstEnd < 0 && s.lookAhead(2) == '/' {
+				// in "/*/" the asterisk also starts the first closing asterisk and slash
+				firstEnd = s.cursor + 3
+			}
 			ch = s.nextBy(2) // consume the nested opening slash and asterisk
 			depth++
 			continue

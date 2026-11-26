@@ -182,6 +182,12 @@ func TestObfuscator(t *testing.T) {
 			dbms:     DBMSSQLServer,
 		},
 		{
+			// unbalanced: the comment still ends at the first closing, which overlaps the nested opening
+			input:    "SELECT /*/*/ 'secret' FROM t",
+			expected: "SELECT /*/*/ ? FROM t",
+			dbms:     DBMSPostgres,
+		},
+		{
 			input:    "SELECT * FROM users where id = 'Joh",
 			expected: "SELECT * FROM users where id = ?",
 		},
